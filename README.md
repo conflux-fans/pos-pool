@@ -1,2 +1,1 @@
-# pos-pool
-Solidity contract of pos-pool
+# PoS-Pool
