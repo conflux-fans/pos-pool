@@ -8,13 +8,14 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
   TODO
   1. deal pool retired situation
   2. upgradable
+  3, binded PoS address
  */
 contract PoSPool {
   using SafeMath for uint256;
   using SafeMath for uint64;
 
-  uint constant private ONE_DAY_BLOCK_COUNT = 2 * 60 * 60 * 24;
-  uint constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
+  uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 60 * 60 * 24;
+  uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
 
   // ======================== Pool config =========================
 
@@ -23,15 +24,6 @@ contract PoSPool {
   uint8 private _poolUserShareRatio; // ratio shared by user: 1-100
 
   // ======================== Struct definitions =========================
-
-  /* enum ActionType {Stake, Retire, Withdraw, Claim}
-
-  struct UserAction {
-    ActionType actionType;
-    uint64 votes;
-    uint happenBlockNumber; // action happen block number
-    uint endBlockNumber; // action end block number
-  } */
 
   struct PoolSummary {
     // uint64 allVotes;  // can get through PoS RPC or 
@@ -49,31 +41,31 @@ contract PoSPool {
 
   struct PoolShot {
     uint64 available;
-    uint blockNumber;
+    uint64 blockNumber;
     uint balance;
   } 
 
   struct UserShot {
     uint64 available;
-    uint blockNumber;
+    uint64 blockNumber;
   }
 
-  struct PoolSection {
-    uint startBlock;
-    uint endBlock;
-    uint reward;
+  struct RewardSection {
+    uint64 startBlock;
+    uint64 endBlock;
     uint64 available;
+    uint reward;
   }
 
-  struct UserSection {
-    uint startBlock;
-    uint endBlock;
+  struct VotePowerSection {
+    uint64 startBlock;
+    uint64 endBlock;
     uint64 available;
   }
 
   struct QueueNode {
     uint64 votePower;
-    uint endBlockNumber;
+    uint64 endBlock;
   }
 
   struct InOutQueue {
@@ -97,8 +89,8 @@ contract PoSPool {
 
   PoolSummary public poolSummary;
 
-  PoolSection[] private poolSections;
-  mapping(address => UserSection[]) private userSections;
+  RewardSection[] private rewardSections;
+  mapping(address => VotePowerSection[]) private votePowerSections;
   
   PoolShot private lastPoolShot;
   mapping(address => UserShot) private lastUserShots;
@@ -130,7 +122,7 @@ contract PoSPool {
     InOutQueue storage q = userInqueues[msg.sender];
     uint64 locked = 0;
     for (uint64 i = q.start; i < q.end; i++) {
-      if (q.items[i].endBlockNumber >= block.number) {
+      if (q.items[i].endBlock >= block.number) {
         locked += q.items[i].votePower;
         dequeue(q);
       } else {
@@ -144,7 +136,7 @@ contract PoSPool {
     InOutQueue storage q = userOutqueues[msg.sender];
     uint64 unlocked = 0;
     for (uint64 i = q.start; i < q.end; i++) {
-      if (q.items[i].endBlockNumber > block.number) {
+      if (q.items[i].endBlock > block.number) {
         unlocked += q.items[i].votePower;
         dequeue(q);
       } else {
@@ -156,15 +148,18 @@ contract PoSPool {
 
   function _updateLastPoolShot() private {
     lastPoolShot.available = poolSummary.availableVotes;
-    lastPoolShot.blockNumber = block.number;
+    lastPoolShot.blockNumber = _blockNumber();
     lastPoolShot.balance = _selfBalance();
   }
 
   function _shotPoolSection() private {
-    uint startBlock = lastPoolShot.blockNumber;
-    uint endBlock = block.number;
     uint reward = _selfBalance() - lastPoolShot.balance; // TODO check negative situation
-    poolSections.push(PoolSection(startBlock, endBlock, reward, lastPoolShot.available));
+    rewardSections.push(RewardSection({
+      startBlock: lastPoolShot.blockNumber, 
+      endBlock: _blockNumber(), 
+      reward: reward,
+      available: lastPoolShot.available
+    }));
   }
 
   function _shotPoolSectionAndUpdateLastShot() private {
@@ -174,7 +169,7 @@ contract PoSPool {
 
   function _updateLastUserShot() private {
     lastUserShots[msg.sender].available = userInfos[msg.sender].available;
-    lastUserShots[msg.sender].blockNumber = block.number;
+    lastUserShots[msg.sender].blockNumber = _blockNumber();
   }
 
   function _shotUserSection() private {
@@ -182,8 +177,12 @@ contract PoSPool {
     if (lastShot.available == 0) {
       return;
     }
-    UserSection memory uSection = UserSection(lastShot.blockNumber, block.number, lastShot.available);
-    userSections[msg.sender].push(uSection);
+    VotePowerSection memory uSection = VotePowerSection({
+      startBlock: lastShot.blockNumber, 
+      endBlock: _blockNumber(), 
+      available: lastShot.available
+    });
+    votePowerSections[msg.sender].push(uSection);
   }
 
   function _shotUserSectionAndUpdateLastShot() private {
@@ -194,6 +193,10 @@ contract PoSPool {
   function _selfBalance() private view returns (uint) {
     address self = address(this);
     return self.balance;
+  }
+
+  function _blockNumber() private view returns (uint64) {
+    return uint64(block.number);
   }
 
   // ======================== Events =========================
@@ -243,7 +246,7 @@ contract PoSPool {
 
     // put stake info in queue
     InOutQueue storage q = userInqueues[msg.sender];
-    enqueue(q, QueueNode(votePower, block.number + SEVEN_DAY_BLOCK_COUNT));
+    enqueue(q, QueueNode(votePower, _blockNumber() + SEVEN_DAY_BLOCK_COUNT));
 
     _shotUserSectionAndUpdateLastShot();
     _shotPoolSectionAndUpdateLastShot();
@@ -261,7 +264,7 @@ contract PoSPool {
 
     //
     InOutQueue storage q = userOutqueues[msg.sender];
-    enqueue(q, QueueNode(votePower, block.number + SEVEN_DAY_BLOCK_COUNT));
+    enqueue(q, QueueNode(votePower, _blockNumber() + SEVEN_DAY_BLOCK_COUNT));
 
     _shotUserSectionAndUpdateLastShot();
     _shotPoolSectionAndUpdateLastShot();
@@ -283,9 +286,9 @@ contract PoSPool {
 
   function userInterest() public view onlyRegisted returns (uint) {
     uint totalIntereset = 0;
-    UserSection[] memory uSections = userSections[msg.sender];
-    for (uint32 i = 0; i < poolSections.length; i++) {
-      PoolSection memory pSection = poolSections[i];
+    VotePowerSection[] memory uSections = votePowerSections[msg.sender];
+    for (uint32 i = 0; i < rewardSections.length; i++) {
+      RewardSection memory pSection = rewardSections[i];
       for (uint32 j = 0; j < uSections.length; j++) {
         if (uSections[j].startBlock >= pSection.endBlock) {
           break;
@@ -303,8 +306,8 @@ contract PoSPool {
 
     // calculate lastest section;
     UserShot memory uShot = lastUserShots[msg.sender];
-    for (uint32 i = 0; i < poolSections.length; i++) {
-      PoolSection memory pSection = poolSections[i];
+    for (uint32 i = 0; i < rewardSections.length; i++) {
+      RewardSection memory pSection = rewardSections[i];
       if (uShot.blockNumber >= pSection.endBlock) {
         continue;
       }
