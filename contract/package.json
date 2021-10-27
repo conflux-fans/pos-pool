@@ -5,7 +5,8 @@
   "main": "index.js",
   "dependencies": {
     "@confluxfans/contracts": "^0.2.3",
-    "@openzeppelin/contracts": "^4.3.2"
+    "@openzeppelin/contracts": "^4.3.2",
+    "js-conflux-sdk": "^2.0.0-beta.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
