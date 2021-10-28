@@ -296,6 +296,9 @@ contract PoSPool {
     return reward.mul(userVotes).mul(_poolUserShareRatio).div(totalVotes * 100);
   }
 
+  /**
+    Calculate user's latest interest not in sections
+   */
   function _userLatestInterest() private view onlyRegisted returns (uint256) {
     uint latestInterest = 0;
     UserShot memory uShot = lastUserShots[msg.sender];
@@ -342,6 +345,9 @@ contract PoSPool {
     return totalInterest;
   }
 
+  /*
+   * Currently user's total interest
+  */
   function userInterest() public view onlyRegisted returns (uint256) {
     uint totalInterest = 0;
     totalInterest = totalInterest.add(_userSectionInterest());
@@ -351,7 +357,7 @@ contract PoSPool {
     return totalInterest.add(userSummaries[msg.sender].currentInterest);
   }
 
-  // collet all user interest and clear user's votePowerSections
+  // collet all user section interest to currentInterest and clear user's votePowerSections
   function _collectUserInterest() private onlyRegisted {
     uint256 collectedInterest = _userSectionInterest();
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
