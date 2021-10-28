@@ -8,11 +8,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
   TODO
   1. deal pool retired situation
   2. upgradable
-  3, binded PoS address
+  3, multi-pool
  */
 contract PoSPool {
   using SafeMath for uint256;
-  using SafeMath for uint64;
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 60 * 60 * 24;
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
@@ -26,9 +25,9 @@ contract PoSPool {
   // ======================== Struct definitions =========================
 
   struct PoolSummary {
-    // uint64 allVotes;  // can get through PoS RPC or 
+    // uint64 allVotes;  // can get through PoS RPC
     uint64 availableVotes;
-    // uint poolInterest; // TODO pool vailable interest
+    uint256 poolInterest;
   }
 
   struct UserSummary {
@@ -36,13 +35,14 @@ contract PoSPool {
     uint64 available; // locking + locked
     uint64 locked;
     uint64 unlocked;
-    uint claimedInterest;
+    uint256 claimedInterest;
+    uint256 currentInterest;
   }
 
   struct PoolShot {
-    uint64 available;
+    uint64 available; // available votes
     uint64 blockNumber;
-    uint balance;
+    uint256 balance;
   } 
 
   struct UserShot {
@@ -54,7 +54,7 @@ contract PoSPool {
     uint64 startBlock;
     uint64 endBlock;
     uint64 available;
-    uint reward;
+    uint256 reward;
   }
 
   struct VotePowerSection {
@@ -91,11 +91,12 @@ contract PoSPool {
 
   RewardSection[] private rewardSections;
   mapping(address => VotePowerSection[]) private votePowerSections;
+  mapping(uint64 => uint64) rewardSectionIndex; // from blockNumber to array index, used to fast find rewardSection
   
   PoolShot private lastPoolShot;
   mapping(address => UserShot) private lastUserShots;
 
-  mapping(address => UserSummary) private userInfos;
+  mapping(address => UserSummary) private userSummaries;
   mapping(address => InOutQueue) private userInqueues;
   mapping(address => InOutQueue) private userOutqueues;
 
@@ -106,7 +107,7 @@ contract PoSPool {
     _;
   }
 
-  function getAdmin() public view returns (address) {
+  function getAdmin() private view returns (address) {
     address _checkAdmin = InternalContracts.ADMIN_CONTROL.getAdmin(address(this));
     return _checkAdmin;
   }
@@ -118,32 +119,19 @@ contract PoSPool {
 
   // ======================== Helpers =========================
 
-  function _moveLockedFromQueueToTotal() private {
-    InOutQueue storage q = userInqueues[msg.sender];
-    uint64 locked = 0;
+  /**
+    sum all ended vote powers in queue and clean them from queue
+   */
+  function _collectEndedVotesFromQueue(InOutQueue storage q) private returns (uint64) {
+    uint64 total = 0;
     for (uint64 i = q.start; i < q.end; i++) {
       if (q.items[i].endBlock >= block.number) {
-        locked += q.items[i].votePower;
-        dequeue(q);
-      } else {
         break;
       }
+      total += q.items[i].votePower;
+      dequeue(q);
     }
-    userInfos[msg.sender].locked += locked;
-  }
-
-  function _moveUnlockedFromQueueToTotal() private {
-    InOutQueue storage q = userOutqueues[msg.sender];
-    uint64 unlocked = 0;
-    for (uint64 i = q.start; i < q.end; i++) {
-      if (q.items[i].endBlock > block.number) {
-        unlocked += q.items[i].votePower;
-        dequeue(q);
-      } else {
-        break;
-      }
-    }
-    userInfos[msg.sender].unlocked += unlocked;
+    return total;
   }
 
   function _updateLastPoolShot() private {
@@ -152,27 +140,37 @@ contract PoSPool {
     lastPoolShot.balance = _selfBalance();
   }
 
-  function _shotPoolSection() private {
-    uint reward = _selfBalance() - lastPoolShot.balance; // TODO check negative situation
+  function _shotRewardSection() private {
+    if (_selfBalance() < lastPoolShot.balance) {
+      revert UnnormalReward(lastPoolShot.balance, lastPoolShot.balance, block.number);
+    }
+    // create startBlock -> index mapping
+    uint64 sectionLen = uint64(rewardSections.length);
+    rewardSectionIndex[lastPoolShot.blockNumber] = sectionLen;
+    // create new section
+    uint reward = _selfBalance().sub(lastPoolShot.balance);
     rewardSections.push(RewardSection({
-      startBlock: lastPoolShot.blockNumber, 
-      endBlock: _blockNumber(), 
-      reward: reward,
-      available: lastPoolShot.available
+      startBlock: lastPoolShot.blockNumber,
+      endBlock: _blockNumber(),
+      available: lastPoolShot.available,
+      reward: reward
     }));
+    // acumulate pool interest
+    uint _poolShare = reward.mul(100 - _poolUserShareRatio).div(100);
+    poolSummary.poolInterest = poolSummary.poolInterest.add(_poolShare);
   }
 
-  function _shotPoolSectionAndUpdateLastShot() private {
-    _shotPoolSection();
+  function _shotRewardSectionAndUpdateLastShot() private {
+    _shotRewardSection();
     _updateLastPoolShot();
   }
 
   function _updateLastUserShot() private {
-    lastUserShots[msg.sender].available = userInfos[msg.sender].available;
+    lastUserShots[msg.sender].available = userSummaries[msg.sender].available;
     lastUserShots[msg.sender].blockNumber = _blockNumber();
   }
 
-  function _shotUserSection() private {
+  function _shotVotePowerSection() private {
     UserShot memory lastShot = lastUserShots[msg.sender];
     if (lastShot.available == 0) {
       return;
@@ -185,12 +183,12 @@ contract PoSPool {
     votePowerSections[msg.sender].push(uSection);
   }
 
-  function _shotUserSectionAndUpdateLastShot() private {
-    _shotUserSection();
+  function _shotVotePowerSectionAndUpdateLastShot() private {
+    _shotVotePowerSection();
     _updateLastUserShot();
   }
 
-  function _selfBalance() private view returns (uint) {
+  function _selfBalance() private view returns (uint256) {
     address self = address(this);
     return self.balance;
   }
@@ -209,12 +207,22 @@ contract PoSPool {
 
   event ClaimInterest(address indexed user, uint256 amount);
 
+  error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
+
   // ======================== Contract methods =========================
 
   constructor() {
     _poolAdmin = msg.sender;
-    poolSummary = PoolSummary(0);
     _poolUserShareRatio = 90; // default user ratio
+    poolSummary = PoolSummary({
+      availableVotes: 0,
+      poolInterest: 0
+    });
+  }
+
+  function setPoolUserShareRatio(uint8 ratio) public onlyAdmin {
+    require(ratio > 0 && ratio <= 100, "ratio should be 1-100");
+    _poolUserShareRatio = ratio;
   }
 
   function register(bytes32 indentifier, bytes calldata blsPubKey, bytes calldata vrfPubKey, bytes[2] calldata blsPubKeyProof) public payable onlyAdmin {
@@ -225,9 +233,9 @@ contract PoSPool {
     _poolRegisted = true;
     // update pool and user info
     poolSummary.availableVotes += votePower;
-    userInfos[msg.sender].votes += votePower;
-    userInfos[msg.sender].available += votePower;
-    userInfos[msg.sender].locked += votePower;
+    userSummaries[msg.sender].votes += votePower;
+    userSummaries[msg.sender].available += votePower;
+    userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
     // update pool and user last shot
     _updateLastUserShot();
     _updateLastPoolShot();
@@ -241,54 +249,81 @@ contract PoSPool {
     emit IncreasePoSStake(msg.sender, votePower);
     //
     poolSummary.availableVotes += votePower;
-    userInfos[msg.sender].votes += votePower;
-    userInfos[msg.sender].available += votePower;
+    userSummaries[msg.sender].votes += votePower;
+    userSummaries[msg.sender].available += votePower;
 
     // put stake info in queue
     InOutQueue storage q = userInqueues[msg.sender];
     enqueue(q, QueueNode(votePower, _blockNumber() + SEVEN_DAY_BLOCK_COUNT));
 
-    _shotUserSectionAndUpdateLastShot();
-    _shotPoolSectionAndUpdateLastShot();
+    _shotVotePowerSectionAndUpdateLastShot();
+    _shotRewardSectionAndUpdateLastShot();
   }
 
   function decreaseStake(uint64 votePower) public onlyRegisted {
-    _moveLockedFromQueueToTotal();
-    require(userInfos[msg.sender].locked >= votePower, "Locked is not enough");
+    userSummaries[msg.sender].locked += _collectEndedVotesFromQueue(userInqueues[msg.sender]);
+    require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
     InternalContracts.POS_REGISTER.retire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
     //
     poolSummary.availableVotes -= votePower;
-    userInfos[msg.sender].available -= votePower;
-    userInfos[msg.sender].locked -= votePower;
+    userSummaries[msg.sender].available -= votePower;
+    userSummaries[msg.sender].locked -= votePower;
 
     //
     InOutQueue storage q = userOutqueues[msg.sender];
     enqueue(q, QueueNode(votePower, _blockNumber() + SEVEN_DAY_BLOCK_COUNT));
 
-    _shotUserSectionAndUpdateLastShot();
-    _shotPoolSectionAndUpdateLastShot();
+    _shotVotePowerSectionAndUpdateLastShot();
+    _shotRewardSectionAndUpdateLastShot();
   }
 
   function withdrawStake(uint64 votePower) public onlyRegisted {
-    _moveUnlockedFromQueueToTotal();
-    require(userInfos[msg.sender].unlocked >= votePower, "Unlocked is not enough");
+    userSummaries[msg.sender].unlocked += _collectEndedVotesFromQueue(userOutqueues[msg.sender]);
+    require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     InternalContracts.STAKING.withdraw(votePower * 100 ether);
 
     //    
-    userInfos[msg.sender].unlocked -= votePower;
-    userInfos[msg.sender].votes -= votePower;
+    userSummaries[msg.sender].unlocked -= votePower;
+    userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
     receiver.transfer(votePower * 100 ether);
     emit WithdrawStake(msg.sender, votePower);
   }
 
-  function userInterest() public view onlyRegisted returns (uint) {
-    uint totalIntereset = 0;
+  function _calculateShare(uint256 reward, uint64 userVotes, uint64 totalVotes) private view returns (uint256) {
+    return reward.mul(userVotes).mul(_poolUserShareRatio).div(totalVotes * 100);
+  }
+
+  function _userLatestInterest() private view onlyRegisted returns (uint256) {
+    uint latestInterest = 0;
+    UserShot memory uShot = lastUserShots[msg.sender];
+    for (uint32 i = 0; i < rewardSections.length; i++) {
+      RewardSection memory pSection = rewardSections[i];
+      if (uShot.blockNumber >= pSection.endBlock) {
+        continue;
+      }
+      uint256 currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
+      latestInterest = latestInterest.add(currentShare);
+    }
+    // include latest not shot reward section
+    if (uShot.blockNumber <= lastPoolShot.blockNumber && _selfBalance() > lastPoolShot.balance) {
+      uint256 latestReward = _selfBalance().sub(lastPoolShot.balance);
+      uint256 currentShare = _calculateShare(latestReward, uShot.available, lastPoolShot.available);
+      latestInterest = latestInterest.add(currentShare);
+    }
+    return latestInterest;
+  }
+
+  function _userSectionInterest() private view onlyRegisted returns (uint256) {
+    uint totalInterest = 0;
     VotePowerSection[] memory uSections = votePowerSections[msg.sender];
     for (uint32 i = 0; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
+      if (pSection.reward == 0) {
+        continue;
+      }
       for (uint32 j = 0; j < uSections.length; j++) {
         if (uSections[j].startBlock >= pSection.endBlock) {
           break;
@@ -300,38 +335,44 @@ contract PoSPool {
         if (!include) {
           continue;
         }
-        totalIntereset += (pSection.reward * _poolUserShareRatio / 100) * uSections[j].available / pSection.available;
+        uint256 currentSectionShare = _calculateShare(pSection.reward, uSections[j].available, pSection.available);
+        totalInterest = totalInterest.add(currentSectionShare);
       }
     }
+    return totalInterest;
+  }
 
-    // calculate lastest section;
-    UserShot memory uShot = lastUserShots[msg.sender];
-    for (uint32 i = 0; i < rewardSections.length; i++) {
-      RewardSection memory pSection = rewardSections[i];
-      if (uShot.blockNumber >= pSection.endBlock) {
-        continue;
-      }
-      totalIntereset += (pSection.reward * _poolUserShareRatio / 100) * uShot.available / pSection.available;
-    }
-    return totalIntereset - userInfos[msg.sender].claimedInterest;
+  function userInterest() public view onlyRegisted returns (uint256) {
+    uint totalInterest = 0;
+    totalInterest = totalInterest.add(_userSectionInterest());
+
+    totalInterest = totalInterest.add(_userLatestInterest());
+    
+    return totalInterest.add(userSummaries[msg.sender].currentInterest);
+  }
+
+  // collet all user interest and clear user's votePowerSections
+  function _collectUserInterest() private onlyRegisted {
+    uint256 collectedInterest = _userSectionInterest();
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
+    delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
   }
 
   function claimInterest(uint amount) public onlyRegisted {
     uint claimableInterest = userInterest();
     require(claimableInterest >= amount, "You can not claim so much interest");
-
-    userInfos[msg.sender].claimedInterest += amount;
-
-    _shotUserSectionAndUpdateLastShot();
-
     /*
       NOTE: The order is important:
       1. shot pool section
       2. send reward
       3. update lastPoolShot
     */
-    _shotPoolSection();
+    _shotVotePowerSectionAndUpdateLastShot();
+    _shotRewardSection();
+    _collectUserInterest();
     //
+    userSummaries[msg.sender].claimedInterest = userSummaries[msg.sender].claimedInterest.add(amount);
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.sub(amount);
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     emit ClaimInterest(msg.sender, amount);
@@ -340,11 +381,11 @@ contract PoSPool {
   }
 
   function userSummary() public view returns (UserSummary memory) {
-    return userInfos[msg.sender];
+    return userSummaries[msg.sender];
   }
 
-  function setPoolUserShareRatio(uint8 ratio) public onlyAdmin {
-    require(ratio > 0 && ratio <= 100, "ratio should be 1-100");
-    _poolUserShareRatio = ratio;
+  function posAddress() public view returns (bytes32) {
+    return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
   }
+
 }
