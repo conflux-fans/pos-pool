@@ -440,19 +440,13 @@ contract PoSPool {
 
   // ====== Debug methods ======
 
-  function _userInQueue(address _address) public view returns (QueueNode[] memory) {
-    InOutQueue storage q = userInqueues[_address];
-    uint64 qLen = q.end - q.start;
-    QueueNode[] memory nodes = new QueueNode[](qLen);
-    uint64 j = 0;
-    for(uint64 i = q.start; i < q.end; i++) {
-      nodes[j++] = q.items[i];
+  function _userInQueue(address _address, bool inOrOut) public view returns (QueueNode[] memory) {
+    InOutQueue storage q;
+    if (inOrOut) {
+      q = userInqueues[_address];
+    } else {
+      q = userOutqueues[_address];
     }
-    return nodes;
-  }
-
-  function _userOutQueue(address _address) public view returns (QueueNode[] memory) {
-    InOutQueue storage q = userOutqueues[_address];
     uint64 qLen = q.end - q.start;
     QueueNode[] memory nodes = new QueueNode[](qLen);
     uint64 j = 0;
