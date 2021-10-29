@@ -18,7 +18,7 @@ contract PoSPool {
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
-  uint32 constant RATIO_BASE = 10000;
+  uint32 constant private RATIO_BASE = 10000;
   
   // ======================== Pool config =========================
 
@@ -96,7 +96,7 @@ contract PoSPool {
 
   RewardSection[] private rewardSections;
   mapping(address => VotePowerSection[]) private votePowerSections;
-  mapping(uint256 => uint256) rewardSectionIndexByBlockNumber; // from blockNumber to section index in array, used to fast find rewardSection
+  mapping(uint256 => uint256) private rewardSectionIndexByBlockNumber; // from blockNumber to section index in array, used to fast find rewardSection
   
   PoolShot private lastPoolShot;
   mapping(address => UserShot) private lastUserShots;
@@ -130,11 +130,22 @@ contract PoSPool {
   function _collectEndedVotesFromQueue(InOutQueue storage q) private returns (uint64) {
     uint64 total = 0;
     for (uint64 i = q.start; i < q.end; i++) {
-      if (q.items[i].endBlock >= block.number) {
+      if (q.items[i].endBlock > block.number) {
         break;
       }
       total += q.items[i].votePower;
       dequeue(q);
+    }
+    return total;
+  }
+
+  function _sumEndedVotesFromQueue(InOutQueue storage q) private view returns (uint64) {
+    uint64 total = 0;
+    for (uint64 i = q.start; i < q.end; i++) {
+      if (q.items[i].endBlock > block.number) {
+        break;
+      }
+      total += q.items[i].votePower;
     }
     return total;
   }
@@ -298,7 +309,6 @@ contract PoSPool {
     userSummaries[msg.sender].unlocked += _collectEndedVotesFromQueue(userOutqueues[msg.sender]);
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     InternalContracts.STAKING.withdraw(votePower * 100 ether);
-
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
@@ -374,12 +384,10 @@ contract PoSPool {
    * Currently user's total interest
   */
   function userInterest(address _address) public view returns (uint256) {
-    uint totalInterest = 0;
-    totalInterest = totalInterest.add(_userSectionInterest(_address));
-
-    totalInterest = totalInterest.add(_userLatestInterest(_address));
-    
-    return totalInterest.add(userSummaries[_address].currentInterest);
+    uint interest = 0;
+    interest = interest.add(_userSectionInterest(_address));
+    interest = interest.add(_userLatestInterest(_address));
+    return interest.add(userSummaries[_address].currentInterest);
   }
 
   // collet all user section interest to currentInterest and clear user's votePowerSections
@@ -418,8 +426,12 @@ contract PoSPool {
   }
 
   function userSummary(address _user) public view returns (UserSummary memory) {
-    // TODO add lockedQueue's ended votes to locked
-    return userSummaries[_user];
+    UserSummary memory summary = userSummaries[_user];
+
+    summary.locked += _sumEndedVotesFromQueue(userInqueues[_user]);
+    summary.unlocked += _sumEndedVotesFromQueue(userOutqueues[_user]);
+
+    return summary;
   }
 
   function posAddress() public view returns (bytes32) {
@@ -457,6 +469,5 @@ contract PoSPool {
   function _votePowerSections(address _address) public view returns (VotePowerSection[] memory) {
     return votePowerSections[_address];
   }
-
 
 }
