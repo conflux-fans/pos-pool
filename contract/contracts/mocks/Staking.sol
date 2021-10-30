@@ -43,6 +43,7 @@ contract FakeStaking {
       return 0;
     }
 
+    // NOTE: need send value when call this method
     function deposit(uint256 amount) public payable {
       _userStakes[msg.sender] = _userStakes[msg.sender].add(amount);
     }

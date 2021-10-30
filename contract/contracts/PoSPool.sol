@@ -1,8 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
+// import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
+import "@confluxfans/contracts/InternalContracts/Staking.sol";
+import "@confluxfans/contracts/InternalContracts/AdminControl.sol";
 
  /**
   * Key points:
@@ -26,6 +29,11 @@ contract PoSPool {
   bool private _poolRegisted;
   uint32 private _poolUserShareRatio; // ratio shared by user: 1-10000
   uint64 private _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
+
+  // Internal contracts
+  AdminControl private constant ADMIN_CONTROL = AdminControl(0x0888000000000000000000000000000000000000);
+  Staking private STAKING = Staking(0x0888000000000000000000000000000000000002);
+  PoSRegister private POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
 
   // ======================== Struct definitions =========================
 
@@ -113,7 +121,7 @@ contract PoSPool {
   }
 
   function getAdmin() private view returns (address) {
-    address _checkAdmin = InternalContracts.ADMIN_CONTROL.getAdmin(address(this));
+    address _checkAdmin = ADMIN_CONTROL.getAdmin(address(this));
     return _checkAdmin;
   }
 
@@ -255,8 +263,8 @@ contract PoSPool {
     require(!_poolRegisted, "Pool is already registed");
     require(votePower == 1, "votePower should be 1");
     require(msg.value == votePower * 100 ether, "The tx value can only be 100 CFX");
-    InternalContracts.STAKING.deposit(msg.value);
-    InternalContracts.POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+    STAKING.deposit(msg.value);
+    POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
     // update pool and user info
     poolSummary.availableVotes += votePower;
@@ -271,8 +279,8 @@ contract PoSPool {
   function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
     require(msg.value == votePower * 100 ether, "The msg.value should be votePower * 100 ether");
-    InternalContracts.STAKING.deposit(msg.value);
-    InternalContracts.POS_REGISTER.increaseStake(votePower);
+    STAKING.deposit(msg.value);
+    POS_REGISTER.increaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
     //
     poolSummary.availableVotes += votePower;
@@ -290,7 +298,7 @@ contract PoSPool {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += _collectEndedVotesFromQueue(userInqueues[msg.sender]);
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
-    InternalContracts.POS_REGISTER.retire(votePower);
+    POS_REGISTER.retire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
     //
     poolSummary.availableVotes -= votePower;
@@ -308,7 +316,7 @@ contract PoSPool {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += _collectEndedVotesFromQueue(userOutqueues[msg.sender]);
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    InternalContracts.STAKING.withdraw(votePower * 100 ether);
+    STAKING.withdraw(votePower * 100 ether);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
@@ -435,7 +443,7 @@ contract PoSPool {
   }
 
   function posAddress() public view returns (bytes32) {
-    return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
+    return POS_REGISTER.addressToIdentifier(address(this));
   }
 
   // ====== Debug methods(will removed when publish) ======
@@ -476,9 +484,17 @@ contract PoSPool {
 
   // used for test
   function _withdrawAll() public onlyAdmin {
-    uint256 _balance = InternalContracts.STAKING.getStakingBalance(address(this));
-    InternalContracts.STAKING.withdraw(_balance);
+    uint256 _balance = STAKING.getStakingBalance(address(this));
+    STAKING.withdraw(_balance);
     address payable receiver = payable(msg.sender);
     receiver.transfer(_balance);
+  }
+
+  function _setStakingContract(address _stakingContractAddress) public onlyAdmin {
+    STAKING = Staking(_stakingContractAddress);
+  }
+
+  function _setPoSRegisterContract(address _posRegisterContractAddress) public onlyAdmin {
+    POS_REGISTER = PoSRegister(_posRegisterContractAddress);
   }
 }
