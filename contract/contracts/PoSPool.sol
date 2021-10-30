@@ -438,9 +438,9 @@ contract PoSPool {
     return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
   }
 
-  // ====== Debug methods ======
+  // ====== Debug methods(will removed when publish) ======
 
-  function _userInQueue(address _address, bool inOrOut) public view returns (QueueNode[] memory) {
+  function _userInOutQueue(address _address, bool inOrOut) public view returns (QueueNode[] memory) {
     InOutQueue storage q;
     if (inOrOut) {
       q = userInqueues[_address];
@@ -464,4 +464,21 @@ contract PoSPool {
     return votePowerSections[_address];
   }
 
+  function _userShot(address _address) public view returns (UserShot memory) {
+    return lastUserShots[_address];
+  }
+
+  function _poolShot() public view returns (PoolShot memory) {
+    return lastPoolShot;
+  }
+
+  receive() external payable {}
+
+  // used for test
+  function _withdrawAll() public onlyAdmin {
+    uint256 _balance = InternalContracts.STAKING.getStakingBalance(address(this));
+    InternalContracts.STAKING.withdraw(_balance);
+    address payable receiver = payable(msg.sender);
+    receiver.transfer(_balance);
+  }
 }
