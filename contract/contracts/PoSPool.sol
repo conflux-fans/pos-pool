@@ -8,21 +8,26 @@ import "@confluxfans/contracts/InternalContracts/AdminControl.sol";
 // import "@confluxfans/contracts/InternalContracts/Staking.sol";
 import "./mocks/Staking.sol"; // NOTE
 
- /**
-  * Key points:
-  * 1. Record pool and user state correctly
-  * 2. Calculate user reward correctly
-  * 
-  * Note:
-  * 1. Do not send CFX directly to the pool contract
-  * 
-  */
+///
+///  @title PoSPool
+///  @author Pana.W
+///  @dev This is Conflux PoS pool contract
+///  @notice Users can use this contract to participate Conflux PoS without running a PoS node.
+///
+///  Key points:
+///  1. Record pool and user state correctly
+///  2. Calculate user reward correctly
+///
+///  Note:
+///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
+///
 contract PoSPool {
   using SafeMath for uint256;
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
   uint32 constant private RATIO_BASE = 10000;
+  uint256 constant private CFX_COUNT_OF_ONE_VOTE = 100 ether; // 
   
   // ======================== Pool config =========================
 
@@ -44,6 +49,13 @@ contract PoSPool {
     uint256 poolInterest;
   }
 
+  /// @title UserSummary
+  /// @custom:field votes User's total votes
+  /// @custom:field available User's avaliable votes
+  /// @custom:field locked
+  /// @custom:field unlocked
+  /// @custom:field claimedInterest
+  /// @custom:field currentInterest
   struct UserSummary {
     uint64 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
     uint64 available; // locking + locked
@@ -117,7 +129,7 @@ contract PoSPool {
   // ======================== Modifiers =========================
 
   modifier onlyAdmin() {
-    require(msg.sender == getAdmin(), "need admin permission");
+    require(msg.sender == getAdmin() || msg.sender == _poolAdmin, "need admin permission");
     _;
   }
 
@@ -244,16 +256,34 @@ contract PoSPool {
     });
   }
 
+  ///
+  /// @notice Enable admin to set the user share ratio
+  /// @dev The ratio base is 10000, only admin can do this
+  /// @param ratio The interest user share ratio (1-10000), default is 9000
+  ///
   function setPoolUserShareRatio(uint8 ratio) public onlyAdmin {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     _poolUserShareRatio = ratio;
   }
 
-  // 10 minutes: 2 * 60 * 10
+  /// 
+  /// @notice Enable admin to set the lock and unlock period
+  /// @dev Only admin can do this
+  /// @param period The lock period in block number, default is seven day's block count
+  ///
   function setLockPeriod(uint64 period) public onlyAdmin {
     _poolLockPeriod = period;
   }
 
+  ///
+  /// @notice Regist the pool contract in PoS internal contract 
+  /// @dev Only admin can do this
+  /// @param indentifier The identifier of PoS node
+  /// @param votePower The vote power when register
+  /// @param blsPubKey The bls public key of PoS node
+  /// @param vrfPubKey The vrf public key of PoS node
+  /// @param blsPubKeyProof The bls public key proof of PoS node
+  ///
   function register(
     bytes32 indentifier,
     uint64 votePower,
@@ -263,7 +293,7 @@ contract PoSPool {
   ) public virtual payable onlyAdmin {
     require(!_poolRegisted, "Pool is already registed");
     require(votePower == 1, "votePower should be 1");
-    require(msg.value == votePower * 100 ether, "The tx value can only be 100 CFX");
+    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The tx value can only be 1000 CFX");
     // STAKING.deposit(msg.value);
     STAKING.deposit{value: msg.value}(msg.value);  // NOTE: interacting with fake staking contract
     POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
@@ -278,9 +308,13 @@ contract PoSPool {
     _updateLastPoolShot();
   }
 
+  ///
+  /// @notice Increase PoS vote power
+  /// @param votePower The number of vote power to increase
+  ///
   function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
-    require(msg.value == votePower * 100 ether, "The msg.value should be votePower * 100 ether");
+    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The msg.value should be votePower * 1000 ether");
     // STAKING.deposit(msg.value);
     STAKING.deposit{value: msg.value}(msg.value);   // NOTE: interacting with fake staking contract
     POS_REGISTER.increaseStake(votePower);
@@ -298,6 +332,10 @@ contract PoSPool {
     _shotRewardSectionAndUpdateLastShot();
   }
 
+  ///
+  /// @notice Decrease PoS vote power
+  /// @param votePower The number of vote power to decrease
+  ///
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += _collectEndedVotesFromQueue(userInqueues[msg.sender]);
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
@@ -316,16 +354,20 @@ contract PoSPool {
     _shotRewardSectionAndUpdateLastShot();
   }
 
+  ///
+  /// @notice Withdraw PoS vote power
+  /// @param votePower The number of vote power to withdraw
+  ///
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += _collectEndedVotesFromQueue(userOutqueues[msg.sender]);
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    STAKING.withdraw(votePower * 100 ether);
+    STAKING.withdraw(votePower * CFX_COUNT_OF_ONE_VOTE);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
-    receiver.transfer(votePower * 100 ether);
+    receiver.transfer(votePower * CFX_COUNT_OF_ONE_VOTE);
     emit WithdrawStake(msg.sender, votePower);
   }
 
@@ -391,9 +433,11 @@ contract PoSPool {
     return totalInterest;
   }
 
-  /*
-   * Currently user's total interest
-  */
+  ///
+  /// @notice User's interest from participate PoS
+  /// @param _address The address of user to query
+  /// @return CFX interest in Drip
+  ///
   function userInterest(address _address) public view returns (uint256) {
     uint interest = 0;
     interest = interest.add(_userSectionInterest(_address));
@@ -408,6 +452,10 @@ contract PoSPool {
     delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
   }
 
+  ///
+  /// @notice Claim specific amount user interest
+  /// @param amount The amount of interest to claim
+  ///
   function claimInterest(uint amount) public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "You can not claim so much interest");
@@ -430,12 +478,20 @@ contract PoSPool {
     _updateLastPoolShot();
   }
 
+  ///
+  /// @notice Claim one user's all interest
+  ///
   function claimAllInterest() public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest > 0, "You can not claim so much interest");
     claimInterest(claimableInterest);
   }
 
+  /// 
+  /// @notice Get user's pool summary
+  /// @param _user The address of user to query
+  /// @return User's summary
+  ///
   function userSummary(address _user) public view returns (UserSummary memory) {
     UserSummary memory summary = userSummaries[_user];
 
@@ -445,7 +501,11 @@ contract PoSPool {
     return summary;
   }
 
-  function posAddress() public view returns (bytes32) {
+  /// 
+  /// @notice Query pools contract address
+  /// @return Pool's PoS address
+  ///
+  function posAddress() public view onlyRegisted returns (bytes32) {
     return POS_REGISTER.addressToIdentifier(address(this));
   }
 
