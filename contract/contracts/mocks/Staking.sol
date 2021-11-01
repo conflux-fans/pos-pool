@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract Staking {
+contract MockStaking {
     using SafeMath for uint256;
 
     address private _admin;
@@ -67,12 +67,12 @@ contract Staking {
     }
 
     // send one user's interest
-    function _sendInterest(address _user) public payable {
+    function _sendUserInterest(address _user) public payable {
       require(msg.sender == _admin, "Only admin can add interest");
       require(_userStakes[_user] > 0, "User has no staking balance");
 
       uint256 interest = _userStakes[_user].mul(400).div(10000);  // TODO use a more realistic interest rate
-      address payable receiver = payable(msg.sender);
+      address payable receiver = payable(_user);
       receiver.transfer(interest);
     }
 }

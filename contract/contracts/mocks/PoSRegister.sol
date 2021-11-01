@@ -4,7 +4,7 @@ pragma solidity >=0.8.0;
 /**
 * This is a fake empty contract for testing purpose.
 */ 
-contract PoSRegister {
+contract MockPoSRegister {
 
   mapping(address => bytes32) private addressToIdentifierMap;
   mapping(bytes32 => address) private identifierToAddressMap;
@@ -12,7 +12,7 @@ contract PoSRegister {
   mapping(address => uint64) private userVotes;
   mapping(address => uint64) private userUnlockedVotes;
 
-  function _addressToBytes(address a) public pure returns (bytes memory b){
+  /* function _addressToBytes(address a) public pure returns (bytes memory b){
     assembly {
         let m := mload(0x40)
         a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
@@ -20,7 +20,7 @@ contract PoSRegister {
         mstore(0x40, add(m, 52))
         b := m
     }
-  }
+  } */
 
   /**
      * @dev Register PoS account
@@ -36,18 +36,18 @@ contract PoSRegister {
         bytes calldata blsPubKey,
         bytes calldata vrfPubKey,
         bytes[2] calldata blsPubKeyProof
-    ) external {
-      bytes32 _identifier = keccak256(_addressToBytes(msg.sender));
-      addressToIdentifierMap[msg.sender] = _identifier;
-      identifierToAddressMap[_identifier] = msg.sender;
-      emit Register(_identifier, blsPubKey, vrfPubKey);
+    ) public {
+      // bytes32 _identifier = keccak256(_addressToBytes(msg.sender));
+      addressToIdentifierMap[msg.sender] = indentifier;
+      identifierToAddressMap[indentifier] = msg.sender;
+      emit Register(indentifier, blsPubKey, vrfPubKey);
     }
 
     /**
      * @dev Increase specified number votes for msg.sender
      * @param votePower - count of votes to increase
      */
-    function increaseStake(uint64 votePower) external {
+    function increaseStake(uint64 votePower) public {
       userVotes[msg.sender] += votePower;
       emit IncreaseStake(addressToIdentifierMap[msg.sender], votePower);
     }
@@ -56,7 +56,7 @@ contract PoSRegister {
      * @dev Retire specified number votes for msg.sender
      * @param votePower - count of votes to retire
      */
-    function retire(uint64 votePower) external {
+    function retire(uint64 votePower) public {
       // TODO add delay seven days logic
       userUnlockedVotes[msg.sender] += votePower;
       emit Retire(addressToIdentifierMap[msg.sender], votePower);
@@ -66,7 +66,7 @@ contract PoSRegister {
      * @dev Query PoS account's lock info. Include "totalStakedVotes" and "totalUnlockedVotes"
      * @param identifier - PoS address
      */
-    function getVotes(bytes32 identifier) external view returns (uint256, uint256) {
+    function getVotes(bytes32 identifier) public view returns (uint256, uint256) {
       address _address = identifierToAddressMap[identifier];
       return (userVotes[_address], userUnlockedVotes[_address]);
     }
@@ -75,7 +75,7 @@ contract PoSRegister {
      * @dev Query the PoW address binding with specified PoS address
      * @param identifier - PoS address
      */
-    function identifierToAddress(bytes32 identifier) external view returns (address) {
+    function identifierToAddress(bytes32 identifier) public view returns (address) {
       return identifierToAddressMap[identifier];
     }
 
@@ -83,7 +83,7 @@ contract PoSRegister {
      * @dev Query the PoS address binding with specified PoW address
      * @param addr - PoW address
      */
-    function addressToIdentifier(address addr) external view returns (bytes32) {
+    function addressToIdentifier(address addr) public view returns (bytes32) {
       return addressToIdentifierMap[addr];
     }
 

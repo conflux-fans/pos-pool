@@ -1,4 +1,4 @@
-const { expect } = require("chai");
+/* const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Greeter", function () {
@@ -15,5 +15,12 @@ describe("Greeter", function () {
     await setGreetingTx.wait();
 
     expect(await greeter.greet()).to.equal("Hola, mundo!");
+
+    const blockNumBefore = await ethers.provider.getBlockNumber();
+    await ethers.provider.send("evm_mine");
+    await ethers.provider.send("evm_mine");
+    const blockNumAfter = await ethers.provider.getBlockNumber();
+    expect(blockNumAfter - blockNumBefore).to.equal(2);
   });
 });
+ */

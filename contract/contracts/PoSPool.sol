@@ -1,12 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-// import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
+import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
-import "@confluxfans/contracts/InternalContracts/AdminControl.sol";
-// import "@confluxfans/contracts/InternalContracts/Staking.sol";
-import "./mocks/Staking.sol"; // NOTE
 
 ///
 ///  @title PoSPool
@@ -27,7 +23,7 @@ contract PoSPool {
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
   uint32 constant private RATIO_BASE = 10000;
-  uint256 constant private CFX_COUNT_OF_ONE_VOTE = 100 ether; // 
+  uint256 constant private CFX_COUNT_OF_ONE_VOTE = 100 ether; // NOTE: mainnet will be 1000
   
   // ======================== Pool config =========================
 
@@ -35,11 +31,6 @@ contract PoSPool {
   bool private _poolRegisted;
   uint32 private _poolUserShareRatio; // ratio shared by user: 1-10000
   uint64 private _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
-
-  // Internal contracts
-  AdminControl private constant ADMIN_CONTROL = AdminControl(0x0888000000000000000000000000000000000000);
-  Staking private STAKING = Staking(0x0888000000000000000000000000000000000002);
-  PoSRegister private POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
 
   // ======================== Struct definitions =========================
 
@@ -129,14 +120,14 @@ contract PoSPool {
   // ======================== Modifiers =========================
 
   modifier onlyAdmin() {
-    require(msg.sender == getAdmin() || msg.sender == _poolAdmin, "need admin permission");
+    require(msg.sender == _poolAdmin, "need admin permission");
     _;
   }
 
-  function getAdmin() private view returns (address) {
-    address _checkAdmin = ADMIN_CONTROL.getAdmin(address(this));
+  /* function getAdmin() private view returns (address) {
+    address _checkAdmin = InternalContracts.ADMIN_CONTROL.getAdmin(address(this));
     return _checkAdmin;
-  }
+  } */
 
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -181,7 +172,7 @@ contract PoSPool {
     if (_selfBalance() < lastPoolShot.balance) {
       revert UnnormalReward(lastPoolShot.balance, _selfBalance(), block.number);
     }
-    // create startBlock number -> section index mapping
+    // create section startBlock number -> section index mapping
     rewardSectionIndexByBlockNumber[lastPoolShot.blockNumber] = rewardSections.length;
     // save new section
     uint reward = _selfBalance().sub(lastPoolShot.balance);
@@ -233,6 +224,32 @@ contract PoSPool {
     return uint64(block.number);
   }
 
+  function _stakingDeposit(uint256 _amount) public virtual {
+    InternalContracts.STAKING.deposit(_amount);
+  }
+
+  function _stakingWithdraw(uint256 _amount) public virtual {
+    InternalContracts.STAKING.withdraw(_amount);
+  }
+
+  function _posRegisterRegister(
+    bytes32 indentifier,
+    uint64 votePower,
+    bytes calldata blsPubKey,
+    bytes calldata vrfPubKey,
+    bytes[2] calldata blsPubKeyProof
+  ) public virtual {
+    InternalContracts.POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+  }
+
+  function _posRegisterIncreaseStake(uint64 votePower) public virtual {
+    InternalContracts.POS_REGISTER.increaseStake(votePower);
+  }
+
+  function _posRegisterRetire(uint64 votePower) public virtual {
+    InternalContracts.POS_REGISTER.retire(votePower);
+  }
+
   // ======================== Events =========================
 
   event IncreasePoSStake(address indexed user, uint64 votePower);
@@ -242,6 +259,8 @@ contract PoSPool {
   event WithdrawStake(address indexed user, uint64 votePower);
 
   event ClaimInterest(address indexed user, uint256 amount);
+
+  event RatioChanged(uint32 ratio);
 
   error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
@@ -264,6 +283,7 @@ contract PoSPool {
   function setPoolUserShareRatio(uint8 ratio) public onlyAdmin {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     _poolUserShareRatio = ratio;
+    emit RatioChanged(ratio);
   }
 
   /// 
@@ -294,16 +314,15 @@ contract PoSPool {
     require(!_poolRegisted, "Pool is already registed");
     require(votePower == 1, "votePower should be 1");
     require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The tx value can only be 1000 CFX");
-    // STAKING.deposit(msg.value);
-    STAKING.deposit{value: msg.value}(msg.value);  // NOTE: interacting with fake staking contract
-    POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+    _stakingDeposit(msg.value);
+    _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
     // update pool and user info
     poolSummary.availableVotes += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
-    // update pool and user last shot
+    // create the initial shot of pool and admin
     _updateLastUserShot();
     _updateLastPoolShot();
   }
@@ -315,9 +334,8 @@ contract PoSPool {
   function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
     require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The msg.value should be votePower * 1000 ether");
-    // STAKING.deposit(msg.value);
-    STAKING.deposit{value: msg.value}(msg.value);   // NOTE: interacting with fake staking contract
-    POS_REGISTER.increaseStake(votePower);
+    _stakingDeposit(msg.value);
+    _posRegisterIncreaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
     //
     poolSummary.availableVotes += votePower;
@@ -339,7 +357,7 @@ contract PoSPool {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += _collectEndedVotesFromQueue(userInqueues[msg.sender]);
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
-    POS_REGISTER.retire(votePower);
+    _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
     //
     poolSummary.availableVotes -= votePower;
@@ -361,7 +379,7 @@ contract PoSPool {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += _collectEndedVotesFromQueue(userOutqueues[msg.sender]);
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    STAKING.withdraw(votePower * CFX_COUNT_OF_ONE_VOTE);
+    _stakingWithdraw(votePower * CFX_COUNT_OF_ONE_VOTE);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
@@ -506,10 +524,10 @@ contract PoSPool {
   /// @return Pool's PoS address
   ///
   function posAddress() public view onlyRegisted returns (bytes32) {
-    return POS_REGISTER.addressToIdentifier(address(this));
+    return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
   }
 
-  // ====== Debug methods(will removed when publish) ======
+  // ======================== debug methods =====================
 
   function _userInOutQueue(address _address, bool inOrOut) public view returns (QueueNode[] memory) {
     InOutQueue storage q;
@@ -535,6 +553,14 @@ contract PoSPool {
     return votePowerSections[_address];
   }
 
+  function _lastRewardSection() public view returns (RewardSection memory) {
+    return rewardSections[rewardSections.length - 1];
+  }
+
+  function _lastVotePowerSection(address _address) public view returns (VotePowerSection memory) {
+    return votePowerSections[_address][votePowerSections[_address].length - 1];
+  }
+
   function _userShot(address _address) public view returns (UserShot memory) {
     return lastUserShots[_address];
   }
@@ -543,21 +569,11 @@ contract PoSPool {
     return lastPoolShot;
   }
 
-  receive() external payable {}
-
-  // used for test
   function _withdrawAll() public onlyAdmin {
-    uint256 _balance = STAKING.getStakingBalance(address(this));
-    STAKING.withdraw(_balance);
+    uint256 _balance = InternalContracts.STAKING.getStakingBalance(address(this));
+    InternalContracts.STAKING.withdraw(_balance);
     address payable receiver = payable(msg.sender);
     receiver.transfer(_balance);
   }
 
-  function _setStakingContract(address _stakingContractAddress) public onlyAdmin {
-    STAKING = Staking(_stakingContractAddress);
-  }
-
-  function _setPoSRegisterContract(address _posRegisterContractAddress) public onlyAdmin {
-    POS_REGISTER = PoSRegister(_posRegisterContractAddress);
-  }
 }
