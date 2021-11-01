@@ -47,10 +47,10 @@ describe("Staking", async function () {
     await registTx.wait();
 
     let poolSummary = await pool.poolSummary();
-    expect(poolSummary.availableVotes).to.equal(1);
-    expect(poolSummary.poolInterest).to.equal(0);
+    expect(poolSummary.available).to.equal(1);
+    expect(poolSummary.interest).to.equal(0);
 
-    let lastPoolAvailable = poolSummary.availableVotes;
+    let lastPoolAvailable = poolSummary.available;
 
     // ==================================== Test A increase stake
     // total 11
@@ -73,9 +73,9 @@ describe("Staking", async function () {
     expect(lastRewardSection.available).to.equal(lastPoolAvailable);
 
     poolSummary = await pool.poolSummary();
-    expect(poolSummary.availableVotes).to.equal(11);
+    expect(poolSummary.available).to.equal(11);
 
-    lastPoolAvailable = poolSummary.availableVotes;
+    lastPoolAvailable = poolSummary.available;
 
     // ====================================== Test B increase stake
     // total 14
@@ -85,7 +85,7 @@ describe("Staking", async function () {
     await increaseTx2.wait();
 
     poolSummary = await pool.poolSummary();
-    expect(poolSummary.availableVotes).to.equal(14);
+    expect(poolSummary.available).to.equal(14);
 
     lastRewardSection = await pool._lastRewardSection();
     expect(lastRewardSection.available).to.equal(lastPoolAvailable);
@@ -100,7 +100,7 @@ describe("Staking", async function () {
     let user2Shot = await pool._userShot(accounts[1].address);
     expect(user2Shot.available).to.equal(3);
 
-    lastPoolAvailable = poolSummary.availableVotes;
+    lastPoolAvailable = poolSummary.available;
 
     let poolStakeBalance = await staking.getStakingBalance(pool.address);
     expect(ethers.utils.formatEther(poolStakeBalance)).to.equal(
@@ -119,7 +119,7 @@ describe("Staking", async function () {
     await decreaseTx.wait();
 
     poolSummary = await pool.poolSummary();
-    expect(poolSummary.availableVotes).to.equal(9);
+    expect(poolSummary.available).to.equal(9);
 
     lastRewardSection = await pool._lastRewardSection();
     expect(lastRewardSection.available).to.equal(lastPoolAvailable);
@@ -127,7 +127,7 @@ describe("Staking", async function () {
       poolStakeBalance.mul(400).div(10000)
     );
 
-    expect(poolSummary.poolInterest).to.equal(
+    expect(poolSummary.interest).to.equal(
       lastRewardSection.reward.mul(1000).div(10000)
     );
 

@@ -36,8 +36,8 @@ contract PoSPool {
 
   struct PoolSummary {
     // uint64 allVotes;  // can get through PoS RPC
-    uint64 availableVotes;
-    uint256 poolInterest;
+    uint64 available;
+    uint256 interest;
   }
 
   /// @title UserSummary
@@ -163,7 +163,7 @@ contract PoSPool {
   }
 
   function _updateLastPoolShot() private {
-    lastPoolShot.available = poolSummary.availableVotes;
+    lastPoolShot.available = poolSummary.available;
     lastPoolShot.blockNumber = _blockNumber();
     lastPoolShot.balance = _selfBalance();
   }
@@ -184,7 +184,7 @@ contract PoSPool {
     }));
     // acumulate pool interest
     uint _poolShare = reward.mul(RATIO_BASE - _poolUserShareRatio).div(RATIO_BASE);
-    poolSummary.poolInterest = poolSummary.poolInterest.add(_poolShare);
+    poolSummary.interest = poolSummary.interest.add(_poolShare);
   }
 
   function _shotRewardSectionAndUpdateLastShot() private {
@@ -270,8 +270,8 @@ contract PoSPool {
     _poolAdmin = msg.sender;
     _poolUserShareRatio = 9000; // default user ratio
     poolSummary = PoolSummary({
-      availableVotes: 0,
-      poolInterest: 0
+      available: 0,
+      interest: 0
     });
   }
 
@@ -318,7 +318,7 @@ contract PoSPool {
     _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
     // update pool and user info
-    poolSummary.availableVotes += votePower;
+    poolSummary.available += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
@@ -338,7 +338,7 @@ contract PoSPool {
     _posRegisterIncreaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
     //
-    poolSummary.availableVotes += votePower;
+    poolSummary.available += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
 
@@ -360,7 +360,7 @@ contract PoSPool {
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
     //
-    poolSummary.availableVotes -= votePower;
+    poolSummary.available -= votePower;
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
 
