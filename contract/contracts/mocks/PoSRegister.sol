@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
-
 /**
 * This is a fake empty contract for testing purpose.
 */ 
-contract FakePoSRegister is PoSRegister {
+contract PoSRegister {
 
   mapping(address => bytes32) private addressToIdentifierMap;
   mapping(bytes32 => address) private identifierToAddressMap;
@@ -38,7 +36,7 @@ contract FakePoSRegister is PoSRegister {
         bytes calldata blsPubKey,
         bytes calldata vrfPubKey,
         bytes[2] calldata blsPubKeyProof
-    ) external override {
+    ) external {
       bytes32 _identifier = keccak256(_addressToBytes(msg.sender));
       addressToIdentifierMap[msg.sender] = _identifier;
       identifierToAddressMap[_identifier] = msg.sender;
@@ -49,7 +47,7 @@ contract FakePoSRegister is PoSRegister {
      * @dev Increase specified number votes for msg.sender
      * @param votePower - count of votes to increase
      */
-    function increaseStake(uint64 votePower) external override {
+    function increaseStake(uint64 votePower) external {
       userVotes[msg.sender] += votePower;
       emit IncreaseStake(addressToIdentifierMap[msg.sender], votePower);
     }
@@ -58,7 +56,7 @@ contract FakePoSRegister is PoSRegister {
      * @dev Retire specified number votes for msg.sender
      * @param votePower - count of votes to retire
      */
-    function retire(uint64 votePower) external override {
+    function retire(uint64 votePower) external {
       // TODO add delay seven days logic
       userUnlockedVotes[msg.sender] += votePower;
       emit Retire(addressToIdentifierMap[msg.sender], votePower);
@@ -68,7 +66,7 @@ contract FakePoSRegister is PoSRegister {
      * @dev Query PoS account's lock info. Include "totalStakedVotes" and "totalUnlockedVotes"
      * @param identifier - PoS address
      */
-    function getVotes(bytes32 identifier) external override view returns (uint256, uint256) {
+    function getVotes(bytes32 identifier) external view returns (uint256, uint256) {
       address _address = identifierToAddressMap[identifier];
       return (userVotes[_address], userUnlockedVotes[_address]);
     }
@@ -77,7 +75,7 @@ contract FakePoSRegister is PoSRegister {
      * @dev Query the PoW address binding with specified PoS address
      * @param identifier - PoS address
      */
-    function identifierToAddress(bytes32 identifier) external override view returns (address) {
+    function identifierToAddress(bytes32 identifier) external view returns (address) {
       return identifierToAddressMap[identifier];
     }
 
@@ -85,7 +83,22 @@ contract FakePoSRegister is PoSRegister {
      * @dev Query the PoS address binding with specified PoW address
      * @param addr - PoW address
      */
-    function addressToIdentifier(address addr) external override view returns (bytes32) {
+    function addressToIdentifier(address addr) external view returns (bytes32) {
       return addressToIdentifierMap[addr];
     }
+
+    /**
+     * @dev Emitted when register method executed successfully
+     */
+    event Register(bytes32 indexed identifier, bytes blsPubKey, bytes vrfPubKey);
+
+    /**
+     * @dev Emitted when increaseStake method executed successfully
+     */
+    event IncreaseStake(bytes32 indexed identifier, uint64 votePower);
+
+    /**
+     * @dev Emitted when retire method executed successfully
+     */
+    event Retire(bytes32 indexed identifier, uint64 votePower);
 }

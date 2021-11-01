@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 // import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
-import "@confluxfans/contracts/InternalContracts/Staking.sol";
 import "@confluxfans/contracts/InternalContracts/AdminControl.sol";
+// import "@confluxfans/contracts/InternalContracts/Staking.sol";
+import "./mocks/Staking.sol"; // NOTE
 
  /**
   * Key points:
@@ -263,7 +264,8 @@ contract PoSPool {
     require(!_poolRegisted, "Pool is already registed");
     require(votePower == 1, "votePower should be 1");
     require(msg.value == votePower * 100 ether, "The tx value can only be 100 CFX");
-    STAKING.deposit(msg.value);
+    // STAKING.deposit(msg.value);
+    STAKING.deposit{value: msg.value}(msg.value);  // NOTE: interacting with fake staking contract
     POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
     // update pool and user info
@@ -279,7 +281,8 @@ contract PoSPool {
   function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
     require(msg.value == votePower * 100 ether, "The msg.value should be votePower * 100 ether");
-    STAKING.deposit(msg.value);
+    // STAKING.deposit(msg.value);
+    STAKING.deposit{value: msg.value}(msg.value);   // NOTE: interacting with fake staking contract
     POS_REGISTER.increaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
     //
