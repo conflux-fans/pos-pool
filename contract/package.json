@@ -4,7 +4,7 @@
   "description": "Solidity contract of pos-pool",
   "main": "index.js",
   "dependencies": {
-    "@confluxfans/contracts": "^0.2.3",
+    "@confluxfans/contracts": "^0.2.4",
     "@openzeppelin/contracts": "^4.3.2",
     "js-conflux-sdk": "^2.0.0-beta.1"
   },
