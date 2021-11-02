@@ -4,32 +4,49 @@ pragma solidity ^0.8.0;
 import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-/**
-  TODO
-  1. deal pool retired situation
-  2. upgradable
-  3, multi-pool
- */
+///
+///  @title PoSPool
+///  @author Pana.W
+///  @dev This is Conflux PoS pool contract
+///  @notice Users can use this contract to participate Conflux PoS without running a PoS node.
+///
+///  Key points:
+///  1. Record pool and user state correctly
+///  2. Calculate user reward correctly
+///
+///  Note:
+///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
+///
 contract PoSPool {
   using SafeMath for uint256;
 
-  uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 60 * 60 * 24;
+  uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
-
+  uint32 constant private RATIO_BASE = 10000;
+  uint256 constant private CFX_COUNT_OF_ONE_VOTE = 100 ether; // NOTE: mainnet will be 1000
+  
   // ======================== Pool config =========================
 
   address private _poolAdmin;
   bool private _poolRegisted;
-  uint8 private _poolUserShareRatio; // ratio shared by user: 1-100
+  uint32 private _poolUserShareRatio; // ratio shared by user: 1-10000
+  uint64 private _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
 
   // ======================== Struct definitions =========================
 
   struct PoolSummary {
     // uint64 allVotes;  // can get through PoS RPC
-    uint64 availableVotes;
-    uint256 poolInterest;
+    uint64 available;
+    uint256 interest;
   }
 
+  /// @title UserSummary
+  /// @custom:field votes User's total votes
+  /// @custom:field available User's avaliable votes
+  /// @custom:field locked
+  /// @custom:field unlocked
+  /// @custom:field claimedInterest
+  /// @custom:field currentInterest
   struct UserSummary {
     uint64 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
     uint64 available; // locking + locked
@@ -40,7 +57,7 @@ contract PoSPool {
   }
 
   struct PoolShot {
-    uint64 available; // available votes
+    uint64 available;
     uint64 blockNumber;
     uint256 balance;
   } 
@@ -91,7 +108,7 @@ contract PoSPool {
 
   RewardSection[] private rewardSections;
   mapping(address => VotePowerSection[]) private votePowerSections;
-  mapping(uint64 => uint64) rewardSectionIndex; // from blockNumber to array index, used to fast find rewardSection
+  mapping(uint256 => uint256) private rewardSectionIndexByBlockNumber; // from blockNumber to section index in array, used to fast find rewardSection
   
   PoolShot private lastPoolShot;
   mapping(address => UserShot) private lastUserShots;
@@ -103,14 +120,14 @@ contract PoSPool {
   // ======================== Modifiers =========================
 
   modifier onlyAdmin() {
-    require(msg.sender == getAdmin(), "need admin permission");
+    require(msg.sender == _poolAdmin, "need admin permission");
     _;
   }
 
-  function getAdmin() private view returns (address) {
+  /* function getAdmin() private view returns (address) {
     address _checkAdmin = InternalContracts.ADMIN_CONTROL.getAdmin(address(this));
     return _checkAdmin;
-  }
+  } */
 
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -125,7 +142,7 @@ contract PoSPool {
   function _collectEndedVotesFromQueue(InOutQueue storage q) private returns (uint64) {
     uint64 total = 0;
     for (uint64 i = q.start; i < q.end; i++) {
-      if (q.items[i].endBlock >= block.number) {
+      if (q.items[i].endBlock > block.number) {
         break;
       }
       total += q.items[i].votePower;
@@ -134,20 +151,30 @@ contract PoSPool {
     return total;
   }
 
+  function _sumEndedVotesFromQueue(InOutQueue storage q) private view returns (uint64) {
+    uint64 total = 0;
+    for (uint64 i = q.start; i < q.end; i++) {
+      if (q.items[i].endBlock > block.number) {
+        break;
+      }
+      total += q.items[i].votePower;
+    }
+    return total;
+  }
+
   function _updateLastPoolShot() private {
-    lastPoolShot.available = poolSummary.availableVotes;
+    lastPoolShot.available = poolSummary.available;
     lastPoolShot.blockNumber = _blockNumber();
     lastPoolShot.balance = _selfBalance();
   }
 
   function _shotRewardSection() private {
     if (_selfBalance() < lastPoolShot.balance) {
-      revert UnnormalReward(lastPoolShot.balance, lastPoolShot.balance, block.number);
+      revert UnnormalReward(lastPoolShot.balance, _selfBalance(), block.number);
     }
-    // create startBlock -> index mapping
-    uint64 sectionLen = uint64(rewardSections.length);
-    rewardSectionIndex[lastPoolShot.blockNumber] = sectionLen;
-    // create new section
+    // create section startBlock number -> section index mapping
+    rewardSectionIndexByBlockNumber[lastPoolShot.blockNumber] = rewardSections.length;
+    // save new section
     uint reward = _selfBalance().sub(lastPoolShot.balance);
     rewardSections.push(RewardSection({
       startBlock: lastPoolShot.blockNumber,
@@ -156,8 +183,8 @@ contract PoSPool {
       reward: reward
     }));
     // acumulate pool interest
-    uint _poolShare = reward.mul(100 - _poolUserShareRatio).div(100);
-    poolSummary.poolInterest = poolSummary.poolInterest.add(_poolShare);
+    uint _poolShare = reward.mul(RATIO_BASE - _poolUserShareRatio).div(RATIO_BASE);
+    poolSummary.interest = poolSummary.interest.add(_poolShare);
   }
 
   function _shotRewardSectionAndUpdateLastShot() private {
@@ -197,6 +224,32 @@ contract PoSPool {
     return uint64(block.number);
   }
 
+  function _stakingDeposit(uint256 _amount) public virtual {
+    InternalContracts.STAKING.deposit(_amount);
+  }
+
+  function _stakingWithdraw(uint256 _amount) public virtual {
+    InternalContracts.STAKING.withdraw(_amount);
+  }
+
+  function _posRegisterRegister(
+    bytes32 indentifier,
+    uint64 votePower,
+    bytes calldata blsPubKey,
+    bytes calldata vrfPubKey,
+    bytes[2] calldata blsPubKeyProof
+  ) public virtual {
+    InternalContracts.POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+  }
+
+  function _posRegisterIncreaseStake(uint64 votePower) public virtual {
+    InternalContracts.POS_REGISTER.increaseStake(votePower);
+  }
+
+  function _posRegisterRetire(uint64 votePower) public virtual {
+    InternalContracts.POS_REGISTER.retire(votePower);
+  }
+
   // ======================== Events =========================
 
   event IncreasePoSStake(address indexed user, uint64 votePower);
@@ -207,102 +260,151 @@ contract PoSPool {
 
   event ClaimInterest(address indexed user, uint256 amount);
 
+  event RatioChanged(uint32 ratio);
+
   error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
   // ======================== Contract methods =========================
 
   constructor() {
     _poolAdmin = msg.sender;
-    _poolUserShareRatio = 90; // default user ratio
+    _poolUserShareRatio = 9000; // default user ratio
     poolSummary = PoolSummary({
-      availableVotes: 0,
-      poolInterest: 0
+      available: 0,
+      interest: 0
     });
   }
 
+  ///
+  /// @notice Enable admin to set the user share ratio
+  /// @dev The ratio base is 10000, only admin can do this
+  /// @param ratio The interest user share ratio (1-10000), default is 9000
+  ///
   function setPoolUserShareRatio(uint8 ratio) public onlyAdmin {
-    require(ratio > 0 && ratio <= 100, "ratio should be 1-100");
+    require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     _poolUserShareRatio = ratio;
+    emit RatioChanged(ratio);
   }
 
-  function register(bytes32 indentifier, bytes calldata blsPubKey, bytes calldata vrfPubKey, bytes[2] calldata blsPubKeyProof) public payable onlyAdmin {
-    uint64 votePower = 1;
-    require(msg.value == votePower * 100 ether, "The tx value can only be 100 CFX");
-    InternalContracts.STAKING.deposit(msg.value);
-    InternalContracts.POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+  /// 
+  /// @notice Enable admin to set the lock and unlock period
+  /// @dev Only admin can do this
+  /// @param period The lock period in block number, default is seven day's block count
+  ///
+  function setLockPeriod(uint64 period) public onlyAdmin {
+    _poolLockPeriod = period;
+  }
+
+  ///
+  /// @notice Regist the pool contract in PoS internal contract 
+  /// @dev Only admin can do this
+  /// @param indentifier The identifier of PoS node
+  /// @param votePower The vote power when register
+  /// @param blsPubKey The bls public key of PoS node
+  /// @param vrfPubKey The vrf public key of PoS node
+  /// @param blsPubKeyProof The bls public key proof of PoS node
+  ///
+  function register(
+    bytes32 indentifier,
+    uint64 votePower,
+    bytes calldata blsPubKey,
+    bytes calldata vrfPubKey,
+    bytes[2] calldata blsPubKeyProof
+  ) public virtual payable onlyAdmin {
+    require(!_poolRegisted, "Pool is already registed");
+    require(votePower == 1, "votePower should be 1");
+    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The tx value can only be 1000 CFX");
+    _stakingDeposit(msg.value);
+    _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
     // update pool and user info
-    poolSummary.availableVotes += votePower;
+    poolSummary.available += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
-    // update pool and user last shot
+    // create the initial shot of pool and admin
     _updateLastUserShot();
     _updateLastPoolShot();
   }
 
-  function increaseStake(uint64 votePower) public payable onlyRegisted {
+  ///
+  /// @notice Increase PoS vote power
+  /// @param votePower The number of vote power to increase
+  ///
+  function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
-    require(msg.value == votePower * 100 ether, "The msg.value should be votePower * 100 ether");
-    InternalContracts.STAKING.deposit(msg.value);
-    InternalContracts.POS_REGISTER.increaseStake(votePower);
+    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The msg.value should be votePower * 1000 ether");
+    _stakingDeposit(msg.value);
+    _posRegisterIncreaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
     //
-    poolSummary.availableVotes += votePower;
+    poolSummary.available += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
 
     // put stake info in queue
     InOutQueue storage q = userInqueues[msg.sender];
-    enqueue(q, QueueNode(votePower, _blockNumber() + SEVEN_DAY_BLOCK_COUNT));
+    enqueue(q, QueueNode(votePower, _blockNumber() + _poolLockPeriod));
 
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSectionAndUpdateLastShot();
   }
 
-  function decreaseStake(uint64 votePower) public onlyRegisted {
+  ///
+  /// @notice Decrease PoS vote power
+  /// @param votePower The number of vote power to decrease
+  ///
+  function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += _collectEndedVotesFromQueue(userInqueues[msg.sender]);
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
-    InternalContracts.POS_REGISTER.retire(votePower);
+    _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
     //
-    poolSummary.availableVotes -= votePower;
+    poolSummary.available -= votePower;
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
 
     //
     InOutQueue storage q = userOutqueues[msg.sender];
-    enqueue(q, QueueNode(votePower, _blockNumber() + SEVEN_DAY_BLOCK_COUNT));
+    enqueue(q, QueueNode(votePower, _blockNumber() + _poolLockPeriod));
 
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSectionAndUpdateLastShot();
   }
 
+  ///
+  /// @notice Withdraw PoS vote power
+  /// @param votePower The number of vote power to withdraw
+  ///
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += _collectEndedVotesFromQueue(userOutqueues[msg.sender]);
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    InternalContracts.STAKING.withdraw(votePower * 100 ether);
-
+    _stakingWithdraw(votePower * CFX_COUNT_OF_ONE_VOTE);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
-    receiver.transfer(votePower * 100 ether);
+    receiver.transfer(votePower * CFX_COUNT_OF_ONE_VOTE);
     emit WithdrawStake(msg.sender, votePower);
   }
 
-  function _calculateShare(uint256 reward, uint64 userVotes, uint64 totalVotes) private view returns (uint256) {
-    return reward.mul(userVotes).mul(_poolUserShareRatio).div(totalVotes * 100);
+  function _calculateShare(uint256 reward, uint64 userVotes, uint64 poolVotes) private view returns (uint256) {
+    return reward.mul(userVotes).mul(_poolUserShareRatio).div(poolVotes * RATIO_BASE);
+  }
+
+  function _rSectionStartIndex(uint256 _bNumber) private view returns (uint64) {
+    return uint64(rewardSectionIndexByBlockNumber[_bNumber]);
   }
 
   /**
     Calculate user's latest interest not in sections
    */
-  function _userLatestInterest() private view onlyRegisted returns (uint256) {
+  function _userLatestInterest(address _address) private view returns (uint256) {
     uint latestInterest = 0;
-    UserShot memory uShot = lastUserShots[msg.sender];
-    for (uint32 i = 0; i < rewardSections.length; i++) {
+    UserShot memory uShot = lastUserShots[_address];
+    uint64 start = _rSectionStartIndex(uShot.blockNumber);
+    for (uint64 i = start; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
       if (uShot.blockNumber >= pSection.endBlock) {
         continue;
@@ -319,10 +421,14 @@ contract PoSPool {
     return latestInterest;
   }
 
-  function _userSectionInterest() private view onlyRegisted returns (uint256) {
+  function _userSectionInterest(address _address) private view returns (uint256) {
     uint totalInterest = 0;
-    VotePowerSection[] memory uSections = votePowerSections[msg.sender];
-    for (uint32 i = 0; i < rewardSections.length; i++) {
+    VotePowerSection[] memory uSections = votePowerSections[_address];
+    if (uSections.length == 0) {
+      return totalInterest;
+    }
+    uint64 start = _rSectionStartIndex(uSections[0].startBlock);
+    for (uint64 i = start; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
       if (pSection.reward == 0) {
         continue;
@@ -345,27 +451,31 @@ contract PoSPool {
     return totalInterest;
   }
 
-  /*
-   * Currently user's total interest
-  */
-  function userInterest() public view onlyRegisted returns (uint256) {
-    uint totalInterest = 0;
-    totalInterest = totalInterest.add(_userSectionInterest());
-
-    totalInterest = totalInterest.add(_userLatestInterest());
-    
-    return totalInterest.add(userSummaries[msg.sender].currentInterest);
+  ///
+  /// @notice User's interest from participate PoS
+  /// @param _address The address of user to query
+  /// @return CFX interest in Drip
+  ///
+  function userInterest(address _address) public view returns (uint256) {
+    uint interest = 0;
+    interest = interest.add(_userSectionInterest(_address));
+    interest = interest.add(_userLatestInterest(_address));
+    return interest.add(userSummaries[_address].currentInterest);
   }
 
   // collet all user section interest to currentInterest and clear user's votePowerSections
-  function _collectUserInterest() private onlyRegisted {
-    uint256 collectedInterest = _userSectionInterest();
+  function _collectUserInterestAndCleanVoteSection() private onlyRegisted {
+    uint256 collectedInterest = _userSectionInterest(msg.sender);
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
     delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
   }
 
+  ///
+  /// @notice Claim specific amount user interest
+  /// @param amount The amount of interest to claim
+  ///
   function claimInterest(uint amount) public onlyRegisted {
-    uint claimableInterest = userInterest();
+    uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "You can not claim so much interest");
     /*
       NOTE: The order is important:
@@ -375,7 +485,7 @@ contract PoSPool {
     */
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSection();
-    _collectUserInterest();
+    _collectUserInterestAndCleanVoteSection();
     //
     userSummaries[msg.sender].claimedInterest = userSummaries[msg.sender].claimedInterest.add(amount);
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.sub(amount);
@@ -386,12 +496,84 @@ contract PoSPool {
     _updateLastPoolShot();
   }
 
-  function userSummary() public view returns (UserSummary memory) {
-    return userSummaries[msg.sender];
+  ///
+  /// @notice Claim one user's all interest
+  ///
+  function claimAllInterest() public onlyRegisted {
+    uint claimableInterest = userInterest(msg.sender);
+    require(claimableInterest > 0, "You have no interest yet ?");
+    claimInterest(claimableInterest);
   }
 
-  function posAddress() public view returns (bytes32) {
+  /// 
+  /// @notice Get user's pool summary
+  /// @param _user The address of user to query
+  /// @return User's summary
+  ///
+  function userSummary(address _user) public view returns (UserSummary memory) {
+    UserSummary memory summary = userSummaries[_user];
+
+    summary.locked += _sumEndedVotesFromQueue(userInqueues[_user]);
+    summary.unlocked += _sumEndedVotesFromQueue(userOutqueues[_user]);
+
+    return summary;
+  }
+
+  /// 
+  /// @notice Query pools contract address
+  /// @return Pool's PoS address
+  ///
+  function posAddress() public view onlyRegisted returns (bytes32) {
     return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
+  }
+
+  // ======================== debug methods =====================
+
+  function _userInOutQueue(address _address, bool inOrOut) public view returns (QueueNode[] memory) {
+    InOutQueue storage q;
+    if (inOrOut) {
+      q = userInqueues[_address];
+    } else {
+      q = userOutqueues[_address];
+    }
+    uint64 qLen = q.end - q.start;
+    QueueNode[] memory nodes = new QueueNode[](qLen);
+    uint64 j = 0;
+    for(uint64 i = q.start; i < q.end; i++) {
+      nodes[j++] = q.items[i];
+    }
+    return nodes;
+  }
+
+  function _rewardSections() public view returns (RewardSection[] memory) {
+    return rewardSections;
+  }
+
+  function _votePowerSections(address _address) public view returns (VotePowerSection[] memory) {
+    return votePowerSections[_address];
+  }
+
+  function _lastRewardSection() public view returns (RewardSection memory) {
+    return rewardSections[rewardSections.length - 1];
+  }
+
+  function _lastVotePowerSection(address _address) public view returns (VotePowerSection memory) {
+    return votePowerSections[_address][votePowerSections[_address].length - 1];
+  }
+
+  function _userShot(address _address) public view returns (UserShot memory) {
+    return lastUserShots[_address];
+  }
+
+  function _poolShot() public view returns (PoolShot memory) {
+    return lastPoolShot;
+  }
+
+  function _withdrawAll() public onlyAdmin {
+    uint256 _balance = InternalContracts.STAKING.getStakingBalance(address(this));
+    InternalContracts.STAKING.withdraw(_balance);
+    address payable receiver = payable(msg.sender);
+    receiver.transfer(_balance);
   }
 
 }
