@@ -501,7 +501,7 @@ contract PoSPool {
   ///
   function claimAllInterest() public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
-    require(claimableInterest > 0, "You can not claim so much interest");
+    require(claimableInterest > 0, "You have no interest yet ?");
     claimInterest(claimableInterest);
   }
 
