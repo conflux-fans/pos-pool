@@ -33,6 +33,7 @@ contract PoSPool is PoolContext, Ownable {
   bool public _poolRegisted;
   uint32 public _poolUserShareRatio; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
+  string public _poolName;
 
   // ======================== Struct definitions =========================
 
@@ -40,6 +41,7 @@ contract PoSPool is PoolContext, Ownable {
     // uint64 allVotes;  // can get through PoS RPC
     uint64 available;
     uint256 interest;
+    uint256 totalInterest; // total interest of all pools
   }
 
   /// @title UserSummary
@@ -129,6 +131,7 @@ contract PoSPool is PoolContext, Ownable {
     // acumulate pool interest
     uint _poolShare = reward.mul(RATIO_BASE - _poolUserShareRatio).div(RATIO_BASE);
     poolSummary.interest = poolSummary.interest.add(_poolShare);
+    poolSummary.totalInterest = poolSummary.totalInterest.add(reward);
   }
 
   function _shotRewardSectionAndUpdateLastShot() private {
@@ -206,7 +209,8 @@ contract PoSPool is PoolContext, Ownable {
     _poolUserShareRatio = 9000; // default user ratio
     poolSummary = PoolSummary({
       available: 0,
-      interest: 0
+      interest: 0,
+      totalInterest: 0
     });
   }
 
@@ -215,7 +219,7 @@ contract PoSPool is PoolContext, Ownable {
   /// @dev The ratio base is 10000, only admin can do this
   /// @param ratio The interest user share ratio (1-10000), default is 9000
   ///
-  function setPoolUserShareRatio(uint8 ratio) public onlyOwner {
+  function setPoolUserShareRatio(uint32 ratio) public onlyOwner {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     _poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
@@ -228,6 +232,13 @@ contract PoSPool is PoolContext, Ownable {
   ///
   function setLockPeriod(uint64 period) public onlyOwner {
     _poolLockPeriod = period;
+  }
+
+  /// 
+  /// @notice Enable admin to set the pool name
+  ///
+  function setPoolName(string memory name) public onlyOwner {
+    _poolName = name;
   }
 
   ///
@@ -462,9 +473,26 @@ contract PoSPool is PoolContext, Ownable {
     return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
   }
 
+  function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
+    return VotePowerQueue.queueItems(userInqueues[account]);
+  }
+
+  function userOutQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
+    return VotePowerQueue.queueItems(userOutqueues[account]);
+  }
+
+  function userInQueue(address account, uint64 offset, uint64 limit) public view returns (VotePowerQueue.QueueNode[] memory) {
+    return VotePowerQueue.queueItems(userInqueues[account], offset, limit);
+  }
+
+  function userOutQueue(address account, uint64 offset, uint64 limit) public view returns (VotePowerQueue.QueueNode[] memory) {
+    return VotePowerQueue.queueItems(userOutqueues[account], offset, limit);
+  }
+
   // ======================== admin methods =====================
 
   function _withdrawAll() public onlyOwner {
+    // TODO retire logic
     uint256 _balance = InternalContracts.STAKING.getStakingBalance(address(this));
     InternalContracts.STAKING.withdraw(_balance);
     address payable receiver = payable(msg.sender);
