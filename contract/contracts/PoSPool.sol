@@ -1,9 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
+// import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
+import "@confluxfans/contracts/InternalContracts/Staking.sol";
+import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 
@@ -20,7 +21,7 @@ import "./VotePowerQueue.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext, Ownable {
+contract PoSPool is PoolContext {
   using SafeMath for uint256;
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
@@ -30,10 +31,14 @@ contract PoSPool is PoolContext, Ownable {
   
   // ======================== Pool config =========================
 
+  address private _poolAdmin;
   bool public _poolRegisted;
   uint32 public _poolUserShareRatio; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
   string public _poolName;
+
+  Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
+  PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
 
   // ======================== Struct definitions =========================
 
@@ -106,6 +111,11 @@ contract PoSPool is PoolContext, Ownable {
     _;
   }
 
+  modifier onlyOwner() {
+    require(msg.sender == _poolAdmin, "Only pool admin can do this");
+    _;
+  }
+
   // ======================== Helpers =========================
 
   function _updateLastPoolShot() private {
@@ -164,11 +174,11 @@ contract PoSPool is PoolContext, Ownable {
 
   // ======================== InternalContract's method wrapper ==============
   function _stakingDeposit(uint256 _amount) public virtual {
-    InternalContracts.STAKING.deposit(_amount);
+    STAKING.deposit(_amount);
   }
 
   function _stakingWithdraw(uint256 _amount) public virtual {
-    InternalContracts.STAKING.withdraw(_amount);
+    STAKING.withdraw(_amount);
   }
 
   function _posRegisterRegister(
@@ -178,15 +188,15 @@ contract PoSPool is PoolContext, Ownable {
     bytes calldata vrfPubKey,
     bytes[2] calldata blsPubKeyProof
   ) public virtual {
-    InternalContracts.POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+    POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
   }
 
   function _posRegisterIncreaseStake(uint64 votePower) public virtual {
-    InternalContracts.POS_REGISTER.increaseStake(votePower);
+    POS_REGISTER.increaseStake(votePower);
   }
 
   function _posRegisterRetire(uint64 votePower) public virtual {
-    InternalContracts.POS_REGISTER.retire(votePower);
+    POS_REGISTER.retire(votePower);
   }
 
   // ======================== Events =========================
@@ -206,6 +216,7 @@ contract PoSPool is PoolContext, Ownable {
   // ======================== Contract methods =========================
 
   constructor() {
+    _poolAdmin = msg.sender;
     _poolUserShareRatio = 9000; // default user ratio
     poolSummary = PoolSummary({
       available: 0,
@@ -259,7 +270,7 @@ contract PoSPool is PoolContext, Ownable {
   ) public virtual payable onlyOwner {
     require(!_poolRegisted, "Pool is already registed");
     require(votePower == 1, "votePower should be 1");
-    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The tx value can only be 1000 CFX");
+    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "msg.value should be 1000 CFX");
     _stakingDeposit(msg.value);
     _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
@@ -279,7 +290,7 @@ contract PoSPool is PoolContext, Ownable {
   ///
   function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
-    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "The msg.value should be votePower * 1000 ether");
+    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
     _stakingDeposit(msg.value);
     _posRegisterIncreaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
@@ -422,7 +433,7 @@ contract PoSPool is PoolContext, Ownable {
   ///
   function claimInterest(uint amount) public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
-    require(claimableInterest >= amount, "You can not claim so much interest");
+    require(claimableInterest >= amount, "Interest not enough");
     /*
       NOTE: The order is important:
       1. shot pool section
@@ -447,7 +458,7 @@ contract PoSPool is PoolContext, Ownable {
   ///
   function claimAllInterest() public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
-    require(claimableInterest > 0, "You have no interest yet ?");
+    require(claimableInterest > 0, "No claimable interest");
     claimInterest(claimableInterest);
   }
 
@@ -470,7 +481,7 @@ contract PoSPool is PoolContext, Ownable {
   /// @return Pool's PoS address
   ///
   function posAddress() public view onlyRegisted returns (bytes32) {
-    return InternalContracts.POS_REGISTER.addressToIdentifier(address(this));
+    return POS_REGISTER.addressToIdentifier(address(this));
   }
 
   function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
@@ -491,12 +502,12 @@ contract PoSPool is PoolContext, Ownable {
 
   // ======================== admin methods =====================
 
-  function _withdrawAll() public onlyOwner {
+  /* function _withdrawAll() public onlyOwner {
     // TODO retire logic
-    uint256 _balance = InternalContracts.STAKING.getStakingBalance(address(this));
-    InternalContracts.STAKING.withdraw(_balance);
+    uint256 _balance = STAKING.getStakingBalance(address(this));
+    STAKING.withdraw(_balance);
     address payable receiver = payable(msg.sender);
     receiver.transfer(_balance);
-  }
+  } */
 
 }
