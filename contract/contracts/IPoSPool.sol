@@ -28,8 +28,8 @@ interface IPoSPool {
   // pool info
   function poolSummary() external view returns (PoolSummary memory);
   function poolAPY() external view returns (uint32);
+  function poolUserShareRatio() external view returns (uint32);
   function _poolName() external view returns (string memory);
-  function _poolUserShareRatio() external view returns (uint32);
   function _poolLockPeriod() external view returns (uint64);
 
   // user functions
@@ -38,7 +38,7 @@ interface IPoSPool {
   function withdrawStake(uint64 votePower) external;
   function userInterest(address _address) external view returns (uint256);
   function claimInterest(uint256 amount) external;
-  function claimAllInterest(uint256 amount) external;
+  function claimAllInterest() external;
   function userSummary(address _user) external view returns (UserSummary memory);
   function posAddress() external view returns (bytes32);
   function userInQueue(address account) external view returns (VotePowerQueue.QueueNode[] memory);

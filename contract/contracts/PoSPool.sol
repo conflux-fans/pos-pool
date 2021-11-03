@@ -25,6 +25,7 @@ contract PoSPool is PoolContext {
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
+  uint64 constant private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
   uint32 constant private RATIO_BASE = 10000;
   uint256 constant private CFX_COUNT_OF_ONE_VOTE = 100 ether; // NOTE: mainnet will be 1000
   
@@ -32,7 +33,7 @@ contract PoSPool is PoolContext {
 
   address private _poolAdmin;
   bool public _poolRegisted;
-  uint32 public _poolUserShareRatio; // ratio shared by user: 1-10000
+  uint32 public poolUserShareRatio; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
   string public _poolName;
 
@@ -138,7 +139,7 @@ contract PoSPool is PoolContext {
       reward: reward
     }));
     // acumulate pool interest
-    uint _poolShare = reward.mul(RATIO_BASE - _poolUserShareRatio).div(RATIO_BASE);
+    uint _poolShare = reward.mul(RATIO_BASE - poolUserShareRatio).div(RATIO_BASE);
     poolSummary.interest = poolSummary.interest.add(_poolShare);
     poolSummary.totalInterest = poolSummary.totalInterest.add(reward);
   }
@@ -216,7 +217,7 @@ contract PoSPool is PoolContext {
 
   constructor() {
     _poolAdmin = msg.sender;
-    _poolUserShareRatio = 9000; // default user ratio
+    poolUserShareRatio = 9000; // default user ratio
     poolSummary = PoolSummary({
       available: 0,
       interest: 0,
@@ -231,7 +232,7 @@ contract PoSPool is PoolContext {
   ///
   function setPoolUserShareRatio(uint32 ratio) public onlyOwner {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
-    _poolUserShareRatio = ratio;
+    poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
   }
 
@@ -346,7 +347,7 @@ contract PoSPool is PoolContext {
   }
 
   function _calculateShare(uint256 reward, uint64 userVotes, uint64 poolVotes) private view returns (uint256) {
-    return reward.mul(userVotes).mul(_poolUserShareRatio).div(poolVotes * RATIO_BASE);
+    return reward.mul(userVotes).mul(poolUserShareRatio).div(poolVotes * RATIO_BASE);
   }
 
   function _rSectionStartIndex(uint256 _bNumber) private view returns (uint64) {
@@ -475,9 +476,46 @@ contract PoSPool is PoolContext {
     return summary;
   }
 
-  function poolAPY () public pure returns (uint32) {
-    // TODO : calculate APY
-    return 800;
+  function _rewardSectionAPY(RewardSection memory _section) private pure returns (uint256) {
+    uint256 sectionBlockCount = _section.endBlock - _section.startBlock;
+    if (_section.reward == 0 || sectionBlockCount == 0) {
+      return 0;
+    }
+    uint256 baseCfx = uint256(_section.available).mul(CFX_COUNT_OF_ONE_VOTE);
+    uint256 apy = _section.reward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(baseCfx).div(sectionBlockCount);
+    return apy;
+  }
+
+  function _poolAPY(uint256 startBlock) public view returns (uint32) {
+    uint256 totalAPY = 0;
+    uint256 apyCount = 0;
+
+    // latest section APY
+    RewardSection memory latestSection = RewardSection({
+      startBlock: lastPoolShot.blockNumber,
+      endBlock: _blockNumber(),
+      reward: _selfBalance().sub(lastPoolShot.balance),
+      available: lastPoolShot.available
+    });
+    totalAPY = totalAPY.add(_rewardSectionAPY(latestSection));
+    apyCount += 1;
+
+    for (uint256 i = rewardSections.length - 1; i >= 0; i++) {
+      RewardSection memory section = rewardSections[i];
+      if (section.endBlock < startBlock) {
+        break;
+      }
+      uint256 apy = _rewardSectionAPY(section);
+      totalAPY = totalAPY.add(apy);
+      apyCount += 1;
+    }
+
+    return uint32(totalAPY.div(apyCount));
+  }
+
+  function poolAPY () public view returns (uint32) {
+    uint256 oneDayAgoBlock = block.number - ONE_DAY_BLOCK_COUNT;
+    return _poolAPY(oneDayAgoBlock);
   }
 
   /// 
