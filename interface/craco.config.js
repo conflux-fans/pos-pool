@@ -7,7 +7,7 @@ const ProxyConfig = {
 module.exports = {
   style: {
     postcss: {
-      plugins: [require('autoprefixer')],
+      plugins: [require('tailwindcss'),require('autoprefixer')],
     },
   },
   devServer: {
