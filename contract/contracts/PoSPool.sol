@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-// import "@confluxfans/contracts/InternalContracts/InternalContractsLib.sol";
 import "@confluxfans/contracts/InternalContracts/Staking.sol";
 import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -408,6 +407,13 @@ contract PoSPool is PoolContext {
     return totalInterest;
   }
 
+  // collet all user section interest to currentInterest and clear user's votePowerSections
+  function _collectUserInterestAndCleanVoteSection() private onlyRegisted {
+    uint256 collectedInterest = _userSectionInterest(msg.sender);
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
+    delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
+  }
+
   ///
   /// @notice User's interest from participate PoS
   /// @param _address The address of user to query
@@ -418,13 +424,6 @@ contract PoSPool is PoolContext {
     interest = interest.add(_userSectionInterest(_address));
     interest = interest.add(_userLatestInterest(_address));
     return interest.add(userSummaries[_address].currentInterest);
-  }
-
-  // collet all user section interest to currentInterest and clear user's votePowerSections
-  function _collectUserInterestAndCleanVoteSection() private onlyRegisted {
-    uint256 collectedInterest = _userSectionInterest(msg.sender);
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
-    delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
   }
 
   ///
@@ -474,6 +473,11 @@ contract PoSPool is PoolContext {
     summary.unlocked += VotePowerQueue.sumEndedVotes(userOutqueues[_user]);
 
     return summary;
+  }
+
+  function poolAPY () public pure returns (uint32) {
+    // TODO : calculate APY
+    return 800;
   }
 
   /// 

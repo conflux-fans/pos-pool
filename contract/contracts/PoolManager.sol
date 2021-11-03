@@ -25,6 +25,7 @@ contract PoolManager is Ownable {
   // TODO pagination
   function getPools() public view returns (PoolInfo[] memory) {
     PoolInfo[] memory poolInfos = new PoolInfo[](pools.length());
+
     address[] memory poolAddresses = pools.values();
     for (uint32 i = 0; i < poolAddresses.length; i++) {
       IPoSPool poolInstance = IPoSPool(poolAddresses[i]);
@@ -32,10 +33,11 @@ contract PoolManager is Ownable {
         poolAddress: poolAddresses[i],
         totalAvailable: poolInstance.poolSummary().available,
         name: poolInstance._poolName(),
-        apy: 8,
+        apy: poolInstance.poolAPY(),
         fee: poolInstance._poolUserShareRatio()
       });
     }
+    
     return poolInfos;
   }
 
