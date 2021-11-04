@@ -6,7 +6,7 @@ import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 ///
 ///  @title PoSPool
@@ -365,21 +365,29 @@ contract PoSPool is PoolContext {
   function _userLatestInterest(address _address) private view returns (uint256) {
     uint latestInterest = 0;
     UserShot memory uShot = lastUserShots[_address];
-    uint64 start = _rSectionStartIndex(uShot.blockNumber);
-    for (uint64 i = start; i < rewardSections.length; i++) {
-      RewardSection memory pSection = rewardSections[i];
-      if (uShot.blockNumber >= pSection.endBlock) {
-        continue;
-      }
-      uint256 currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
-      latestInterest = latestInterest.add(currentShare);
-    }
     // include latest not shot reward section
     if (uShot.blockNumber <= lastPoolShot.blockNumber && _selfBalance() > lastPoolShot.balance) {
       uint256 latestReward = _selfBalance().sub(lastPoolShot.balance);
       uint256 currentShare = _calculateShare(latestReward, uShot.available, lastPoolShot.available);
       latestInterest = latestInterest.add(currentShare);
     }
+
+    uint64 start = _rSectionStartIndex(uShot.blockNumber);
+
+    // user shot is the last one in shot of all, can't get start index from blockNumber
+    if (start == 0) {
+      return latestInterest;
+    }
+
+    for (uint64 i = start; i < rewardSections.length; i++) {
+      RewardSection memory pSection = rewardSections[i];
+      /* if (uShot.blockNumber >= pSection.endBlock) {
+        continue;
+      } */
+      uint256 currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
+      latestInterest = latestInterest.add(currentShare);
+    }
+    
     return latestInterest;
   }
 
@@ -420,10 +428,33 @@ contract PoSPool is PoolContext {
     delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
   }
 
-  function collectUserOldestInterest(uint32 sectionCount) public onlyRegisted {
-    if (sectionCount > votePowerSections[msg.sender].length) {
-      sectionCount = uint32(votePowerSections[msg.sender].length);
+  function collectUserLatestPartInterest(uint256 sectionCount) public onlyRegisted {
+    require(sectionCount <= 100, "Max section count is 100");
+    uint totalInterest = 0;
+    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    uint256 uLen = uSections.length;
+    if (uLen == 0) {
+      return;
     }
+    if (uLen < sectionCount) {
+      sectionCount = uSections.length;
+    }
+    for(uint256 i = 0; i < sectionCount; i++) {
+      VotePowerSection memory vSection = uSections[uLen - i - 1];
+      uint64 start = _rSectionStartIndex(vSection.startBlock);
+      for (uint64 j = start; j < rewardSections.length; j++) {
+        if (rewardSections[j].startBlock >= vSection.endBlock) {
+          break;
+        }
+        if (rewardSections[j].reward == 0) {
+          continue;
+        }
+        uint256 currentSectionShare = _calculateShare(rewardSections[j].reward, vSection.available, rewardSections[j].available);
+        totalInterest = totalInterest.add(currentSectionShare);
+      }
+      uSections.pop();
+    }
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
   }
 
   ///
@@ -511,23 +542,20 @@ contract PoSPool is PoolContext {
     totalAPY = totalAPY.add(_rewardSectionAPY(latestSection));
     apyCount += 1;
 
-    if (rewardSections.length == 0) {
+    uint256 rLen = rewardSections.length;
+
+    if (rLen == 0) {
       return uint32(totalAPY.div(apyCount));
     }
 
-    for (uint256 i = rewardSections.length - 1; i >= 0; i--) {
-      RewardSection memory section = rewardSections[i];
+    for (uint256 i = 0; i < rLen; i++) {
+      RewardSection memory section = rewardSections[rLen - i - 1];
       if (section.endBlock < startBlock) {
         break;
       }
       uint256 apy = _rewardSectionAPY(section);
       totalAPY = totalAPY.add(apy);
       apyCount += 1;
-      
-      // avoid i underflow
-      if (i == 0) {
-        break;
-      }
     }
 
     return uint32(totalAPY.div(apyCount));
