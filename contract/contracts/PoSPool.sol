@@ -6,6 +6,7 @@ import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
+import "hardhat/console.sol";
 
 ///
 ///  @title PoSPool
@@ -27,15 +28,15 @@ contract PoSPool is PoolContext {
   uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
   uint64 constant private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
   uint32 constant private RATIO_BASE = 10000;
-  uint256 constant private CFX_COUNT_OF_ONE_VOTE = 100 ether; // NOTE: mainnet will be 1000
   
   // ======================== Pool config =========================
 
-  address private _poolAdmin;
-  bool public _poolRegisted;
   uint32 public poolUserShareRatio; // ratio shared by user: 1-10000
+  bool public _poolRegisted;
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
   string public _poolName;
+  uint256 private CFX_COUNT_OF_ONE_VOTE = 1000 ether;
+  address private _poolAdmin;
 
   Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
   PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
@@ -43,7 +44,6 @@ contract PoSPool is PoolContext {
   // ======================== Struct definitions =========================
 
   struct PoolSummary {
-    // uint64 allVotes;  // can get through PoS RPC
     uint64 available;
     uint256 interest;
     uint256 totalInterest; // total interest of all pools
@@ -252,6 +252,11 @@ contract PoSPool is PoolContext {
     _poolName = name;
   }
 
+  /// @param count Vote cfx count
+  function setCfxCountOfOneVote(uint256 count) public onlyOwner {
+    CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
+  }
+
   ///
   /// @notice Regist the pool contract in PoS internal contract 
   /// @dev Only admin can do this
@@ -415,6 +420,12 @@ contract PoSPool is PoolContext {
     delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
   }
 
+  function collectUserOldestInterest(uint32 sectionCount) public onlyRegisted {
+    if (sectionCount > votePowerSections[msg.sender].length) {
+      sectionCount = uint32(votePowerSections[msg.sender].length);
+    }
+  }
+
   ///
   /// @notice User's interest from participate PoS
   /// @param _address The address of user to query
@@ -476,9 +487,9 @@ contract PoSPool is PoolContext {
     return summary;
   }
 
-  function _rewardSectionAPY(RewardSection memory _section) private pure returns (uint256) {
+  function _rewardSectionAPY(RewardSection memory _section) private view returns (uint256) {
     uint256 sectionBlockCount = _section.endBlock - _section.startBlock;
-    if (_section.reward == 0 || sectionBlockCount == 0) {
+    if (_section.reward == 0 || sectionBlockCount == 0 || _section.available == 0) {
       return 0;
     }
     uint256 baseCfx = uint256(_section.available).mul(CFX_COUNT_OF_ONE_VOTE);
@@ -500,7 +511,11 @@ contract PoSPool is PoolContext {
     totalAPY = totalAPY.add(_rewardSectionAPY(latestSection));
     apyCount += 1;
 
-    for (uint256 i = rewardSections.length - 1; i >= 0; i++) {
+    if (rewardSections.length == 0) {
+      return uint32(totalAPY.div(apyCount));
+    }
+
+    for (uint256 i = rewardSections.length - 1; i >= 0; i--) {
       RewardSection memory section = rewardSections[i];
       if (section.endBlock < startBlock) {
         break;
@@ -508,14 +523,22 @@ contract PoSPool is PoolContext {
       uint256 apy = _rewardSectionAPY(section);
       totalAPY = totalAPY.add(apy);
       apyCount += 1;
+      
+      // avoid i underflow
+      if (i == 0) {
+        break;
+      }
     }
 
     return uint32(totalAPY.div(apyCount));
   }
 
   function poolAPY () public view returns (uint32) {
-    uint256 oneDayAgoBlock = block.number - ONE_DAY_BLOCK_COUNT;
-    return _poolAPY(oneDayAgoBlock);
+    if (block.number > ONE_YEAR_BLOCK_COUNT) {
+      return _poolAPY(block.number - ONE_YEAR_BLOCK_COUNT);
+    } else {
+      return _poolAPY(0);
+    }
   }
 
   /// 
