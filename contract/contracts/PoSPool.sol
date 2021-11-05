@@ -38,15 +38,43 @@ contract PoSPool is PoolContext {
   uint256 private CFX_COUNT_OF_ONE_VOTE = 1000 ether;
   address private _poolAdmin;
 
+  // ======================== InternalContract's method wrapper ==============
+
   Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
   PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
+  
+  function _stakingDeposit(uint256 _amount) public virtual {
+    STAKING.deposit(_amount);
+  }
+
+  function _stakingWithdraw(uint256 _amount) public virtual {
+    STAKING.withdraw(_amount);
+  }
+
+  function _posRegisterRegister(
+    bytes32 indentifier,
+    uint64 votePower,
+    bytes calldata blsPubKey,
+    bytes calldata vrfPubKey,
+    bytes[2] calldata blsPubKeyProof
+  ) public virtual {
+    POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
+  }
+
+  function _posRegisterIncreaseStake(uint64 votePower) public virtual {
+    POS_REGISTER.increaseStake(votePower);
+  }
+
+  function _posRegisterRetire(uint64 votePower) public virtual {
+    POS_REGISTER.retire(votePower);
+  }
 
   // ======================== Struct definitions =========================
 
   struct PoolSummary {
     uint64 available;
     uint256 interest;
-    uint256 totalInterest; // total interest of all pools
+    uint256 totalInterest; // total interest of whole pools
   }
 
   /// @title UserSummary
@@ -130,8 +158,9 @@ contract PoSPool is PoolContext {
     }
     // create section startBlock number -> section index mapping
     rewardSectionIndexByBlockNumber[lastPoolShot.blockNumber] = rewardSections.length;
-    // save new section
+    
     uint reward = _selfBalance().sub(lastPoolShot.balance);
+    // save new section
     rewardSections.push(RewardSection({
       startBlock: lastPoolShot.blockNumber,
       endBlock: _blockNumber(),
@@ -159,44 +188,16 @@ contract PoSPool is PoolContext {
     if (lastShot.available == 0) {
       return;
     }
-    VotePowerSection memory uSection = VotePowerSection({
+    votePowerSections[msg.sender].push(VotePowerSection({
       startBlock: lastShot.blockNumber, 
       endBlock: _blockNumber(), 
       available: lastShot.available
-    });
-    votePowerSections[msg.sender].push(uSection);
+    }));
   }
 
   function _shotVotePowerSectionAndUpdateLastShot() private {
     _shotVotePowerSection();
     _updateLastUserShot();
-  }
-
-  // ======================== InternalContract's method wrapper ==============
-  function _stakingDeposit(uint256 _amount) public virtual {
-    STAKING.deposit(_amount);
-  }
-
-  function _stakingWithdraw(uint256 _amount) public virtual {
-    STAKING.withdraw(_amount);
-  }
-
-  function _posRegisterRegister(
-    bytes32 indentifier,
-    uint64 votePower,
-    bytes calldata blsPubKey,
-    bytes calldata vrfPubKey,
-    bytes[2] calldata blsPubKeyProof
-  ) public virtual {
-    POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
-  }
-
-  function _posRegisterIncreaseStake(uint64 votePower) public virtual {
-    POS_REGISTER.increaseStake(votePower);
-  }
-
-  function _posRegisterRetire(uint64 votePower) public virtual {
-    POS_REGISTER.retire(votePower);
   }
 
   // ======================== Events =========================
@@ -252,7 +253,7 @@ contract PoSPool is PoolContext {
     _poolName = name;
   }
 
-  /// @param count Vote cfx count
+  /// @param count Vote cfx count, unit is cfx
   function setCfxCountOfOneVote(uint256 count) public onlyOwner {
     CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
   }
@@ -374,7 +375,7 @@ contract PoSPool is PoolContext {
 
     uint64 start = _rSectionStartIndex(uShot.blockNumber);
 
-    // user shot is the last one in shot of all, can't get start index from blockNumber
+    // If user shot is the last one of all shots, then can't get start index from blockNumber
     if (start == 0) {
       return latestInterest;
     }
@@ -384,8 +385,8 @@ contract PoSPool is PoolContext {
       /* if (uShot.blockNumber >= pSection.endBlock) {
         continue;
       } */
-      uint256 currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
-      latestInterest = latestInterest.add(currentShare);
+      uint256 _currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
+      latestInterest = latestInterest.add(_currentShare);
     }
     
     return latestInterest;
@@ -425,36 +426,7 @@ contract PoSPool is PoolContext {
   function _collectUserInterestAndCleanVoteSection() private onlyRegisted {
     uint256 collectedInterest = _userSectionInterest(msg.sender);
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
-    delete votePowerSections[msg.sender]; // delete this user's all votePowerSection or use arr.length = 0
-  }
-
-  function collectUserLatestPartInterest(uint256 sectionCount) public onlyRegisted {
-    require(sectionCount <= 100, "Max section count is 100");
-    uint totalInterest = 0;
-    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
-    uint256 uLen = uSections.length;
-    if (uLen == 0) {
-      return;
-    }
-    if (uLen < sectionCount) {
-      sectionCount = uSections.length;
-    }
-    for(uint256 i = 0; i < sectionCount; i++) {
-      VotePowerSection memory vSection = uSections[uLen - i - 1];
-      uint64 start = _rSectionStartIndex(vSection.startBlock);
-      for (uint64 j = start; j < rewardSections.length; j++) {
-        if (rewardSections[j].startBlock >= vSection.endBlock) {
-          break;
-        }
-        if (rewardSections[j].reward == 0) {
-          continue;
-        }
-        uint256 currentSectionShare = _calculateShare(rewardSections[j].reward, vSection.available, rewardSections[j].available);
-        totalInterest = totalInterest.add(currentSectionShare);
-      }
-      uSections.pop();
-    }
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    delete votePowerSections[msg.sender]; // delete all user's votePowerSection or use arr.length = 0
   }
 
   ///
@@ -545,7 +517,7 @@ contract PoSPool is PoolContext {
     uint256 rLen = rewardSections.length;
 
     if (rLen == 0) {
-      return uint32(totalAPY.div(apyCount));
+      return uint32(totalAPY);
     }
 
     for (uint256 i = 0; i < rLen; i++) {
@@ -553,8 +525,7 @@ contract PoSPool is PoolContext {
       if (section.endBlock < startBlock) {
         break;
       }
-      uint256 apy = _rewardSectionAPY(section);
-      totalAPY = totalAPY.add(apy);
+      totalAPY = totalAPY.add(_rewardSectionAPY(section));
       apyCount += 1;
     }
 
@@ -602,5 +573,83 @@ contract PoSPool is PoolContext {
     address payable receiver = payable(msg.sender);
     receiver.transfer(_balance);
   } */
+  function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
+    require(sectionCount <= 100, "Max section count is 100");
+    uint totalInterest = 0;
+    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    uint256 uLen = uSections.length;
+    if (uLen == 0) {
+      return;
+    }
+    if (uLen < sectionCount) {
+      sectionCount = uSections.length;
+    }
+    // from back to start
+    for(uint256 i = 0; i < sectionCount; i++) {
+      VotePowerSection memory vSection = uSections[uLen - i - 1];
+      uint64 start = _rSectionStartIndex(vSection.startBlock);
+      for (uint64 j = start; j < rewardSections.length; j++) {
+        if (rewardSections[j].startBlock >= vSection.endBlock) {
+          break;
+        }
+        if (rewardSections[j].reward == 0) {
+          continue;
+        }
+        uint256 currentSectionShare = _calculateShare(rewardSections[j].reward, vSection.available, rewardSections[j].available);
+        totalInterest = totalInterest.add(currentSectionShare);
+      }
+      uSections.pop();
+    }
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+  }
+
+  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
+    require(limit <= 100, "Max section count is 100");
+    UserShot storage uShot = lastUserShots[msg.sender];
+    require(uShot.blockNumber < lastPoolShot.blockNumber, "No new user shot");
+    uint64 start = _rSectionStartIndex(uShot.blockNumber);
+    uint64 end = start + limit;
+    if (end > rewardSections.length) {
+      end = uint64(rewardSections.length);
+    }
+    uint256 totalInterest = 0;
+    for (uint64 i = start; i < end; i++) {
+      RewardSection memory pSection = rewardSections[i];
+      if (pSection.reward == 0) {
+        continue;
+      }
+      uint256 currentSectionShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
+      totalInterest = totalInterest.add(currentSectionShare);
+    }
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    uShot.blockNumber = rewardSections[end - 1].endBlock;
+  }
+
+  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
+    require(limit <= 100, "Max section count is 100");
+    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    require(uSections.length > 0, "No vote power section");
+    uint64 start = _rSectionStartIndex(uSections[uSections.length - 1].startBlock);
+    uint64 end = start + limit;
+    if (end > rewardSections.length) {
+      end = uint64(rewardSections.length);
+    }
+
+    uint256 totalInterest = 0;
+    for (uint64 i = start; i < end; i++) {
+      RewardSection memory pSection = rewardSections[i];
+      if (pSection.reward == 0) {
+        continue;
+      }
+      uint256 currentSectionShare = _calculateShare(pSection.reward, uSections[uSections.length - 1].available, pSection.available);
+      totalInterest = totalInterest.add(currentSectionShare);
+    }
+    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    if (end == rewardSections.length) {
+      uSections.pop();
+    } else {
+      uSections[uSections.length - 1].startBlock = rewardSections[end - 1].endBlock;
+    }
+  }
 
 }
