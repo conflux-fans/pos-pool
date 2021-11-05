@@ -573,20 +573,22 @@ contract PoSPool is PoolContext {
     address payable receiver = payable(msg.sender);
     receiver.transfer(_balance);
   } */
+
+  // collect user interest in a pagination way to avoid gas OOM
   function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
     require(sectionCount <= 100, "Max section count is 100");
-    uint totalInterest = 0;
+    
     VotePowerSection[] storage uSections = votePowerSections[msg.sender];
-    uint256 uLen = uSections.length;
-    if (uLen == 0) {
-      return;
-    }
-    if (uLen < sectionCount) {
+    require(uSections.length > 0, "No sections");
+
+    if (uSections.length < sectionCount) {
       sectionCount = uSections.length;
     }
+
+    uint totalInterest = 0;
     // from back to start
     for(uint256 i = 0; i < sectionCount; i++) {
-      VotePowerSection memory vSection = uSections[uLen - i - 1];
+      VotePowerSection memory vSection = uSections[uSections.length - i - 1];
       uint64 start = _rSectionStartIndex(vSection.startBlock);
       for (uint64 j = start; j < rewardSections.length; j++) {
         if (rewardSections[j].startBlock >= vSection.endBlock) {
@@ -605,13 +607,16 @@ contract PoSPool is PoolContext {
 
   function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
     require(limit <= 100, "Max section count is 100");
+
     UserShot storage uShot = lastUserShots[msg.sender];
     require(uShot.blockNumber < lastPoolShot.blockNumber, "No new user shot");
+
     uint64 start = _rSectionStartIndex(uShot.blockNumber);
     uint64 end = start + limit;
     if (end > rewardSections.length) {
       end = uint64(rewardSections.length);
     }
+
     uint256 totalInterest = 0;
     for (uint64 i = start; i < end; i++) {
       RewardSection memory pSection = rewardSections[i];
@@ -621,14 +626,17 @@ contract PoSPool is PoolContext {
       uint256 currentSectionShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
       totalInterest = totalInterest.add(currentSectionShare);
     }
+
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
     uShot.blockNumber = rewardSections[end - 1].endBlock;
   }
 
   function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
     require(limit <= 100, "Max section count is 100");
+
     VotePowerSection[] storage uSections = votePowerSections[msg.sender];
     require(uSections.length > 0, "No vote power section");
+
     uint64 start = _rSectionStartIndex(uSections[uSections.length - 1].startBlock);
     uint64 end = start + limit;
     if (end > rewardSections.length) {
@@ -644,6 +652,7 @@ contract PoSPool is PoolContext {
       uint256 currentSectionShare = _calculateShare(pSection.reward, uSections[uSections.length - 1].available, pSection.available);
       totalInterest = totalInterest.add(currentSectionShare);
     }
+    
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
     if (end == rewardSections.length) {
       uSections.pop();
