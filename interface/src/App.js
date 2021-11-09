@@ -1,16 +1,12 @@
-import {Suspense} from 'react'
-import {
-  BrowserRouter as Router,
-  Route,
-  Switch,
-} from 'react-router-dom'
-import { Spin,Layout } from 'antd';
+import { Suspense } from "react";
+import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
+import { Spin, Layout } from "antd";
 
-import './App.css';
-import {Header} from './pages/components'
-import Home from './pages/Home'
+import "./App.css";
+import { Header } from "./pages/components";
+import Home from "./pages/Home";
 
-const { Content } = Layout;
+const { Content, Footer } = Layout;
 
 function App() {
   return (
@@ -22,20 +18,20 @@ function App() {
       }
     >
       <Router>
-      <Layout className="layout">
-        <div className="flex flex-col h-full relative overflow-x-hidden">
-          <Header />
-          <Content style={{ padding: '20px 50px'}}>
-          <div>
-              <Switch>
-                <Route path="/" exact>
-                  <Home />
-                </Route>
-              </Switch>
+        <Layout className="layout">
+          <div className="flex flex-col h-full relative overflow-x-hidden">
+            <Header />
+            <Content style={{ padding: "50px 50px" }}>
+              <div>
+                <Switch>
+                  <Route path="/" exact>
+                    <Home />
+                  </Route>
+                </Switch>
+              </div>
+            </Content>
+            {/* <Footer style={{ textAlign: 'center' }}>PoS Pool</Footer> */}
           </div>
-          </Content>
-          
-        </div>
         </Layout>
       </Router>
     </Suspense>
