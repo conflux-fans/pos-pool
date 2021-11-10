@@ -28,6 +28,12 @@ describe("Staking", async function () {
     const accounts = await ethers.getSigners();
     const setPeriodTx = await pool.setLockPeriod(LOCK_PERIOD);
     await setPeriodTx.wait();
+    const setCfxCountTx = await pool.setCfxCountOfOneVote(100);
+    await setCfxCountTx.wait();
+
+    /* const account0Balance = await ethers.provider.getBalance(accounts[0].address);
+    console.log(account0Balance.toString());
+    console.log("Account 0 balance:", ethers.utils.formatEther(account0Balance.toString())); */
 
     // ================================= Test register
     // total 1
@@ -76,6 +82,12 @@ describe("Staking", async function () {
     expect(poolSummary.available).to.equal(11);
 
     lastPoolAvailable = poolSummary.available;
+
+    /* const sections = await pool._rewardSections();
+    console.log(sections);
+    
+    let apy = await pool.poolAPY();
+    console.log(apy); */
 
     // ====================================== Test B increase stake
     // total 14
