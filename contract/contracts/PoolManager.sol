@@ -13,11 +13,11 @@ contract PoolManager is Ownable {
   EnumerableSet.AddressSet private pools;
 
   struct PoolInfo {
-    address poolAddress;
-    uint64 totalAvailable;
-    string name;
     uint32 apy; // 1000 / 1w  10%
     uint32 fee; // userShare fee   90%
+    uint64 totalAvailable;
+    address poolAddress;
+    string name;
   }
 
   constructor() {}

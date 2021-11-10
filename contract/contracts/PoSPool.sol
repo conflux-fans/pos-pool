@@ -1,12 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@confluxfans/contracts/InternalContracts/Staking.sol";
-import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
-// import "hardhat/console.sol";
+import "./InternalContractHandle.sol";
 
 ///
 ///  @title PoSPool
@@ -21,7 +19,7 @@ import "./VotePowerQueue.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext {
+contract PoSPool is PoolContext, InternalContractHandle {
   using SafeMath for uint256;
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
@@ -37,37 +35,6 @@ contract PoSPool is PoolContext {
   string public _poolName;
   uint256 private CFX_COUNT_OF_ONE_VOTE = 1000 ether;
   address private _poolAdmin;
-
-  // ======================== InternalContract's method wrapper ==============
-
-  Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
-  PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
-  
-  function _stakingDeposit(uint256 _amount) public virtual {
-    STAKING.deposit(_amount);
-  }
-
-  function _stakingWithdraw(uint256 _amount) public virtual {
-    STAKING.withdraw(_amount);
-  }
-
-  function _posRegisterRegister(
-    bytes32 indentifier,
-    uint64 votePower,
-    bytes calldata blsPubKey,
-    bytes calldata vrfPubKey,
-    bytes[2] calldata blsPubKeyProof
-  ) public virtual {
-    POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
-  }
-
-  function _posRegisterIncreaseStake(uint64 votePower) public virtual {
-    POS_REGISTER.increaseStake(votePower);
-  }
-
-  function _posRegisterRetire(uint64 votePower) public virtual {
-    POS_REGISTER.retire(votePower);
-  }
 
   // ======================== Struct definitions =========================
 
@@ -545,7 +512,7 @@ contract PoSPool is PoolContext {
   /// @return Pool's PoS address
   ///
   function posAddress() public view onlyRegisted returns (bytes32) {
-    return POS_REGISTER.addressToIdentifier(address(this));
+    return _posAddressToIdentifier(address(this));
   }
 
   function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
@@ -565,14 +532,6 @@ contract PoSPool is PoolContext {
   }
 
   // ======================== admin methods =====================
-
-  /* function _withdrawAll() public onlyOwner {
-    // TODO retire logic
-    uint256 _balance = STAKING.getStakingBalance(address(this));
-    STAKING.withdraw(_balance);
-    address payable receiver = payable(msg.sender);
-    receiver.transfer(_balance);
-  } */
 
   // collect user interest in a pagination way to avoid gas OOM
   function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
