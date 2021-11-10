@@ -1,4 +1,4 @@
-const TestServerUrl = ''
+const TestServerUrl = 'https://votetest.confluxnetwork.org/rpcv2'
 const ProxyConfig = {
   target: TestServerUrl,
   changeOrigin: true,
@@ -13,7 +13,7 @@ module.exports = {
   devServer: {
     historyApiFallback: true,
     proxy: {
-      '/': ProxyConfig,
+      '/rpc': ProxyConfig,
     },
   },
 }
