@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
-import "./InternalContractHandle.sol";
 
 ///
 ///  @title PoSPool
@@ -19,7 +18,7 @@ import "./InternalContractHandle.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext, InternalContractHandle {
+contract PoSPool is PoolContext {
   using SafeMath for uint256;
 
   uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;

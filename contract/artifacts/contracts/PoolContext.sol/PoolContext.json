@@ -2,7 +2,112 @@
   "_format": "hh-sol-artifact-1",
   "contractName": "PoolContext",
   "sourceName": "contracts/PoolContext.sol",
-  "abi": [],
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_addr",
+          "type": "address"
+        }
+      ],
+      "name": "_posAddressToIdentifier",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "votePower",
+          "type": "uint64"
+        }
+      ],
+      "name": "_posRegisterIncreaseStake",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "indentifier",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "votePower",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes",
+          "name": "blsPubKey",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes",
+          "name": "vrfPubKey",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes[2]",
+          "name": "blsPubKeyProof",
+          "type": "bytes[2]"
+        }
+      ],
+      "name": "_posRegisterRegister",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "votePower",
+          "type": "uint64"
+        }
+      ],
+      "name": "_posRegisterRetire",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "_stakingDeposit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "_stakingWithdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
   "bytecode": "0x",
   "deployedBytecode": "0x",
   "linkReferences": {},

@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "StorageValue",
+  "sourceName": "contracts/test-contracts/upgradeable/Storage.sol",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea2646970667358221220507a838e8928ab0b876a4834901bba7c9c195d86ba8e5b8644d9790d5a93f66664736f6c63430008040033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220507a838e8928ab0b876a4834901bba7c9c195d86ba8e5b8644d9790d5a93f66664736f6c63430008040033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
