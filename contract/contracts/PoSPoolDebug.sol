@@ -46,22 +46,6 @@ contract PoSPoolDebug is PoSPool {
 
   receive() external payable {}
 
-  function _userInOutQueue(address _address, bool inOrOut) public view returns (VotePowerQueue.QueueNode[] memory) {
-    VotePowerQueue.InOutQueue storage q;
-    if (inOrOut) {
-      q = userInqueues[_address];
-    } else {
-      q = userOutqueues[_address];
-    }
-    uint64 qLen = q.end - q.start;
-    VotePowerQueue.QueueNode[] memory nodes = new VotePowerQueue.QueueNode[](qLen);
-    uint64 j = 0;
-    for(uint64 i = q.start; i < q.end; i++) {
-      nodes[j++] = q.items[i];
-    }
-    return nodes;
-  }
-
   function _rewardSections() public view returns (RewardSection[] memory) {
     return rewardSections;
   }
