@@ -19,13 +19,13 @@ const conflux = new Conflux({
   networkId,
 });
 
-const posPoolAddressTestnet =
-  "NET8888:TYPE.CONTRACT:ACCHHA25SM4P7C0WXC778MMBTVNE99X53PXFWE26UN";
-//TODO: modify mainnet address
-const posPoolAddressMainnet = "";
-const posPoolAddress = isTestNetEnv()
-  ? posPoolAddressTestnet
-  : posPoolAddressMainnet;
+// const posPoolAddressTestnet =
+//   "NET8888:TYPE.CONTRACT:ACCHHA25SM4P7C0WXC778MMBTVNE99X53PXFWE26UN";
+// //TODO: modify mainnet address
+// const posPoolAddressMainnet = "";
+// const posPoolAddress = isTestNetEnv()
+//   ? posPoolAddressTestnet
+//   : posPoolAddressMainnet;
 const posPoolManagerAddressTestnet =
   "NET8888:TYPE.CONTRACT:ACC7GGWT2M5D8VY6F9P9221TN8KB4CRH2UVW0FA9HT";
 //TODO: modify mainnet address
@@ -34,10 +34,11 @@ const posPoolManagerAddress = isTestNetEnv()
   ? posPoolManagerAddressTestnet
   : posPoolManagerAddressMainnet;
 
-const posPoolContract = conflux.Contract({
+const getPosPoolContract = (address)=>conflux.Contract({
   abi: posPoolAbi,
-  address: posPoolAddress,
+  address: address,
 });
+
 const posPoolManagerContract = conflux.Contract({
   abi: posManagerAbi,
   address: posPoolManagerAddress,
@@ -46,8 +47,7 @@ export {
   conflux,
   format,
   Drip,
-  posPoolContract,
-  posPoolAddress,
+  getPosPoolContract,
   posPoolManagerContract,
   posPoolManagerAddress,
 };

@@ -1,7 +1,10 @@
-const TestServerUrl = 'https://votetest.confluxnetwork.org/rpcv2'
+const TestServerUrl = 'http://101.132.158.162:12537'
 const ProxyConfig = {
   target: TestServerUrl,
   changeOrigin: true,
+  pathRewrite: {
+    '^/rpc': '',
+  },
 }
 
 module.exports = {

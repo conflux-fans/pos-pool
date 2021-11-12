@@ -5,6 +5,8 @@ import { Spin, Layout } from "antd";
 import "./App.css";
 import { Header } from "./pages/components";
 import Home from "./pages/Home";
+import Pool from "./pages/Pool";
+
 
 const { Content, Footer } = Layout;
 
@@ -26,6 +28,9 @@ function App() {
                 <Switch>
                   <Route path="/" exact>
                     <Home />
+                  </Route>
+                  <Route path="/pool/:poolAddress" exact>
+                    <Pool />
                   </Route>
                 </Switch>
               </div>

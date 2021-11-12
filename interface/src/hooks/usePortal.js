@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback} from 'react'
-import {useEffectOnce} from 'react-use'
-import {useBalance as usePortalBalance} from '@cfxjs/react-hooks'
+import {useEffectOnce,useInterval} from 'react-use'
+
 import {TypeConnectWallet} from '../constants'
+import {conflux,Drip} from '../utils/cfx'
 
 function validAccounts(accounts) {
   return Array.isArray(accounts) && accounts.length
@@ -107,9 +108,19 @@ export function useConnect() {
  * @returns balance of account
  */
 export function useBalance(address) {
-  // eslint-disable-next-line no-unused-vars
-  const [balance, tokenBalance, isValidating] = usePortalBalance(address, [])
-  return !isValidating ? balance : null
+  const [balance,setBalance]=useState(0)
+  const delay=3000
+  useInterval(
+    () => {
+      conflux.provider.call("cfx_getAccount", address).then(data=>{
+        setBalance(new Drip(data?.balance).toCFX())
+      }).catch(()=>{
+        setBalance(0)
+      })
+    },
+     delay
+  );    
+  return balance
 }
 
 
