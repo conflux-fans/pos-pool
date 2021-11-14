@@ -6,16 +6,16 @@ contract PoSPoolStorage {
   uint64 constant internal ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint64 constant internal SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
   uint64 constant internal ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
-  uint32 constant internal RATIO_BASE = 10000;
+  uint64 constant internal RATIO_BASE = 10000;
   
   // ======================== Pool config =========================
 
-  uint32 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
   bool public _poolRegisted;
+  uint64 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
-  string public _poolName;
   uint256 internal CFX_COUNT_OF_ONE_VOTE = 1000 ether;
   address internal _poolAdmin;
+  string public poolName;
 
   // ======================== Struct definitions =========================
 

@@ -32,7 +32,7 @@ contract PoolManager is Ownable {
       poolInfos[i] = PoolInfo({
         poolAddress: poolAddresses[i],
         totalAvailable: poolInstance.poolSummary().available,
-        name: poolInstance._poolName(),
+        name: poolInstance.poolName(),
         apy: poolInstance.poolAPY(),
         fee: poolInstance.poolUserShareRatio()
       });

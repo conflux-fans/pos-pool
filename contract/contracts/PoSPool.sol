@@ -101,7 +101,7 @@ contract PoSPool is PoolContext, PoSPoolStorage {
 
   event ClaimInterest(address indexed user, uint256 amount);
 
-  event RatioChanged(uint32 ratio);
+  event RatioChanged(uint64 ratio);
 
   error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
@@ -116,7 +116,7 @@ contract PoSPool is PoolContext, PoSPoolStorage {
   /// @dev The ratio base is 10000, only admin can do this
   /// @param ratio The interest user share ratio (1-10000), default is 9000
   ///
-  function setPoolUserShareRatio(uint32 ratio) public onlyOwner {
+  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
@@ -135,7 +135,7 @@ contract PoSPool is PoolContext, PoSPoolStorage {
   /// @notice Enable admin to set the pool name
   ///
   function setPoolName(string memory name) public onlyOwner {
-    _poolName = name;
+    poolName = name;
   }
 
   /// @param count Vote cfx count, unit is cfx
