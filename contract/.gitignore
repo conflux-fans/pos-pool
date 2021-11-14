@@ -102,10 +102,7 @@ dist
 
 # TernJS port file
 .tern-port
-artifacts/build-info
-artifacts/@confluxfans
-artifacts/@openzeppelin
-artifacts/hardhat
+artifacts
 cache
 doc.md
 contracts/test-contracts

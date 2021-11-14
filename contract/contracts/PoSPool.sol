@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
-import "./InternalContractHandle.sol";
+import "./PoSPoolStorage.sol";
 
 ///
 ///  @title PoSPool
@@ -19,95 +20,14 @@ import "./InternalContractHandle.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext, InternalContractHandle {
+contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   using SafeMath for uint256;
-
-  uint64 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
-  uint64 constant private SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
-  uint64 constant private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
-  uint32 constant private RATIO_BASE = 10000;
-  
-  // ======================== Pool config =========================
-
-  uint32 public poolUserShareRatio; // ratio shared by user: 1-10000
-  bool public _poolRegisted;
-  uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
-  string public _poolName;
-  uint256 private CFX_COUNT_OF_ONE_VOTE = 1000 ether;
-  address private _poolAdmin;
-
-  // ======================== Struct definitions =========================
-
-  struct PoolSummary {
-    uint64 available;
-    uint256 interest;
-    uint256 totalInterest; // total interest of whole pools
-  }
-
-  /// @title UserSummary
-  /// @custom:field votes User's total votes
-  /// @custom:field available User's avaliable votes
-  /// @custom:field locked
-  /// @custom:field unlocked
-  /// @custom:field claimedInterest
-  /// @custom:field currentInterest
-  struct UserSummary {
-    uint64 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
-    uint64 available; // locking + locked
-    uint64 locked;
-    uint64 unlocked;
-    uint256 claimedInterest;
-    uint256 currentInterest;
-  }
-
-  struct PoolShot {
-    uint64 available;
-    uint64 blockNumber;
-    uint256 balance;
-  } 
-
-  struct UserShot {
-    uint64 available;
-    uint64 blockNumber;
-  }
-
-  struct RewardSection {
-    uint64 startBlock;
-    uint64 endBlock;
-    uint64 available;
-    uint256 reward;
-  }
-
-  struct VotePowerSection {
-    uint64 startBlock;
-    uint64 endBlock;
-    uint64 available;
-  }
-
-  // ======================== Contract states =========================
-
-  PoolSummary public poolSummary;
-
-  RewardSection[] internal rewardSections;
-  mapping(address => VotePowerSection[]) internal votePowerSections;
-  mapping(uint256 => uint256) private rewardSectionIndexByBlockNumber; // from blockNumber to section index in array, used to fast find rewardSection
-  
-  PoolShot internal lastPoolShot;
-  mapping(address => UserShot) internal lastUserShots;
-
-  mapping(address => UserSummary) private userSummaries;
-  mapping(address => VotePowerQueue.InOutQueue) internal userInqueues;
-  mapping(address => VotePowerQueue.InOutQueue) internal userOutqueues;
+  using VotePowerQueue for VotePowerQueue.InOutQueue;
 
   // ======================== Modifiers =========================
 
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
-    _;
-  }
-
-  modifier onlyOwner() {
-    require(msg.sender == _poolAdmin, "Only pool admin can do this");
     _;
   }
 
@@ -177,20 +97,13 @@ contract PoSPool is PoolContext, InternalContractHandle {
 
   event ClaimInterest(address indexed user, uint256 amount);
 
-  event RatioChanged(uint32 ratio);
+  event RatioChanged(uint64 ratio);
 
   error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
   // ======================== Contract methods =========================
 
   constructor() {
-    _poolAdmin = msg.sender;
-    poolUserShareRatio = 9000; // default user ratio
-    poolSummary = PoolSummary({
-      available: 0,
-      interest: 0,
-      totalInterest: 0
-    });
   }
 
   ///
@@ -198,7 +111,7 @@ contract PoSPool is PoolContext, InternalContractHandle {
   /// @dev The ratio base is 10000, only admin can do this
   /// @param ratio The interest user share ratio (1-10000), default is 9000
   ///
-  function setPoolUserShareRatio(uint32 ratio) public onlyOwner {
+  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
@@ -217,7 +130,7 @@ contract PoSPool is PoolContext, InternalContractHandle {
   /// @notice Enable admin to set the pool name
   ///
   function setPoolName(string memory name) public onlyOwner {
-    _poolName = name;
+    poolName = name;
   }
 
   /// @param count Vote cfx count, unit is cfx
@@ -273,8 +186,7 @@ contract PoSPool is PoolContext, InternalContractHandle {
     userSummaries[msg.sender].available += votePower;
 
     // put stake info in queue
-    VotePowerQueue.InOutQueue storage q = userInqueues[msg.sender];
-    VotePowerQueue.enqueue(q, VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userInqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
 
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSectionAndUpdateLastShot();
@@ -285,7 +197,7 @@ contract PoSPool is PoolContext, InternalContractHandle {
   /// @param votePower The number of vote power to decrease
   ///
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
-    userSummaries[msg.sender].locked += VotePowerQueue.collectEndedVotes(userInqueues[msg.sender]);
+    userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
@@ -295,8 +207,7 @@ contract PoSPool is PoolContext, InternalContractHandle {
     userSummaries[msg.sender].locked -= votePower;
 
     //
-    VotePowerQueue.InOutQueue storage q = userOutqueues[msg.sender];
-    VotePowerQueue.enqueue(q, VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
 
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSectionAndUpdateLastShot();
@@ -307,7 +218,7 @@ contract PoSPool is PoolContext, InternalContractHandle {
   /// @param votePower The number of vote power to withdraw
   ///
   function withdrawStake(uint64 votePower) public onlyRegisted {
-    userSummaries[msg.sender].unlocked += VotePowerQueue.collectEndedVotes(userOutqueues[msg.sender]);
+    userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     _stakingWithdraw(votePower * CFX_COUNT_OF_ONE_VOTE);
     //    
@@ -451,8 +362,8 @@ contract PoSPool is PoolContext, InternalContractHandle {
   function userSummary(address _user) public view returns (UserSummary memory) {
     UserSummary memory summary = userSummaries[_user];
 
-    summary.locked += VotePowerQueue.sumEndedVotes(userInqueues[_user]);
-    summary.unlocked += VotePowerQueue.sumEndedVotes(userOutqueues[_user]);
+    summary.locked += userInqueues[_user].sumEndedVotes();
+    summary.unlocked += userOutqueues[_user].sumEndedVotes();
 
     return summary;
   }
@@ -516,19 +427,19 @@ contract PoSPool is PoolContext, InternalContractHandle {
   }
 
   function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
-    return VotePowerQueue.queueItems(userInqueues[account]);
+    return userInqueues[account].queueItems();
   }
 
   function userOutQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
-    return VotePowerQueue.queueItems(userOutqueues[account]);
+    return userOutqueues[account].queueItems();
   }
 
   function userInQueue(address account, uint64 offset, uint64 limit) public view returns (VotePowerQueue.QueueNode[] memory) {
-    return VotePowerQueue.queueItems(userInqueues[account], offset, limit);
+    return userInqueues[account].queueItems(offset, limit);
   }
 
   function userOutQueue(address account, uint64 offset, uint64 limit) public view returns (VotePowerQueue.QueueNode[] memory) {
-    return VotePowerQueue.queueItems(userOutqueues[account], offset, limit);
+    return userOutqueues[account].queueItems(offset, limit);
   }
 
   // ======================== admin methods =====================

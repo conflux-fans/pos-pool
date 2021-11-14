@@ -8,7 +8,7 @@ import "./IPoSPool.sol";
 contract PoolManager is Ownable {
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  uint32 constant public RATIO_BASE = 10000;
+  // uint32 constant public RATIO_BASE = 10000;
 
   EnumerableSet.AddressSet private pools;
 
@@ -32,7 +32,7 @@ contract PoolManager is Ownable {
       poolInfos[i] = PoolInfo({
         poolAddress: poolAddresses[i],
         totalAvailable: poolInstance.poolSummary().available,
-        name: poolInstance._poolName(),
+        name: poolInstance.poolName(),
         apy: poolInstance.poolAPY(),
         fee: poolInstance.poolUserShareRatio()
       });
