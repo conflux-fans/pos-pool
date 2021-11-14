@@ -8,7 +8,7 @@ import "./IPoSPool.sol";
 contract PoolManager is Ownable {
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  uint32 constant public RATIO_BASE = 10000;
+  // uint32 constant public RATIO_BASE = 10000;
 
   EnumerableSet.AddressSet private pools;
 

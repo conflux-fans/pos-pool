@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
@@ -19,7 +20,7 @@ import "./PoSPoolStorage.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext, PoSPoolStorage {
+contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   using SafeMath for uint256;
   using VotePowerQueue for VotePowerQueue.InOutQueue;
 
@@ -27,11 +28,6 @@ contract PoSPool is PoolContext, PoSPoolStorage {
 
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
-    _;
-  }
-
-  modifier onlyOwner() {
-    require(msg.sender == _poolAdmin, "Only pool admin can do this");
     _;
   }
 
@@ -108,7 +104,6 @@ contract PoSPool is PoolContext, PoSPoolStorage {
   // ======================== Contract methods =========================
 
   constructor() {
-    _poolAdmin = msg.sender;
   }
 
   ///

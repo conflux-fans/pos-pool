@@ -14,7 +14,7 @@ contract PoSPoolStorage {
   uint64 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
   uint256 internal CFX_COUNT_OF_ONE_VOTE = 1000 ether;
-  address internal _poolAdmin;
+  // address internal _poolAdmin;
   string public poolName;
 
   // ======================== Struct definitions =========================
