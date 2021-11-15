@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Space, Tag } from "antd";
+import { Table, Space, Tag, } from "antd";
 import { RightCircleOutlined } from "@ant-design/icons";
 import { useHistory } from "react-router-dom";
 
@@ -26,6 +26,7 @@ function Home() {
       title: "Status",
       key: "status",
       dataIndex: "status",
+      width:100,
       render: (status) => (
         <>
           {
@@ -40,25 +41,30 @@ function Home() {
       title: "Pool",
       dataIndex: "name",
       key: "name",
+      width:200
     },
     {
       title: "Total Locked(CFX)",
       dataIndex: "totalAvailable",
       key: "totalAvailable",
+      width:200
     },
     {
       title: "APY",
       dataIndex: "apy",
       key: "apy",
+      width:100,
     },
     {
       title: "Performance Fee",
       dataIndex: "fee",
       key: "fee",
+      width:150
     },
     {
       title: "",
       key: "action",
+      width:60,
       render: (text, record) => {
         return (
           <Space size="middle">
@@ -108,7 +114,7 @@ function Home() {
   };
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <Table columns={columns} dataSource={dataList} pagination={false} />
+      <Table columns={columns} dataSource={dataList} pagination={false} size='middle' />
     </div>
   );
 }

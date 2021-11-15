@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Input, Button, Divider, Form, List, message, Col, Row } from "antd";
+import { Input, Button, Divider, Form, List, message, Col, Row,Spin } from "antd";
 import { useParams } from "react-router-dom";
 import BigNumber from "bignumber.js";
 import { useConfluxPortal } from "@cfxjs/react-hooks";
@@ -47,6 +47,7 @@ function Pool() {
   const [unstakeInputStatus, setUnstakeInputStatus] = useState("error");
   const [unstakeErrorText,setUnstakeErrorText]=useState('')
   const [stakeBtnDisabled,setStakeBtnDisabled]=useState(true)
+  const [isLoading,setIsLoading]=useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -118,8 +119,16 @@ function Pool() {
     }
   },[cfxCanUnstake, inputUnstakeCfx])
 
+  function resetData(){
+    setStakedCfx(0)
+    setRewards(0)
+    setCfxCanUnstate(0)
+    setCfxCanWithdraw(0)
+  }
+
   useEffect(() => {
     async function fetchData() {
+        setIsLoading(true)  
       try {
         const proArr = [];
         proArr.push(posPoolContract.userSummary(accountAddress));
@@ -139,11 +148,15 @@ function Pool() {
         setRewards(new Drip(new BigNumber(data[1]).toNumber()).toCFX());
         setFee(getFee(data[2]));
         setUnstakeList(transferQueue(data[3]));
+        setIsLoading(false)
       } catch (error) {
+        setIsLoading(false)
       }
     }
     if (accountAddress) {
       fetchData();
+    }else{
+        resetData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountAddress]);
@@ -253,25 +266,24 @@ function Pool() {
 
   return (
     <div className="w-full h-full flex">
-      <div className="container mx-auto">
+      {isLoading?<div className="flex items-center justify-center w-full h-screen"><Spin></Spin></div>:(<div className="container mx-auto">
         <Header status={status}/>
         <div className="flex justify-center mt-6">
           <div className="w-9/12">
             <div className="flex">
-              <div className="flex-1 p-6 mr-4 -ml-2 border-gray-800 border-2 text-white box-border rounded">
+              <div className="flex-1 p-6 mr-4 -ml-2 border-gray-800 border-2 text-white box-border rounded bg-main-back">
                 <Form
                   layout="vertical"
                   form={form}
                   wrapperCol={{ style: { color: "white" } }}
+                  style={{color:'white'}}
                 >
                   <div className="font-bold my-4 text-xl text-center">
-                    Stake&Unstake
+                    Stake & Unstake
                   </div>
+                  <div className="my-2">How much do you want to stake?(Multiples of 1,000 CFX)</div>
                   <Form.Item
-                    label="How much do you want to stake?(Multiples of 1,000 CFX)"
                     required
-                    tooltip="This is a required field"
-                    labelCol={{ style: { color: "white" } }}
                     validateStatus={stakeInputStatus}
                     help={stakeErrorText}
                   >
@@ -291,7 +303,7 @@ function Pool() {
                   </Form.Item>
                   <div>
                     <span>Balance:</span>
-                    <span>{balance}</span>
+                    <span className="ml-2 font-bold">{balance}</span>
                     <span> CFX</span>
                   </div>
                   <div className="flex mt-2">
@@ -306,11 +318,10 @@ function Pool() {
                       Stake
                     </Button>
                   </div>
-                  <Divider dashed />
+                  <Divider dashed style={{borderColor:'white'}}/>
+                  <div className="my-1">How much do you want to unstake?(Multiples of 1,000 CFX)</div>
                   <Form.Item
-                    label="How much do you want to unstake?(Multiples of 1,000 CFX)"
                     required
-                    tooltip="This is a required field"
                     validateStatus={unstakeInputStatus}
                     help={unstakeErrorText}
                   >
@@ -330,7 +341,7 @@ function Pool() {
                   
                   <div>
                     <span>Unstakeable:</span>
-                    <span>{cfxCanUnstake}</span>
+                    <span className="ml-2 font-bold">{cfxCanUnstake}</span>
                     <span> CFX</span>
                   </div>
                   <div className="flex mt-2">
@@ -347,18 +358,18 @@ function Pool() {
                   </div>
                 </Form>
               </div>
-              <div className="flex-1 p-6 border-gray-800 border-2 box-border rounded">
+              <div className="flex-1 p-6 border-gray-800 border-2 box-border rounded bg-main-back text-white">
                 <div className="font-bold my-4 text-xl text-center mb-4">
                   My Pool
                 </div>
-                <div className="mt-12">
+                <div className="mt-7">
                   <span>My Staked:</span>
-                  <span>{stakedCfx}</span>
+                  <span className="ml-2 font-bold">{stakedCfx}</span>
                   <span> CFX</span>
                 </div>
                 <div className="my-4">
                   <span>My Rewards:</span>
-                  <span>{rewards}</span>
+                  <span className="ml-2 font-bold">{rewards}</span>
                   <span> CFX</span>
                   <span className="ml-2">
                     <Button
@@ -367,23 +378,24 @@ function Pool() {
                       onClick={() => {
                         submit("claim");
                       }}
+                      disabled={!rewards}
                     >
                       Claim
                     </Button>
                   </span>
                 </div>
-                <div className="my-2">
+                <div className="my-2 opacity-60">
                   <span>Last Update Time:</span>
                   <span>{lastDistributeTime}</span>
                 </div>
                 <div className="my-4">
                   <span>Performance Fee:</span>
-                  <span>{`${fee} %`}</span>
+                  <span className="ml-2 font-bold">{ `${fee} %`}</span>
                 </div>
-                <Divider dashed />
+                <Divider dashed style={{borderColor:'white'}}/>
                 <div>
                   <span>Withdrawable: :</span>
-                  <span>{cfxCanWithdraw}</span>
+                  <span className="ml-2 font-bold">{cfxCanWithdraw}</span>
                   <span> CFX</span>
                   <span className="ml-2">
                     <Button
@@ -392,6 +404,7 @@ function Pool() {
                       onClick={() => {
                         submit("withdraw");
                       }}
+                      disabled={!cfxCanWithdraw}
                     >
                       Withdraw
                     </Button>
@@ -400,21 +413,21 @@ function Pool() {
               </div>
             </div>
             <div className={`${unstakeList.length > 0 ? "block" : "hidden"}`}>
-              <Divider orientation="left">Unstake Activity</Divider>
+              <Divider dashed orientation="left" style={{borderColor:'white',color:'white'}}>Unstake Activity</Divider>
               <List
                 bordered
                 dataSource={unstakeList}
                 renderItem={(item) => (
                   <List.Item>
-                    <div>{`${item.amount} CFX`}</div>
-                    <div>{`You can withdraw at ` + item.timeStr}</div>
+                    <div className="text-white">{`${item.amount} CFX`}</div>
+                    <div  className="text-white">{`You can withdraw at ` + item.timeStr}</div>
                   </List.Item>
                 )}
               />
             </div>
           </div>
         </div>
-      </div>
+      </div>)})
       <ConfirmModal
         visible={stakeModalShown}
         setVisible={setStakeModalShown}
