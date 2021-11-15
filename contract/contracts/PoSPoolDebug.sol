@@ -2,23 +2,23 @@
 pragma solidity ^0.8.0;
 
 import "./PoSPool.sol";
-import "./mocks/Staking.sol";
-import "./mocks/PoSRegister.sol";
+import "./mocks/IStaking.sol";
+import "./mocks/IPoSRegister.sol";
+import "./VotePowerQueue.sol";
 
 /// This use mock contracts to replace the real PoS contracts.
 /// Which enable developer test it in ethereum
 contract PoSPoolDebug is PoSPool {
   
-  MockStaking private STAKING;
-  MockPoSRegister private POS_REGISTER;
+  IMockStaking private STAKING;
+  IMockPoSRegister private POS_REGISTER;
 
   constructor(address _stakingAddress, address _posRegisterAddress) {
-    STAKING = MockStaking(_stakingAddress);
-    POS_REGISTER = MockPoSRegister(_posRegisterAddress);
+    STAKING = IMockStaking(_stakingAddress);
+    POS_REGISTER = IMockPoSRegister(_posRegisterAddress);
   }
 
   function _stakingDeposit(uint256 _amount) public override {
-    // STAKING.deposit(_amount);
     STAKING.deposit{value: _amount}(_amount);
   }
 
@@ -45,5 +45,29 @@ contract PoSPoolDebug is PoSPool {
   }
 
   receive() external payable {}
+
+  function _rewardSections() public view returns (RewardSection[] memory) {
+    return rewardSections;
+  }
+
+  function _votePowerSections(address _address) public view returns (VotePowerSection[] memory) {
+    return votePowerSections[_address];
+  }
+
+  function _lastRewardSection() public view returns (RewardSection memory) {
+    return rewardSections[rewardSections.length - 1];
+  }
+
+  function _lastVotePowerSection(address _address) public view returns (VotePowerSection memory) {
+    return votePowerSections[_address][votePowerSections[_address].length - 1];
+  }
+
+  function _userShot(address _address) public view returns (UserShot memory) {
+    return lastUserShots[_address];
+  }
+
+  function _poolShot() public view returns (PoolShot memory) {
+    return lastPoolShot;
+  }
 
 }

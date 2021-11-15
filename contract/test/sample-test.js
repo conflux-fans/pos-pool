@@ -1,4 +1,4 @@
-/* const { expect } = require("chai");
+const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Greeter", function () {
@@ -23,4 +23,23 @@ describe("Greeter", function () {
     expect(blockNumAfter - blockNumBefore).to.equal(2);
   });
 });
- */
+
+describe("Array", function () {
+  it("Array should work", async function () {
+    const TestArray = await ethers.getContractFactory("TestArray");
+    const contract = await TestArray.deploy();
+    await contract.deployed();
+
+    const pushTx = await contract.push(1);
+    await pushTx.wait();
+
+    const pushTx2 = await contract.push(2);
+    await pushTx2.wait();
+
+    const delTx = await contract.del();
+    await delTx.wait();
+
+    const pushTx3 = await contract.pop();
+    await pushTx3.wait();
+  });
+});
