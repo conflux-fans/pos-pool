@@ -6,7 +6,7 @@ import BigNumber from "bignumber.js";
 import { getPosPoolContract, Drip } from "../../utils/cfx";
 import { getCfxByVote, getApy } from "../../utils";
 
-function Header() {
+function Header({status}) {
   let { poolAddress } = useParams();
   const posPoolContract = getPosPoolContract(poolAddress);
   const [lockedCfx, setLockedCfx] = useState(0);
@@ -38,7 +38,9 @@ function Header() {
     <div className="flex">
       <div className="flex-1 pr-4">
         <Card title="Status">
-          <Tag color={"green"}>good</Tag>
+          <Tag color={`${status ? "green" : "error"}`}>
+              {status ? "good" : "error"}
+            </Tag>
         </Card>
       </div>
       <div className="flex-1 pr-4">

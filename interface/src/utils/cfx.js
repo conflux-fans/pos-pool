@@ -33,15 +33,23 @@ const posPoolManagerAddress = isTestNetEnv()
   ? posPoolManagerAddressTestnet
   : posPoolManagerAddressMainnet;
 
-const getPosPoolContract = (address)=>conflux.Contract({
-  abi: posPoolAbi,
-  address: address,
-});
+const getPosPoolContract = (address) =>
+  conflux.Contract({
+    abi: posPoolAbi,
+    address: address,
+  });
 
 const posPoolManagerContract = conflux.Contract({
   abi: posManagerAbi,
   address: posPoolManagerAddress,
 });
+
+export const getPosAccountByPowAddress = async (address) => {
+  const posPoolContract = await getPosPoolContract(address);
+  const posAddress = format.hex(await posPoolContract.posAddress());
+  const posAccout = await conflux.provider.call("pos_getAccount", posAddress);
+  return posAccout;
+};
 export {
   conflux,
   format,

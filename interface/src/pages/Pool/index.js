@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import BigNumber from "bignumber.js";
 import { useConfluxPortal } from "@cfxjs/react-hooks";
 
-import { getPosPoolContract, conflux, Drip } from "../../utils/cfx";
+import { getPosPoolContract, conflux, Drip,getPosAccountByPowAddress } from "../../utils/cfx";
 import {
   getCfxByVote,
   calculateGasMargin,
@@ -26,6 +26,7 @@ function Pool() {
   const { confluxJS } = useConfluxPortal();
   let { poolAddress } = useParams();
   const posPoolContract = getPosPoolContract(poolAddress);
+  const [status,setStatus]=useState(false)
   const [stakedCfx, setStakedCfx] = useState(0);
   const [rewards, setRewards] = useState(0);
   const [fee, setFee] = useState(0);
@@ -45,6 +46,7 @@ function Pool() {
   const [stakeErrorText,setStakeErrorText]=useState('')
   const [unstakeInputStatus, setUnstakeInputStatus] = useState("error");
   const [unstakeErrorText,setUnstakeErrorText]=useState('')
+  const [stakeBtnDisabled,setStakeBtnDisabled]=useState(true)
 
   useEffect(() => {
     async function fetchData() {
@@ -63,6 +65,26 @@ function Pool() {
     }
     fetchData();
   }, []);
+
+  useEffect(()=>{
+    if(status){
+        if(stakeErrorText){
+            setStakeBtnDisabled(true)
+        }else{
+            setStakeBtnDisabled(false)
+        }
+    }else{
+        setStakeBtnDisabled(true)
+    }
+  },[stakeErrorText, status])
+
+  useEffect(()=>{
+    async function fetchData(address){
+        const posAccount=await getPosAccountByPowAddress(address)
+        setStatus(posAccount.status?.forceRetired==null)
+    }
+    fetchData(poolAddress)
+  },[poolAddress])
 
   useEffect(()=>{
     try {
@@ -232,7 +254,7 @@ function Pool() {
   return (
     <div className="w-full h-full flex">
       <div className="container mx-auto">
-        <Header />
+        <Header status={status}/>
         <div className="flex justify-center mt-6">
           <div className="w-9/12">
             <div className="flex">
@@ -279,7 +301,7 @@ function Pool() {
                       onClick={() => {
                         setStakeModalShown(true);
                       }}
-                      disabled={stakeErrorText}
+                      disabled={stakeBtnDisabled}
                     >
                       Stake
                     </Button>
