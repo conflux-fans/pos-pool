@@ -6,7 +6,7 @@ import BigNumber from "bignumber.js";
 import { getPosPoolContract, Drip } from "../../utils/cfx";
 import { getCfxByVote, getApy } from "../../utils";
 
-function Header({status}) {
+function Header({ status }) {
   let { poolAddress } = useParams();
   const posPoolContract = getPosPoolContract(poolAddress);
   const [lockedCfx, setLockedCfx] = useState(0);
@@ -34,27 +34,44 @@ function Header({status}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poolAddress]);
 
+  const cardStyle = {
+    backgroundColor: "#4d5a7e",
+    borderRadius: "10px",
+    color: "#fff",
+    fontWeight: "700",
+  };
+  const cardHeadStyle = { color: "#fff", opacity: "0.6" };
   return (
     <div className="flex">
-      <div className="flex-1 pr-4">
-        <Card title="Status">
+      <div className="flex-1 pr-4 ">
+        <Card
+          title="Status"
+          bordered={false}
+          style={cardStyle}
+          headStyle={cardHeadStyle}
+        >
           <Tag color={`${status ? "green" : "error"}`}>
-              {status ? "good" : "error"}
-            </Tag>
+            {status ? "good" : "error"}
+          </Tag>
         </Card>
       </div>
       <div className="flex-1 pr-4">
-        <Card title="Total Locked(CFX)">
+        <Card
+          title="Total Locked(CFX)"
+          bordered={false}
+          style={cardStyle}
+          headStyle={cardHeadStyle}
+        >
           <div>{lockedCfx}</div>
         </Card>
       </div>
       <div className="flex-1 pr-4">
-        <Card title="Total Revenue">
+        <Card title="Total Revenue" bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
           <div>{totalRevenue}</div>
         </Card>
       </div>
       <div className="flex-1">
-        <Card title="APY">
+        <Card title="APY" bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
           <div>{apy + "%"}</div>
         </Card>
       </div>

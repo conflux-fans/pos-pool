@@ -82,6 +82,8 @@ module.exports = {
         'gray-80': 'var(--color-gray-80)',
         'gray-90': 'var(--color-gray-90)',
         'gray-100': 'var(--color-gray-100)',
+        'main-back':'#252a3a',
+        'card-back':'#4d5a7e'
       },
       fontFamily: {
         body: [

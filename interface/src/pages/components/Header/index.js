@@ -8,7 +8,7 @@ function HeaderComp() {
     const {address,tryActivate}=useConnect()
     return (
       <Header style={{width: '100%' }}>
-        <div className='flex justify-between text-white'>
+        <div className='flex justify-between text-white bg-main-back bg-opacity-0'>
           <div>Pos Pool</div>
           <div>
           {address&&<div>{address}</div>}
