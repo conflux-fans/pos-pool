@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { Table, Space } from "antd";
 import { RightCircleOutlined } from "@ant-design/icons";
-import BigNumber from "bignumber.js";
 import {useHistory} from 'react-router-dom'
 
 import { getCfxByVote,getApy,getFee } from "../../utils";
@@ -40,26 +39,6 @@ function Home() {
       dataIndex: "fee",
       key: "fee",
     },
-    // {
-    //   title: "Tags",
-    //   key: "tags",
-    //   dataIndex: "tags",
-    //   render: (tags) => (
-    //     <>
-    //       {tags.map((tag) => {
-    //         let color = tag.length > 5 ? "geekblue" : "green";
-    //         if (tag === "loser") {
-    //           color = "volcano";
-    //         }
-    //         return (
-    //           <Tag color={color} key={tag}>
-    //             {tag.toUpperCase()}
-    //           </Tag>
-    //         );
-    //       })}
-    //     </>
-    //   ),
-    // },
     {
       title: "",
       key: "action",
