@@ -8,7 +8,7 @@ import Home from "./pages/Home";
 import Pool from "./pages/Pool";
 
 
-const { Content, Footer } = Layout;
+const { Content } = Layout;
 
 function App() {
   return (
