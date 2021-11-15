@@ -103,8 +103,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   // ======================== Contract methods =========================
 
-  constructor() {
-  }
+  constructor() {}
 
   ///
   /// @notice Enable admin to set the user share ratio
@@ -411,8 +410,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function poolAPY () public view returns (uint32) {
-    if (block.number > ONE_YEAR_BLOCK_COUNT) {
-      return _poolAPY(block.number - ONE_YEAR_BLOCK_COUNT);
+    if (block.number > ONE_DAY_BLOCK_COUNT) {
+      return _poolAPY(block.number - ONE_DAY_BLOCK_COUNT);
     } else {
       return _poolAPY(0);
     }
@@ -442,13 +441,42 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return userOutqueues[account].queueItems(offset, limit);
   }
 
+  // Used to bring account's retired votes back to work
+  function reStake(uint64 votePower) public onlyOwner {
+    _posRegisterIncreaseStake(votePower);
+  }
+
   // ======================== admin methods =====================
 
   // collect user interest in a pagination way to avoid gas OOM
   function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
+    _collectUserLatestSectionsInterest(msg.sender, sectionCount);
+  }
+
+  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
+    _collectUserLatestInterestPagination(msg.sender, limit);
+  }
+
+  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
+    _collectUserLastVotePowerSectionPagination(msg.sender, limit);
+  }
+
+  function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
+    _collectUserLatestSectionsInterest(_addr, sectionCount);
+  }
+
+  function collectUserLatestInterestPaginationByAdmin(address _addr, uint64 limit) public onlyRegisted onlyOwner {
+    _collectUserLatestInterestPagination(_addr, limit);
+  }
+
+  function collectUserLastVotePowerSectionPaginationByAdmin(address _addr, uint64 limit) public onlyRegisted onlyOwner {
+    _collectUserLastVotePowerSectionPagination(_addr, limit);
+  }
+
+  function _collectUserLatestSectionsInterest(address _user, uint256 sectionCount) private {
     require(sectionCount <= 100, "Max section count is 100");
     
-    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    VotePowerSection[] storage uSections = votePowerSections[_user];
     require(uSections.length > 0, "No sections");
 
     if (uSections.length < sectionCount) {
@@ -472,13 +500,13 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
       }
       uSections.pop();
     }
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
   }
 
-  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
+  function _collectUserLatestInterestPagination(address _user, uint64 limit) private {
     require(limit <= 100, "Max section count is 100");
 
-    UserShot storage uShot = lastUserShots[msg.sender];
+    UserShot storage uShot = lastUserShots[_user];
     require(uShot.blockNumber < lastPoolShot.blockNumber, "No new user shot");
 
     uint64 start = _rSectionStartIndex(uShot.blockNumber);
@@ -497,14 +525,14 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
       totalInterest = totalInterest.add(currentSectionShare);
     }
 
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
     uShot.blockNumber = rewardSections[end - 1].endBlock;
   }
 
-  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
+  function _collectUserLastVotePowerSectionPagination(address _user, uint64 limit) private {
     require(limit <= 100, "Max section count is 100");
 
-    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    VotePowerSection[] storage uSections = votePowerSections[_user];
     require(uSections.length > 0, "No vote power section");
 
     uint64 start = _rSectionStartIndex(uSections[uSections.length - 1].startBlock);
@@ -523,7 +551,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
       totalInterest = totalInterest.add(currentSectionShare);
     }
     
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
     if (end == rewardSections.length) {
       uSections.pop();
     } else {
