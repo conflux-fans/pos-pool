@@ -20,17 +20,12 @@ import TxModal from "./TxModal";
 
 function Pool() {
   const { address: accountAddress } = useConnect();
-  console.info("accountAddress", accountAddress);
   const [form] = Form.useForm();
   const balance = useBalance(accountAddress);
   const cfxMaxCanStake = getMax(balance);
-  console.info("cfxMaxCanStake", cfxMaxCanStake);
   const { confluxJS } = useConfluxPortal();
-  console.info("balance", balance);
   let { poolAddress } = useParams();
-  console.info("poolAddress", poolAddress);
   const posPoolContract = getPosPoolContract(poolAddress);
-  console.info("posPoolContract", posPoolContract);
   const [stakedCfx, setStakedCfx] = useState(0);
   const [rewards, setRewards] = useState(0);
   const [fee, setFee] = useState(0);
@@ -50,7 +45,6 @@ function Pool() {
   const [stakeErrorText,setStakeErrorText]=useState('')
   const [unstakeInputStatus, setUnstakeInputStatus] = useState("error");
   const [unstakeErrorText,setUnstakeErrorText]=useState('')
-  console.info("currentBlockNumber", currentBlockNumber);
 
   useEffect(() => {
     async function fetchData() {
@@ -111,9 +105,7 @@ function Pool() {
         proArr.push(posPoolContract.poolUserShareRatio());
         proArr.push(posPoolContract.userOutQueue(accountAddress));
         const data = await Promise.all(proArr);
-        console.info("data==", data);
         const userSum = data[0];
-        console.info("userSummary", userSum);
         setUserSummary(userSum);
         setStakedCfx(
           new BigNumber(userSum[1] || 0)
@@ -122,13 +114,10 @@ function Pool() {
         );
         setCfxCanUnstate(getCfxByVote(userSum[2] || 0));
         setCfxCanWithdraw(getCfxByVote(userSum[3] || 0));
-        console.info("rewards", new BigNumber(data[1]).toNumber());
         setRewards(new Drip(new BigNumber(data[1]).toNumber()).toCFX());
         setFee(getFee(data[2]));
-        console.info("outQueue", transferQueue(data[3]));
         setUnstakeList(transferQueue(data[3]));
       } catch (error) {
-        console.info("error", error);
       }
     }
     if (accountAddress) {
@@ -152,7 +141,6 @@ function Pool() {
         });
       }
     });
-    console.info("arrrr", arr);
     return arr;
   };
 
@@ -165,7 +153,6 @@ function Pool() {
   };
 
   const submit = async (type) => {
-    console.info("type", type);
     if (!accountAddress) {
       message.error("Please connect ConfluxPortal");
       return;
@@ -177,9 +164,7 @@ function Pool() {
       switch (type) {
         case "stake":
           value = new BigNumber(inputStakeCfx).multipliedBy(10**18).toNumber();
-          console.info('valueaaaa',value)
           const stakeVote=new BigNumber(inputStakeCfx).dividedBy(CFX_BASE_PER_VOTE).toNumber()
-          console.info('stakeVote',stakeVote)
           estimateData = await posPoolContract
             .increaseStake(stakeVote)
             .estimateGasAndCollateral({
@@ -206,7 +191,6 @@ function Pool() {
               from: accountAddress,
             });
           data = posPoolContract.claimAllInterest().data;
-          console.info("claimData", data);
           break;
         case "withdraw":
           value = 0;
@@ -239,11 +223,9 @@ function Pool() {
         setUnStakeModalShown(false);
       }
       const txHash = await confluxJS.sendTransaction(txParams);
-      console.info("txHash", txHash);
       setTxHash(txHash);
       setTxModalShown(true);
     } catch (error) {
-      console.info(error);
     }
   };
 
@@ -263,11 +245,6 @@ function Pool() {
                   <div className="font-bold my-4 text-xl text-center">
                     Stake&Unstake
                   </div>
-                  {/* <div>How much do you want to stake?(Multiples of 1,000 CFX)</div>
-              <Input
-                placeholder="Enter the CFX amount"
-                suffix={<span>Max</span>}
-              ></Input> */}
                   <Form.Item
                     label="How much do you want to stake?(Multiples of 1,000 CFX)"
                     required

@@ -64,7 +64,6 @@ function Home() {
       title: "",
       key: "action",
       render: (text, record) => {
-        console.info('record',record)
         return <Space size="middle">
         <RightCircleOutlined onClick={()=>gotoPoolPage(record)} style={{ fontSize: '28px', color: '#08c' }} />
       </Space>
@@ -83,7 +82,6 @@ function Home() {
   const transferData=(list)=>{
     const arr=[]
     list.forEach(item => {
-      console.info('item',item)
       arr.push({
         key:item[0],
         address:item[0],

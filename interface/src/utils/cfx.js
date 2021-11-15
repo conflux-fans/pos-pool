@@ -9,7 +9,6 @@ import { abi as posManagerAbi } from "./../contract/PoolManager.json";
 import { isTestNetEnv } from "./index";
 import { NETWORK_ID_MAINNET, NETWORK_ID_TESTNET } from "../constants";
 
-console.info('isTestNetEnv',isTestNetEnv())
 const networkId = isTestNetEnv() ? NETWORK_ID_TESTNET : NETWORK_ID_MAINNET;
 
 const cfxUrl = window.location.origin + "/rpc";

@@ -33,10 +33,8 @@ export const getDateByBlockInterval = (minuend = 0, subtrahend = 0) => {
   const seconds = isGreater
     ? minuendBn.minus(subtrahendBn).dividedBy(2).toNumber()
     : subtrahendBn.minus(minuendBn).dividedBy(2).toNumber()
-  console.info('seconds',seconds)  
   const futureDate=new Date(new BigNumber(Date.now()).plus(seconds * 1000).toNumber())
   const pastDate=new Date(new BigNumber(Date.now()).minus(seconds * 1000).toNumber())
-  console.info('pastDate',pastDate)
   return isGreater?futureDate:pastDate
 }
 
