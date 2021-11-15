@@ -18,8 +18,7 @@ function Header() {
       try {
         const proArr = [];
         proArr.push(posPoolContract.poolSummary());
-        // TODO: proArr.push(posPoolContract.poolAPY());
-        proArr.push(Promise.resolve(1000));
+        proArr.push(posPoolContract.poolAPY());
         const data = await Promise.all(proArr);
         const poolSummary = data[0];
         setLockedCfx(getCfxByVote(poolSummary[0]));
