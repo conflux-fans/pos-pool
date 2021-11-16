@@ -28,7 +28,7 @@ interface IPoSPool {
   // pool info
   function poolSummary() external view returns (PoolSummary memory);
   function poolAPY() external view returns (uint32);
-  function poolUserShareRatio() external view returns (uint32);
+  function poolUserShareRatio() external view returns (uint64);
   function poolName() external view returns (string memory);
   function _poolLockPeriod() external view returns (uint64);
 

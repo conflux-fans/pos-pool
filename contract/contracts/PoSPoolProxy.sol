@@ -4,7 +4,7 @@ import "./PoSPoolStorage.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract StorageProxy is PoSPoolStorage, Proxy, Ownable {
+contract PoSPoolProxy is PoSPoolStorage, Proxy, Ownable {
   address public _logicContractAddress;
 
   function setLogicContractAddress(address _addr) public onlyOwner {
