@@ -109,7 +109,7 @@ export function useConnect() {
  */
 export function useBalance(address) {
   const [balance,setBalance]=useState(0)
-  const delay=3000
+  const delay=2000
   useInterval(
     () => {
       conflux.provider.call("cfx_getAccount", address).then(data=>{
