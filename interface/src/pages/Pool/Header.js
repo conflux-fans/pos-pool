@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import BigNumber from "bignumber.js";
 
 import { getPosPoolContract, Drip } from "../../utils/cfx";
-import { getCfxByVote, getApy } from "../../utils";
+import { getCfxByVote, getApy,getPrecisionAmount } from "../../utils";
 
 function Header({ status }) {
   let { poolAddress } = useParams();
@@ -67,7 +67,7 @@ function Header({ status }) {
       </div>
       <div className="flex-1 pr-4">
         <Card title="Total Revenue" bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
-          <div>{totalRevenue}</div>
+          <div>{getPrecisionAmount(totalRevenue,5)}</div>
         </Card>
       </div>
       <div className="flex-1">
