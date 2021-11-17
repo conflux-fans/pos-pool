@@ -1,4 +1,5 @@
 import { Layout,Button } from 'antd';
+import { Link} from "react-router-dom";
 
 import {useConnect} from '../../../hooks/usePortal'
 
@@ -9,7 +10,7 @@ function HeaderComp() {
     return (
       <Header style={{width: '100%' }}>
         <div className='flex justify-between text-white bg-main-back bg-opacity-0'>
-          <div>Pos Pool</div>
+          <Link to="/">Pos Pool</Link>
           <div>
           {address&&<div>{address}</div>}
           {!address&&<Button type='primary' onClick={tryActivate}>Connect Portal</Button>}
