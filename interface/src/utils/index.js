@@ -106,3 +106,7 @@ export const getMax = (amount) => {
   }
   return 0;
 };
+
+export const getPrecisionAmount=(amount,precision=0)=>{
+  return new BigNumber(amount).toFixed(precision)
+}

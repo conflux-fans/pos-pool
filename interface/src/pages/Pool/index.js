@@ -11,6 +11,7 @@ import {
   getFee,
   getDateByBlockInterval,
   getMax,
+  getPrecisionAmount
 } from "../../utils";
 import { useConnect, useBalance } from "../../hooks/usePortal";
 import { CFX_BASE_PER_VOTE } from "../../constants";
@@ -21,7 +22,7 @@ import TxModal from "./TxModal";
 function Pool() {
   const { address: accountAddress } = useConnect();
   const [form] = Form.useForm();
-  const balance = new BigNumber(useBalance(accountAddress)||0).toFixed(5);
+  const balance = getPrecisionAmount(useBalance(accountAddress)||0,5);
   const cfxMaxCanStake = getMax(balance);
   const { confluxJS } = useConfluxPortal();
   let { poolAddress } = useParams();
@@ -145,7 +146,7 @@ function Pool() {
         );
         setCfxCanUnstate(getCfxByVote(userSum[2] || 0));
         setCfxCanWithdraw(getCfxByVote(userSum[3] || 0));
-        setRewards(new BigNumber(new Drip(new BigNumber(data[1]).toNumber()).toCFX()).toFixed(5));
+        setRewards(getPrecisionAmount(new Drip(new BigNumber(data[1]).toNumber()).toCFX(),5));
         setFee(getFee(data[2]));
         setUnstakeList(transferQueue(data[3]));
         setIsLoading(false)
@@ -378,7 +379,7 @@ function Pool() {
                       onClick={() => {
                         submit("claim");
                       }}
-                      disabled={!rewards}
+                      disabled={new BigNumber(rewards).isEqualTo(0)}
                     >
                       Claim
                     </Button>
