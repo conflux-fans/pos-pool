@@ -56,6 +56,15 @@ program
   });
 
 program
+  .command('setLockPeriod <number>')
+  .action(async (arg) => {
+    const receipt = await poolContract.setLockPeriod(parseInt(arg)).sendTransaction({
+      from: account.address,
+    }).executed();
+    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+  });
+
+program
   .command('setPoolName <name>')
   .action(async (arg) => {
     const receipt = await poolContract.setPoolName(arg).sendTransaction({

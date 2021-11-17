@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 import "./PoSPoolStorage.sol";
@@ -23,6 +24,7 @@ import "./PoSPoolStorage.sol";
 contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   using SafeMath for uint256;
   using VotePowerQueue for VotePowerQueue.InOutQueue;
+  using EnumerableSet for EnumerableSet.AddressSet;
 
   // ======================== Modifiers =========================
 
@@ -167,6 +169,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     // create the initial shot of pool and admin
     _updateLastUserShot();
     _updateLastPoolShot();
+
+    stakers.add(msg.sender);
   }
 
   ///
@@ -189,6 +193,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSectionAndUpdateLastShot();
+
+    stakers.add(msg.sender);
   }
 
   ///
@@ -442,8 +448,34 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   // Used to bring account's retired votes back to work
+  // reStake poolSummary.available
   function reStake(uint64 votePower) public onlyOwner {
     _posRegisterIncreaseStake(votePower);
+  }
+
+  function stakerNumber() public view returns (uint) {
+    return stakers.length();
+  }
+
+  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
+    require(userSummaries[_addr].available > 0, "No available stake");
+    uint64 votePower = userSummaries[_addr].available;
+    poolSummary.available -= votePower;
+    userSummaries[_addr].available = 0;
+    userSummaries[_addr].locked = 0;
+    userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+  }
+
+  // When pool node is force retired, use this method to make all user's available stake to unlocking
+  function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
+    uint256 len = stakers.length();
+    uint256 end = offset + limit;
+    if (end > len) {
+      end = len;
+    }
+    for (uint256 i = offset; i < end; i++) {
+      _retireUserStake(stakers.at(i), endBlockNumber);
+    }
   }
 
   // ======================== admin methods =====================

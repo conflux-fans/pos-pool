@@ -24,6 +24,7 @@ interface IPoSPool {
   function setPoolUserShareRatio(uint32 ratio) external;
   function setLockPeriod(uint64 period) external;
   function setPoolName(string memory name) external;
+  function reStake(uint64 votePower) external;
 
   // pool info
   function poolSummary() external view returns (PoolSummary memory);
