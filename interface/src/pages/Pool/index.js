@@ -21,7 +21,7 @@ import TxModal from "./TxModal";
 function Pool() {
   const { address: accountAddress } = useConnect();
   const [form] = Form.useForm();
-  const balance = useBalance(accountAddress);
+  const balance = new BigNumber(useBalance(accountAddress)||0).toFixed(5);
   const cfxMaxCanStake = getMax(balance);
   const { confluxJS } = useConfluxPortal();
   let { poolAddress } = useParams();
@@ -145,7 +145,7 @@ function Pool() {
         );
         setCfxCanUnstate(getCfxByVote(userSum[2] || 0));
         setCfxCanWithdraw(getCfxByVote(userSum[3] || 0));
-        setRewards(new Drip(new BigNumber(data[1]).toNumber()).toCFX());
+        setRewards(new BigNumber(new Drip(new BigNumber(data[1]).toNumber()).toCFX()).toFixed(5));
         setFee(getFee(data[2]));
         setUnstakeList(transferQueue(data[3]));
         setIsLoading(false)
@@ -209,7 +209,7 @@ function Pool() {
           data = posPoolContract.increaseStake(stakeVote).data;
           break;
         case "unstake":
-          value = inputUnstakeCfx;
+          value = 0;
           const unstakeVote=new BigNumber(inputUnstakeCfx).dividedBy(CFX_BASE_PER_VOTE).toNumber()
           estimateData = await posPoolContract
             .decreaseStake(unstakeVote)
