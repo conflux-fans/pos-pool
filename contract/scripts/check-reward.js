@@ -1,8 +1,6 @@
 const { conflux } = require("./conflux");
 
-let address =
-  "NET8888:TYPE.CONTRACT:ACCHHA25SM4P7C0WXC778MMBTVNE99X53PXFWE26UN";
-address = "NET8888:TYPE.CONTRACT:ACFANGB2WPPT9YB1U4F4272BYZF6NUWJ3PFJ9MTFGZ";
+let address = "";
 
 if (process.argv.length > 2) {
   address = process.argv[2];

@@ -6,6 +6,8 @@ const poolDebugContractInfo = require("../artifacts/contracts/PoSPoolDebug.sol/P
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolContractInterface = require("../artifacts/contracts/IPoSPool.sol/IPoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
+const mockStakingInfo = require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
+const mockPosRegisterInfo = require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
 const {Conflux, Drip, format} = require('js-conflux-sdk');
 const { program } = require("commander");
 require('dotenv').config();
@@ -19,6 +21,11 @@ const poolContract = conflux.Contract({
   abi: poolContractInterface.abi,
   // address: process.env.POOL_DEBUG_ADDRESS,
   address: process.env.POOL_ADDRESS,
+});
+
+const poolDebugContract = conflux.Contract({
+  abi: poolContractInterface.abi,
+  address: process.env.POOL_DEBUG_ADDRESS,
 });
 
 const poolManagerContract = conflux.Contract({
@@ -44,30 +51,33 @@ program
   });
 
 program
-  .command('registerPool <data>')
-  .action(async (arg) => {
+  .command('registerPool [debug]')
+  .action(async (debug) => {
+    const _poolAddress = debug ? process.env.POOL_DEBUG_ADDRESS : process.env.POOL_ADDRESS;
     const receipt = await conflux.cfx.sendTransaction({
       from: account.address,
       value: Drip.fromCFX(1000),
-      to: process.env.POOL_ADDRESS,
-      data: arg,
+      to: _poolAddress,
+      data: process.env.POS_REGIST_DATA,
     }).executed();
     console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
   });
 
 program
-  .command('setLockPeriod <number>')
-  .action(async (arg) => {
-    const receipt = await poolContract.setLockPeriod(parseInt(arg)).sendTransaction({
+  .command('setLockPeriod <number> [debug]')
+  .action(async (arg, debug) => {
+    const contract = debug ? poolDebugContract : poolContract;
+    const receipt = await contract.setLockPeriod(parseInt(arg)).sendTransaction({
       from: account.address,
     }).executed();
     console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
   });
 
 program
-  .command('setPoolName <name>')
-  .action(async (arg) => {
-    const receipt = await poolContract.setPoolName(arg).sendTransaction({
+  .command('setPoolName <name> [debug]')
+  .action(async (arg, debug) => {
+    const contract = debug ? poolDebugContract : poolContract;
+    const receipt = await contract.setPoolName(arg).sendTransaction({
       from: account.address,
     }).executed();
     console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
@@ -123,6 +133,57 @@ program
     const contract = conflux.Contract({
       abi: poolContractInfo.abi,
       bytecode: poolContractInfo.bytecode,
+    });
+    const receipt = await contract.constructor().sendTransaction({
+      from: account.address
+    }).executed();
+    if (receipt.outcomeStatus) {
+      console.log('deploy failed', receipt);
+    } else {
+      console.log('deploy success: ', receipt.contractCreated);
+    }
+  });
+
+program
+  .command('deployDebugPool')
+  .action(async (arg) => {
+    const contract = conflux.Contract({
+      abi: poolDebugContractInfo.abi,
+      bytecode: poolDebugContractInfo.bytecode,
+    });
+    const receipt = await contract.constructor(process.env.MOCK_STAKE, process.env.MOCK_POS_REGISTER).sendTransaction({
+      from: account.address
+    }).executed();
+    if (receipt.outcomeStatus) {
+      console.log('deploy failed', receipt);
+    } else {
+      console.log('deploy success: ', receipt.contractCreated);
+    }
+  });
+
+program
+  .command('deployMockStake')
+  .action(async (arg) => {
+    const contract = conflux.Contract({
+      abi: mockStakingInfo.abi,
+      bytecode: mockStakingInfo.bytecode,
+    });
+    const receipt = await contract.constructor().sendTransaction({
+      from: account.address
+    }).executed();
+    if (receipt.outcomeStatus) {
+      console.log('deploy failed', receipt);
+    } else {
+      console.log('deploy success: ', receipt.contractCreated);
+    }
+  });
+
+program
+  .command('deployMockPosRegister')
+  .action(async (arg) => {
+    const contract = conflux.Contract({
+      abi: mockPosRegisterInfo.abi,
+      bytecode: mockPosRegisterInfo.bytecode,
     });
     const receipt = await contract.constructor().sendTransaction({
       from: account.address

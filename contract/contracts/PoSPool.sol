@@ -458,7 +458,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    require(userSummaries[_addr].available > 0, "No available stake");
+    if (userSummaries[_addr].available == 0) return;
     uint64 votePower = userSummaries[_addr].available;
     poolSummary.available -= votePower;
     userSummaries[_addr].available = 0;
