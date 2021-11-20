@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 import "./PoSPoolStorage.sol";
@@ -23,6 +24,7 @@ import "./PoSPoolStorage.sol";
 contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   using SafeMath for uint256;
   using VotePowerQueue for VotePowerQueue.InOutQueue;
+  using EnumerableSet for EnumerableSet.AddressSet;
 
   // ======================== Modifiers =========================
 
@@ -103,40 +105,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   // ======================== Contract methods =========================
 
-  constructor() {
-  }
-
-  ///
-  /// @notice Enable admin to set the user share ratio
-  /// @dev The ratio base is 10000, only admin can do this
-  /// @param ratio The interest user share ratio (1-10000), default is 9000
-  ///
-  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
-    require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
-    poolUserShareRatio = ratio;
-    emit RatioChanged(ratio);
-  }
-
-  /// 
-  /// @notice Enable admin to set the lock and unlock period
-  /// @dev Only admin can do this
-  /// @param period The lock period in block number, default is seven day's block count
-  ///
-  function setLockPeriod(uint64 period) public onlyOwner {
-    _poolLockPeriod = period;
-  }
-
-  /// 
-  /// @notice Enable admin to set the pool name
-  ///
-  function setPoolName(string memory name) public onlyOwner {
-    poolName = name;
-  }
-
-  /// @param count Vote cfx count, unit is cfx
-  function setCfxCountOfOneVote(uint256 count) public onlyOwner {
-    CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
-  }
+  // constructor() {}
 
   ///
   /// @notice Regist the pool contract in PoS internal contract 
@@ -168,6 +137,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     // create the initial shot of pool and admin
     _updateLastUserShot();
     _updateLastPoolShot();
+
+    stakers.add(msg.sender);
   }
 
   ///
@@ -190,6 +161,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
     _shotVotePowerSectionAndUpdateLastShot();
     _shotRewardSectionAndUpdateLastShot();
+
+    stakers.add(msg.sender);
   }
 
   ///
@@ -411,8 +384,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function poolAPY () public view returns (uint32) {
-    if (block.number > ONE_YEAR_BLOCK_COUNT) {
-      return _poolAPY(block.number - ONE_YEAR_BLOCK_COUNT);
+    if (block.number > ONE_DAY_BLOCK_COUNT) {
+      return _poolAPY(block.number - ONE_DAY_BLOCK_COUNT);
     } else {
       return _poolAPY(0);
     }
@@ -442,13 +415,106 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return userOutqueues[account].queueItems(offset, limit);
   }
 
-  // ======================== admin methods =====================
-
   // collect user interest in a pagination way to avoid gas OOM
   function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
+    _collectUserLatestSectionsInterest(msg.sender, sectionCount);
+  }
+
+  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
+    _collectUserLatestInterestPagination(msg.sender, limit);
+  }
+
+  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
+    _collectUserLastVotePowerSectionPagination(msg.sender, limit);
+  }
+
+  // ======================== admin methods =====================
+
+  ///
+  /// @notice Enable admin to set the user share ratio
+  /// @dev The ratio base is 10000, only admin can do this
+  /// @param ratio The interest user share ratio (1-10000), default is 9000
+  ///
+  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
+    require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
+    poolUserShareRatio = ratio;
+    emit RatioChanged(ratio);
+  }
+
+  /// 
+  /// @notice Enable admin to set the lock and unlock period
+  /// @dev Only admin can do this
+  /// @param period The lock period in block number, default is seven day's block count
+  ///
+  function setLockPeriod(uint64 period) public onlyOwner {
+    _poolLockPeriod = period;
+  }
+
+  /// 
+  /// @notice Enable admin to set the pool name
+  ///
+  function setPoolName(string memory name) public onlyOwner {
+    poolName = name;
+  }
+
+  /// @param count Vote cfx count, unit is cfx
+  function setCfxCountOfOneVote(uint256 count) public onlyOwner {
+    CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
+  }
+
+  function _withdrawCFX(uint256 amount) public onlyOwner {
+    require(_selfBalance() > amount, "Balance must be greater than amount");
+    address payable receiver = payable(msg.sender);
+    receiver.transfer(amount);
+  }
+
+  // Used to bring account's retired votes back to work
+  // reStake poolSummary.available
+  function reStake(uint64 votePower) public onlyOwner {
+    _posRegisterIncreaseStake(votePower);
+  }
+
+  function stakerNumber() public view returns (uint) {
+    return stakers.length();
+  }
+
+  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
+    if (userSummaries[_addr].available == 0) return;
+    uint64 votePower = userSummaries[_addr].available;
+    poolSummary.available -= votePower;
+    userSummaries[_addr].available = 0;
+    userSummaries[_addr].locked = 0;
+    userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+  }
+
+  // When pool node is force retired, use this method to make all user's available stake to unlocking
+  function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
+    uint256 len = stakers.length();
+    uint256 end = offset + limit;
+    if (end > len) {
+      end = len;
+    }
+    for (uint256 i = offset; i < end; i++) {
+      _retireUserStake(stakers.at(i), endBlockNumber);
+    }
+  }
+
+  function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
+    _collectUserLatestSectionsInterest(_addr, sectionCount);
+  }
+
+  function collectUserLatestInterestPaginationByAdmin(address _addr, uint64 limit) public onlyRegisted onlyOwner {
+    _collectUserLatestInterestPagination(_addr, limit);
+  }
+
+  function collectUserLastVotePowerSectionPaginationByAdmin(address _addr, uint64 limit) public onlyRegisted onlyOwner {
+    _collectUserLastVotePowerSectionPagination(_addr, limit);
+  }
+
+  function _collectUserLatestSectionsInterest(address _user, uint256 sectionCount) private {
     require(sectionCount <= 100, "Max section count is 100");
     
-    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    VotePowerSection[] storage uSections = votePowerSections[_user];
     require(uSections.length > 0, "No sections");
 
     if (uSections.length < sectionCount) {
@@ -472,13 +538,13 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
       }
       uSections.pop();
     }
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
   }
 
-  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
+  function _collectUserLatestInterestPagination(address _user, uint64 limit) private {
     require(limit <= 100, "Max section count is 100");
 
-    UserShot storage uShot = lastUserShots[msg.sender];
+    UserShot storage uShot = lastUserShots[_user];
     require(uShot.blockNumber < lastPoolShot.blockNumber, "No new user shot");
 
     uint64 start = _rSectionStartIndex(uShot.blockNumber);
@@ -497,14 +563,14 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
       totalInterest = totalInterest.add(currentSectionShare);
     }
 
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
     uShot.blockNumber = rewardSections[end - 1].endBlock;
   }
 
-  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
+  function _collectUserLastVotePowerSectionPagination(address _user, uint64 limit) private {
     require(limit <= 100, "Max section count is 100");
 
-    VotePowerSection[] storage uSections = votePowerSections[msg.sender];
+    VotePowerSection[] storage uSections = votePowerSections[_user];
     require(uSections.length > 0, "No vote power section");
 
     uint64 start = _rSectionStartIndex(uSections[uSections.length - 1].startBlock);
@@ -523,7 +589,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
       totalInterest = totalInterest.add(currentSectionShare);
     }
     
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(totalInterest);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
     if (end == rewardSections.length) {
       uSections.pop();
     } else {
