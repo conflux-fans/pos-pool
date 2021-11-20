@@ -105,39 +105,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   // ======================== Contract methods =========================
 
-  constructor() {}
-
-  ///
-  /// @notice Enable admin to set the user share ratio
-  /// @dev The ratio base is 10000, only admin can do this
-  /// @param ratio The interest user share ratio (1-10000), default is 9000
-  ///
-  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
-    require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
-    poolUserShareRatio = ratio;
-    emit RatioChanged(ratio);
-  }
-
-  /// 
-  /// @notice Enable admin to set the lock and unlock period
-  /// @dev Only admin can do this
-  /// @param period The lock period in block number, default is seven day's block count
-  ///
-  function setLockPeriod(uint64 period) public onlyOwner {
-    _poolLockPeriod = period;
-  }
-
-  /// 
-  /// @notice Enable admin to set the pool name
-  ///
-  function setPoolName(string memory name) public onlyOwner {
-    poolName = name;
-  }
-
-  /// @param count Vote cfx count, unit is cfx
-  function setCfxCountOfOneVote(uint256 count) public onlyOwner {
-    CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
-  }
+  // constructor() {}
 
   ///
   /// @notice Regist the pool contract in PoS internal contract 
@@ -447,6 +415,59 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return userOutqueues[account].queueItems(offset, limit);
   }
 
+  // collect user interest in a pagination way to avoid gas OOM
+  function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
+    _collectUserLatestSectionsInterest(msg.sender, sectionCount);
+  }
+
+  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
+    _collectUserLatestInterestPagination(msg.sender, limit);
+  }
+
+  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
+    _collectUserLastVotePowerSectionPagination(msg.sender, limit);
+  }
+
+  // ======================== admin methods =====================
+
+  ///
+  /// @notice Enable admin to set the user share ratio
+  /// @dev The ratio base is 10000, only admin can do this
+  /// @param ratio The interest user share ratio (1-10000), default is 9000
+  ///
+  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
+    require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
+    poolUserShareRatio = ratio;
+    emit RatioChanged(ratio);
+  }
+
+  /// 
+  /// @notice Enable admin to set the lock and unlock period
+  /// @dev Only admin can do this
+  /// @param period The lock period in block number, default is seven day's block count
+  ///
+  function setLockPeriod(uint64 period) public onlyOwner {
+    _poolLockPeriod = period;
+  }
+
+  /// 
+  /// @notice Enable admin to set the pool name
+  ///
+  function setPoolName(string memory name) public onlyOwner {
+    poolName = name;
+  }
+
+  /// @param count Vote cfx count, unit is cfx
+  function setCfxCountOfOneVote(uint256 count) public onlyOwner {
+    CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
+  }
+
+  function _withdrawCFX(uint256 amount) public onlyOwner {
+    require(_selfBalance() > amount, "Balance must be greater than amount");
+    address payable receiver = payable(msg.sender);
+    receiver.transfer(amount);
+  }
+
   // Used to bring account's retired votes back to work
   // reStake poolSummary.available
   function reStake(uint64 votePower) public onlyOwner {
@@ -476,21 +497,6 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
-  }
-
-  // ======================== admin methods =====================
-
-  // collect user interest in a pagination way to avoid gas OOM
-  function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
-    _collectUserLatestSectionsInterest(msg.sender, sectionCount);
-  }
-
-  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
-    _collectUserLatestInterestPagination(msg.sender, limit);
-  }
-
-  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
-    _collectUserLastVotePowerSectionPagination(msg.sender, limit);
   }
 
   function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
