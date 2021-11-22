@@ -4,8 +4,8 @@ import {
   Drip,
 } from "js-conflux-sdk/dist/js-conflux-sdk.umd.min.js";
 
-import { abi as posPoolAbi } from "./../contract/PoSPool.json";
-import { abi as posManagerAbi } from "./../contract/PoolManager.json";
+import { abi as posPoolAbi } from "./../../../contract/ABI/IPoSPool.json";
+import { abi as posManagerAbi } from "./../../../contract/ABI/PoolManager.json";
 import { isTestNetEnv } from "./index";
 import { NETWORK_ID_MAINNET, NETWORK_ID_TESTNET } from "../constants";
 
@@ -26,7 +26,7 @@ const conflux = new Conflux({
 //   ? posPoolAddressTestnet
 //   : posPoolAddressMainnet;
 const posPoolManagerAddressTestnet =
-  "NET8888:TYPE.CONTRACT:ACC7GGWT2M5D8VY6F9P9221TN8KB4CRH2UVW0FA9HT";
+  "NET8888:TYPE.CONTRACT:ACC7ANC643M4W2VUHRNP5F0ZGZHUW8ZK6AENY2XB11";
 //TODO: modify mainnet address
 const posPoolManagerAddressMainnet = "";
 const posPoolManagerAddress = isTestNetEnv()

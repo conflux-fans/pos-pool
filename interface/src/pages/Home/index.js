@@ -95,21 +95,26 @@ function Home() {
     const arr = [];
     const proArr = [];
     list.forEach((item) => {
-      const address = item[0];
+      const address = item[3];
       proArr.push(getPosAccountByPowAddress(address));
     });
-    const proRes = await Promise.all(proArr);
+    try {
+      const proRes = await Promise.all(proArr);
     list.forEach((item, index) => {
       arr.push({
-        key: item[0],
-        address: item[0],
-        totalAvailable: getCfxByVote(item[1]),
-        name: item[2],
-        apy: getApy(item[3]) + "%",
-        fee: getFee(item[4]) + "%",
+        key: item[3],
+        address: item[3],
+        totalAvailable: getCfxByVote(item[2]),
+        name: item[4],
+        apy: getApy(item[0]) + "%",
+        fee: getFee(item[1]) + "%",
         status: proRes[index]?.status?.forceRetired == null,
       });
     });
+    } catch (error) {
+      console.info('error',error)
+    }
+    
     return arr;
   };
   return (
