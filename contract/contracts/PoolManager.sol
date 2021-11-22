@@ -8,19 +8,15 @@ import "./IPoSPool.sol";
 contract PoolManager is Ownable {
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  // uint32 constant public RATIO_BASE = 10000;
-
   EnumerableSet.AddressSet private pools;
 
   struct PoolInfo {
     uint32 apy; // 1000 / 1w  10%
-    uint32 fee; // userShare fee   90%
+    uint64 fee; // userShare fee   90%
     uint64 totalAvailable;
     address poolAddress;
     string name;
   }
-
-  constructor() {}
 
   // TODO pagination
   function getPools() public view returns (PoolInfo[] memory) {
@@ -41,6 +37,10 @@ contract PoolManager is Ownable {
     return poolInfos;
   }
 
+  function getPoolAddresses() public view returns (address[] memory) {
+    return pools.values();
+  }
+
   function addPool(address poolAddress) public onlyOwner {
     pools.add(poolAddress);
   }
@@ -48,5 +48,4 @@ contract PoolManager is Ownable {
   function removePool(address poolAddress) public onlyOwner {
     pools.remove(poolAddress);
   }
-
 }
