@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "./VotePowerQueue.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract PoSPoolStorage {
   uint64 constant internal ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
@@ -14,7 +15,6 @@ contract PoSPoolStorage {
   uint64 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
   uint256 internal CFX_COUNT_OF_ONE_VOTE = 1000 ether;
-  // address internal _poolAdmin;
   string public poolName;
 
   // ======================== Struct definitions =========================
@@ -79,6 +79,8 @@ contract PoSPoolStorage {
   
   PoolShot internal lastPoolShot;
   mapping(address => UserShot) internal lastUserShots;
+
+  EnumerableSet.AddressSet internal stakers;
 
   mapping(address => UserSummary) internal userSummaries;
   mapping(address => VotePowerQueue.InOutQueue) internal userInqueues;
