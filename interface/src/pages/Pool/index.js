@@ -48,6 +48,7 @@ function Pool() {
   const [unstakeInputStatus, setUnstakeInputStatus] = useState("error");
   const [unstakeErrorText,setUnstakeErrorText]=useState('')
   const [stakeBtnDisabled,setStakeBtnDisabled]=useState(true)
+  const [unstakeBtnDisabled,setUnstakeBtnDisabled]=useState(true)
   const [isLoading,setIsLoading]=useState(false)
 
   useEffect(() => {
@@ -79,6 +80,18 @@ function Pool() {
         setStakeBtnDisabled(true)
     }
   },[stakeErrorText, status])
+
+  useEffect(()=>{
+    if(status){
+        if(unstakeErrorText){
+            setUnstakeBtnDisabled(true)
+        }else{
+            setUnstakeBtnDisabled(false)
+        }
+    }else{
+        setUnstakeBtnDisabled(true)
+    }
+  },[unstakeErrorText, status])
 
   useEffect(()=>{
     async function fetchData(address){
@@ -352,7 +365,7 @@ function Pool() {
                       onClick={() => {
                         setUnStakeModalShown(true);
                       }}
-                      disabled={unstakeErrorText}
+                      disabled={unstakeBtnDisabled}
                     >
                       UnStake
                     </Button>
