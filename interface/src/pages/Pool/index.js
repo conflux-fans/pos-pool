@@ -14,7 +14,7 @@ import {
   getPrecisionAmount
 } from "../../utils";
 import { useConnect, useBalance } from "../../hooks/usePortal";
-import { CFX_BASE_PER_VOTE } from "../../constants";
+import { CFX_BASE_PER_VOTE,StatusPosNode } from "../../constants";
 import Header from "./Header";
 import ConfirmModal from "./ConfirmModal";
 import TxModal from "./TxModal";
@@ -27,7 +27,7 @@ function Pool() {
   const { confluxJS } = useConfluxPortal();
   let { poolAddress } = useParams();
   const posPoolContract = getPosPoolContract(poolAddress);
-  const [status,setStatus]=useState(false)
+  const [status,setStatus]=useState(StatusPosNode.loading)
   const [stakedCfx, setStakedCfx] = useState(0);
   const [rewards, setRewards] = useState(0);
   const [fee, setFee] = useState(0);
@@ -96,7 +96,7 @@ function Pool() {
   useEffect(()=>{
     async function fetchData(address){
         const posAccount=await getPosAccountByPowAddress(address)
-        setStatus(posAccount.status?.forceRetired==null)
+        setStatus(posAccount.status?.forceRetired==null?StatusPosNode.success:StatusPosNode.error)
     }
     fetchData(poolAddress)
   },[poolAddress])
