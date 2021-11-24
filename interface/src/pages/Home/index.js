@@ -12,6 +12,7 @@ import { useConnect } from "../../hooks/usePortal";
 
 function Home() {
   const [dataList, setDataList] = useState([]);
+  const [loading,setLoading]=useState(false)
   const history = useHistory();
   const { address: accountAddress, tryActivate } = useConnect();
   const gotoPoolPage = (record) => {
@@ -80,12 +81,15 @@ function Home() {
 
   useEffect(() => {
     async function getData() {
+      setLoading(true)
       try {
         const list = await posPoolManagerContract.getPools();
         const data = await transferData(list);
         setDataList(data);
+        setLoading(false)
       } catch (error) {
         setDataList([]);
+        setLoading(false)
       }
     }
     getData();
@@ -119,7 +123,7 @@ function Home() {
   };
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <Table columns={columns} dataSource={dataList} pagination={false} size='middle' />
+      <Table columns={columns} dataSource={dataList} pagination={false} size='middle' loading={loading} />
     </div>
   );
 }
