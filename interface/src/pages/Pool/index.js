@@ -155,11 +155,11 @@ function Pool() {
         setStakedCfx(
           new BigNumber(userSum[1] || 0)
             .multipliedBy(CFX_BASE_PER_VOTE)
-            .toNumber()
+            .toString(10)
         );
         setCfxCanUnstate(getCfxByVote(userSum[2] || 0));
         setCfxCanWithdraw(getCfxByVote(userSum[3] || 0));
-        setRewards(getPrecisionAmount(new Drip(new BigNumber(data[1]).toNumber()).toCFX(),5));
+        setRewards(getPrecisionAmount(new Drip(new BigNumber(data[1]).toString(10)).toCFX(),5));
         setFee(getFee(data[2]));
         setUnstakeList(transferQueue(data[3]));
         setIsLoading(false)
@@ -212,8 +212,8 @@ function Pool() {
       let value = 0;
       switch (type) {
         case "stake":
-          value = new BigNumber(inputStakeCfx).multipliedBy(10**18).toNumber();
-          const stakeVote=new BigNumber(inputStakeCfx).dividedBy(CFX_BASE_PER_VOTE).toNumber()
+          value = new BigNumber(inputStakeCfx).multipliedBy(10**18).toString(10);
+          const stakeVote=new BigNumber(inputStakeCfx).dividedBy(CFX_BASE_PER_VOTE).toString(10)
           estimateData = await posPoolContract
             .increaseStake(stakeVote)
             .estimateGasAndCollateral({
@@ -224,7 +224,7 @@ function Pool() {
           break;
         case "unstake":
           value = 0;
-          const unstakeVote=new BigNumber(inputUnstakeCfx).dividedBy(CFX_BASE_PER_VOTE).toNumber()
+          const unstakeVote=new BigNumber(inputUnstakeCfx).dividedBy(CFX_BASE_PER_VOTE).toString(10)
           estimateData = await posPoolContract
             .decreaseStake(unstakeVote)
             .estimateGasAndCollateral({
@@ -244,12 +244,12 @@ function Pool() {
         case "withdraw":
           value = 0;
           estimateData = await posPoolContract
-            .withdrawStake(new BigNumber(userSummary[3]).toNumber())
+            .withdrawStake(new BigNumber(userSummary[3]).toString(10))
             .estimateGasAndCollateral({
               from: accountAddress,
             });
           data = posPoolContract.withdrawStake(
-            new BigNumber(userSummary[3]).toNumber()
+            new BigNumber(userSummary[3]).toString(10)
           ).data;
           break;
         default:
@@ -275,6 +275,7 @@ function Pool() {
       setTxHash(txHash);
       setTxModalShown(true);
     } catch (error) {
+      console.error('error',error)
     }
   };
 
