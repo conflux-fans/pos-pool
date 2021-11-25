@@ -40,7 +40,7 @@ const posRegisterContract = conflux.InternalContract('PoSRegister');
 const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
 
 const poolContract = conflux.Contract({
-  abi: poolContractInterface.abi,
+  abi: poolContractInfo.abi,
   address: process.env.POOL_ADDRESS,
 });
 
@@ -170,6 +170,13 @@ program
   .action(async () => {
     console.log('TODO');
   }); */
+
+program
+  .command('QueryPoolProxy')
+  .action(async () => {
+    const address = await poolProxyContract._logicContractAddress();
+    console.log(address);
+  });
 
 program
   .command('QueryPool')

@@ -485,6 +485,9 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+    // update user shot
+    lastUserShots[_addr].available = 0;
+    lastUserShots[_addr].blockNumber = _blockNumber();
   }
 
   // When pool node is force retired, use this method to make all user's available stake to unlocking
@@ -497,6 +500,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
+    _updateLastPoolShot();
   }
 
   function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
@@ -595,6 +599,31 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     } else {
       uSections[uSections.length - 1].startBlock = rewardSections[end - 1].endBlock;
     }
+  }
+
+  ///////// debug methods
+  function _rewardSections() public view returns (RewardSection[] memory) {
+    return rewardSections;
+  }
+
+  function _votePowerSections(address _address) public view returns (VotePowerSection[] memory) {
+    return votePowerSections[_address];
+  }
+
+  function _lastRewardSection() public view returns (RewardSection memory) {
+    return rewardSections[rewardSections.length - 1];
+  }
+
+  function _lastVotePowerSection(address _address) public view returns (VotePowerSection memory) {
+    return votePowerSections[_address][votePowerSections[_address].length - 1];
+  }
+
+  function _userShot(address _address) public view returns (UserShot memory) {
+    return lastUserShots[_address];
+  }
+
+  function _poolShot() public view returns (PoolShot memory) {
+    return lastPoolShot;
   }
 
 }
