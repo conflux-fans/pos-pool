@@ -36,7 +36,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   // ======================== Helpers =========================
 
   function _updateLastPoolShot() private {
-    lastPoolShot.available = poolSummary.available;
+    lastPoolShot.available = _poolSummary.available;
     lastPoolShot.blockNumber = _blockNumber();
     lastPoolShot.balance = _selfBalance();
   }
@@ -58,8 +58,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     }));
     // acumulate pool interest
     uint _poolShare = reward.mul(RATIO_BASE - poolUserShareRatio).div(RATIO_BASE);
-    poolSummary.interest = poolSummary.interest.add(_poolShare);
-    poolSummary.totalInterest = poolSummary.totalInterest.add(reward);
+    _poolSummary.interest = _poolSummary.interest.add(_poolShare);
+    _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
   }
 
   function _shotRewardSectionAndUpdateLastShot() private {
@@ -130,7 +130,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
     // update pool and user info
-    poolSummary.available += votePower;
+    _poolSummary.available += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
@@ -152,7 +152,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _posRegisterIncreaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
     //
-    poolSummary.available += votePower;
+    _poolSummary.available += votePower;
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
 
@@ -175,7 +175,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
     //
-    poolSummary.available -= votePower;
+    _poolSummary.available -= votePower;
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
 
@@ -341,6 +341,13 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return summary;
   }
 
+  function poolSummary() public view returns (PoolSummary memory) {
+    PoolSummary memory summary = _poolSummary;
+    uint256 _latestReward = _selfBalance().sub(lastPoolShot.balance);
+    summary.totalInterest = summary.totalInterest.add(_latestReward);
+    return summary;
+  }
+
   function _rewardSectionAPY(RewardSection memory _section) private view returns (uint256) {
     uint256 sectionBlockCount = _section.endBlock - _section.startBlock;
     if (_section.reward == 0 || sectionBlockCount == 0 || _section.available == 0) {
@@ -469,7 +476,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   // Used to bring account's retired votes back to work
-  // reStake poolSummary.available
+  // reStake _poolSummary.available
   function reStake(uint64 votePower) public onlyOwner {
     _posRegisterIncreaseStake(votePower);
   }
@@ -481,7 +488,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     if (userSummaries[_addr].available == 0) return;
     uint64 votePower = userSummaries[_addr].available;
-    poolSummary.available -= votePower;
+    _poolSummary.available -= votePower;
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
