@@ -391,8 +391,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function poolAPY () public view returns (uint32) {
-    if (block.number > ONE_DAY_BLOCK_COUNT) {
-      return _poolAPY(block.number - ONE_DAY_BLOCK_COUNT);
+    if (block.number > SEVEN_DAY_BLOCK_COUNT) {
+      return _poolAPY(block.number - SEVEN_DAY_BLOCK_COUNT);
     } else {
       return _poolAPY(0);
     }
