@@ -21,7 +21,7 @@ contract PoSPoolStorage {
 
   struct PoolSummary {
     uint64 available;
-    uint256 interest;
+    uint256 interest; // PoS pool interest share
     uint256 totalInterest; // total interest of whole pools
   }
 
