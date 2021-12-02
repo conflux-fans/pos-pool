@@ -515,6 +515,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _collectUserLastVotePowerSectionPagination(_addr, limit);
   }
 
+  // These methods are used to collect user's interest in a pagination way to avoid gas OOM
   function _collectUserLatestSectionsInterest(address _user, uint256 sectionCount) private {
     require(sectionCount <= 100, "Max section count is 100");
     

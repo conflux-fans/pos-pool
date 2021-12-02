@@ -36,8 +36,9 @@ const conflux = new Conflux({
   url: process.env.CFX_RPC_URL,
   networkId: parseInt(process.env.CFX_NETWORK_ID),
 });
-const posRegisterContract = conflux.InternalContract('PoSRegister');
 const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
+
+const posRegisterContract = conflux.InternalContract('PoSRegister');
 
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,
@@ -53,7 +54,6 @@ const poolManagerContract = conflux.Contract({
   abi: poolManagerInfo.abi,
   address: process.env.POOL_MANAGER_ADDRESS,
 });
-
 
 program.version("0.0.1");
 program
@@ -82,15 +82,6 @@ program
   });
 
 program
-  .command('setLogicContractAddress <address>')
-  .action(async (address) => {
-    const receipt = await poolProxyContract.setLogicContractAddress(address).sendTransaction({
-      from: account.address,
-    }).executed();
-    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
-  });
-
-program
   .command('setLockPeriod <number>')
   .action(async (arg) => {
     const contract = poolContract;
@@ -105,6 +96,16 @@ program
   .action(async (arg, debug) => {
     const contract = poolContract;
     const receipt = await contract.setPoolName(arg).sendTransaction({
+      from: account.address,
+    }).executed();
+    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+  });
+
+program
+  .command('restake <amount>')
+  .action(async (amount) => {
+    const contract = poolContract;
+    const receipt = await contract.reStake(parseInt(amount)).sendTransaction({
       from: account.address,
     }).executed();
     console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
@@ -170,6 +171,15 @@ program
   .action(async () => {
     console.log('TODO');
   }); */
+
+program
+  .command('upgradeContractAddress <address>')
+  .action(async (address) => {
+    const receipt = await poolProxyContract.upgradeTo(address).sendTransaction({
+      from: account.address,
+    }).executed();
+    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+  });
 
 program
   .command('QueryPoolProxy')
