@@ -1,4 +1,6 @@
+/* eslint-disable prettier/prettier */
 const { Conflux, Drip } = require("js-conflux-sdk");
+require('dotenv').config();
 
 const conflux = new Conflux({
   url: process.env.CFX_RPC_URL,

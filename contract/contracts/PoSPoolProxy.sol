@@ -5,13 +5,17 @@ import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PoSPoolProxy is PoSPoolStorage, Proxy, Ownable {
-  address public _logicContractAddress;
+  address public implementation;
 
-  function upgradeTo(address _addr) public onlyOwner {
-    _logicContractAddress = _addr;
+  constructor(address logic) {
+    implementation = logic;
+  }
+
+  function upgradeTo(address newImplementation) public onlyOwner {
+    implementation = newImplementation;
   }
 
   function _implementation() internal view override returns (address) {
-    return _logicContractAddress;
+    return implementation;
   }
 }

@@ -78,7 +78,7 @@ program
       to: _poolAddress,
       data: process.env.POS_REGIST_DATA,
     }).executed();
-    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+    checkReceiptStatus(receipt, 'Register Pool');
   });
 
 program
@@ -88,7 +88,7 @@ program
     const receipt = await contract.setLockPeriod(parseInt(arg)).sendTransaction({
       from: account.address,
     }).executed();
-    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+    checkReceiptStatus(receipt, 'setLockPeriod');
   });
 
 program
@@ -98,7 +98,7 @@ program
     const receipt = await contract.setPoolName(arg).sendTransaction({
       from: account.address,
     }).executed();
-    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+    checkReceiptStatus(receipt, 'setPoolName');
   });
 
 program
@@ -108,12 +108,12 @@ program
     const receipt = await contract.reStake(parseInt(amount)).sendTransaction({
       from: account.address,
     }).executed();
-    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+    checkReceiptStatus(receipt, 'restake');
   });
 
 program
   .command('deploy')
-  .argument('<ContractName>', 'Available Contracts: PoolManager, Pool, PoolProxy')
+  .argument('<ContractName>', 'Available Contracts: PoolManager, Pool')
   .action(async (ContractName) => {
     const contractInfo = getContractInfo(ContractName);
     const contract = conflux.Contract({
@@ -123,11 +123,22 @@ program
     const receipt = await contract.constructor().sendTransaction({
       from: account.address
     }).executed();
-    if (receipt.outcomeStatus) {
-      console.log('Deploy failed', receipt);
-    } else {
-      console.log('Deploy success: ', receipt.contractCreated);
-    }
+    checkDeployStatus(receipt, 'deploy' + ContractName);
+  });
+
+program
+  .command('deployProxy')
+  .argument('<logicAddress>', 'Logic address')
+  .action(async (logicAddress) => {
+    const contractInfo = getContractInfo('PoolProxy');
+    const contract = conflux.Contract({
+      abi: contractInfo.abi,
+      bytecode: contractInfo.bytecode,
+    });
+    const receipt = await contract.constructor(logicAddress).sendTransaction({
+      from: account.address
+    }).executed();
+    checkDeployStatus(receipt, 'deploy proxy');
   });
 
 program
@@ -140,11 +151,7 @@ program
     const receipt = await contract.constructor(process.env.MOCK_STAKE, process.env.MOCK_POS_REGISTER).sendTransaction({
       from: account.address
     }).executed();
-    if (receipt.outcomeStatus) {
-      console.log('Deploy failed', receipt);
-    } else {
-      console.log('Deploy success: ', receipt.contractCreated);
-    }
+    checkDeployStatus(receipt, 'deploy debugPool');
   });
 
 program
@@ -153,7 +160,7 @@ program
     const receipt = await poolProxyContract.upgradeTo(address).sendTransaction({
       from: account.address,
     }).executed();
-    console.log(`${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+    checkReceiptStatus(receipt, "Upgrade");
   });
 
 program
@@ -206,7 +213,18 @@ program
     const receipt = await poolManagerContract[method](arg).sendTransaction({
       from: account.address
     }).executed();
-    console.log(`${method} ${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+    checkReceiptStatus(receipt, method);
   });
 
 program.parse(process.argv);
+
+function checkReceiptStatus(receipt, operate) {
+  console.log(`${operate} ${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+}
+
+function checkDeployStatus(receipt, operate) {
+  console.log(`${operate} ${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
+  if (receipt.outcomeStatus === 0) {
+    console.log('Deploy success: ', receipt.contractCreated);
+  }
+}
