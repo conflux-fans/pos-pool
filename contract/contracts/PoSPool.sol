@@ -217,7 +217,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   /**
     Calculate user's latest interest (not in sections)
    */
-  function _userLatestInterest(address _address) private view returns (uint256) {
+  function _userLatestInterest(address _address) public view returns (uint256) {
     uint latestInterest = 0;
     UserShot memory uShot = lastUserShots[_address];
     // include latest not shot reward section
@@ -246,7 +246,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return latestInterest;
   }
 
-  function _userSectionInterest(address _address) private view returns (uint256) {
+  function _userSectionInterest(address _address) public view returns (uint256) {
     uint totalInterest = 0;
     VotePowerSection[] memory uSections = votePowerSections[_address];
     if (uSections.length == 0) {
@@ -485,6 +485,20 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+
+    // clear user inqueue
+    userInqueues[_addr].clear();
+    
+    // add votePowerSection
+    UserShot memory lastShot = lastUserShots[_addr];
+    if (lastShot.available > 0) {
+      votePowerSections[_addr].push(VotePowerSection({
+        startBlock: lastShot.blockNumber, 
+        endBlock: _blockNumber(), 
+        available: lastShot.available
+      }));
+    }
+
     // update user shot
     lastUserShots[_addr].available = 0;
     lastUserShots[_addr].blockNumber = _blockNumber();

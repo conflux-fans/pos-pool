@@ -50,9 +50,10 @@ async function unlockUserVotes() {
       })
       .executed();
 
-    console.log(receipt.outcomeStatus === 0 ? "Success" : "Fail");
+    console.log(receipt.outcomeStatus === 0 ? "Unlock Success" : "Unlock Failed");
   }
 
+  console.log("Finished");
   // console.log(unlockBlockNumber);
 }
 

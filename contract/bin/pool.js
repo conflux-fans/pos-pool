@@ -155,7 +155,7 @@ program
   });
 
 program
-  .command('upgradeContractAddress <address>')
+  .command('upgradePoolContract <address>')
   .action(async (address) => {
     const receipt = await poolProxyContract.upgradeTo(address).sendTransaction({
       from: account.address,
@@ -166,7 +166,7 @@ program
 program
   .command('QueryPoolProxy')
   .action(async () => {
-    const address = await poolProxyContract._logicContractAddress();
+    const address = await poolProxyContract.implementation();
     console.log(address);
   });
 
