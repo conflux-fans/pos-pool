@@ -479,8 +479,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    if (userSummaries[_addr].available == 0) return;
     uint64 votePower = userSummaries[_addr].available;
+    if (votePower == 0) return;
     _poolSummary.available -= votePower;
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
@@ -514,7 +514,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
-    _updateLastPoolShot();
+    _shotRewardSectionAndUpdateLastShot();
   }
 
   function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
