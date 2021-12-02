@@ -1,16 +1,9 @@
 /* eslint-disable node/no-unpublished-require */
 /* eslint-disable no-unused-vars */
 /* eslint-disable prettier/prettier */
-const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
-const {Conflux, Drip, format} = require('js-conflux-sdk');
 require("dotenv").config();
-
-const conflux = new Conflux({
-  url: process.env.CFX_RPC_URL,
-  networkId: parseInt(process.env.CFX_NETWORK_ID),
-});
-
-const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
+const {conflux, Drip, account} = require("./conflux");
+const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,

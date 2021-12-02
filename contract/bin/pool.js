@@ -147,31 +147,6 @@ program
     }
   });
 
-/* 
-program
-  .command('increaseStake <vote>')
-  .action(async vote => {
-    console.log('TODO');
-  });
-
-program
-  .command('decreaseStake <vote>')
-  .action(async vote => {
-    console.log('TODO');
-  });
-
-program
-  .command('withdrawStake <vote>')
-  .action(async vote => {
-    console.log('TODO');
-  });
-
-program
-  .command('claimAllInterest')
-  .action(async () => {
-    console.log('TODO');
-  }); */
-
 program
   .command('upgradeContractAddress <address>')
   .action(async (address) => {

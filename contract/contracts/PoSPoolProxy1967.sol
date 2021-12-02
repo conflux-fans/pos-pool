@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract PoSPoolProxy1967 is PoSPoolStorage, ERC1967Proxy, Ownable {
   constructor(address logic) ERC1967Proxy(logic, "") {}
 
-  // Can be used to query current logic address
+  // Used to query current logic address
   function implementation() public view returns (address) {
     return _implementation();
   }

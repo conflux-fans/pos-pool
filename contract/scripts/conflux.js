@@ -1,8 +1,8 @@
 const { Conflux, Drip } = require("js-conflux-sdk");
 
 const conflux = new Conflux({
-  url: "http://101.132.158.162:12537",
-  networkId: 8888,
+  url: process.env.CFX_RPC_URL,
+  networkId: parseInt(process.env.CFX_NETWORK_ID),
 });
 
 const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);

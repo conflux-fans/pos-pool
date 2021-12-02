@@ -1,17 +1,11 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable node/no-unpublished-require */
 /* eslint-disable prettier/prettier */
-const {Conflux, Drip, format} = require('js-conflux-sdk');
 require('dotenv').config();
+const {conflux, Drip, account} = require("./conflux");
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
 const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
-
-const conflux = new Conflux({
-  url: process.env.CFX_RPC_URL,
-  networkId: parseInt(process.env.CFX_NETWORK_ID),
-});
-const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
 
 const managerContract = conflux.Contract({
   address: process.env.POOL_MANAGER_ADDRESS,
@@ -19,13 +13,14 @@ const managerContract = conflux.Contract({
 });
 
 async function main() {
+  // TODO read regist data from config file
   const posRegistData = process.argv[2];
   if (!posRegistData) {
     console.log("Please input posRegistData");
     return;
   }
 
-  let poolContract = conflux.Contract({
+  const poolContract = conflux.Contract({
     abi: poolContractInfo.abi,
     bytecode: poolContractInfo.bytecode,
   });
@@ -69,6 +64,7 @@ async function main() {
   );
 
   console.log("======== Start register pool...");
+  
   /* poolContract = conflux.Contract({
     abi: poolContractInfo.abi,
     bytecode: deployProxyContract.contractCreated,
