@@ -359,6 +359,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     uint256 totalWorkload = 0;
     uint256 totalReward = 0;
 
+    // latest section APY
     RewardSection memory latestSection = RewardSection({
       startBlock: lastPoolShot.blockNumber,
       endBlock: _blockNumber(),
@@ -376,10 +377,9 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
         break;
       }
       totalWorkload = totalWorkload.add(_rewardSeciontWorkload(section));
-      totalReward = totalReward.add(latestSection.reward);
+      totalReward = totalReward.add(section.reward);
     }
 
-    // latest section APY
     return uint32(totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload));
   }
 
