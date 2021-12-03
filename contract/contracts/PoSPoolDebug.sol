@@ -46,7 +46,7 @@ contract PoSPoolDebug is PoSPool {
 
   receive() external payable {}
 
-  function _rewardSections() public view returns (RewardSection[] memory) {
+  /* function _rewardSections() public view returns (RewardSection[] memory) {
     return rewardSections;
   }
 
@@ -68,6 +68,6 @@ contract PoSPoolDebug is PoSPool {
 
   function _poolShot() public view returns (PoolShot memory) {
     return lastPoolShot;
-  }
+  } */
 
 }

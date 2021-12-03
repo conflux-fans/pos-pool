@@ -8,20 +8,20 @@ contract PoSPoolStorage {
   uint64 constant internal SEVEN_DAY_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 7;
   uint64 constant internal ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
   uint64 constant internal RATIO_BASE = 10000;
+  uint256 internal CFX_COUNT_OF_ONE_VOTE = 1000 ether;
   
   // ======================== Pool config =========================
 
   bool public _poolRegisted;
   uint64 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
   uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
-  uint256 internal CFX_COUNT_OF_ONE_VOTE = 1000 ether;
   string public poolName;
 
   // ======================== Struct definitions =========================
 
   struct PoolSummary {
     uint64 available;
-    uint256 interest;
+    uint256 interest; // PoS pool interest share
     uint256 totalInterest; // total interest of whole pools
   }
 
@@ -67,11 +67,7 @@ contract PoSPoolStorage {
 
   // ======================== Contract states =========================
 
-  PoolSummary public poolSummary = PoolSummary({
-    available: 0,
-    interest: 0,
-    totalInterest: 0
-  });
+  PoolSummary internal _poolSummary;
 
   RewardSection[] internal rewardSections;
   mapping(address => VotePowerSection[]) internal votePowerSections;
