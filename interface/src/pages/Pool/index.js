@@ -173,7 +173,7 @@ function Pool() {
         resetData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountAddress]);
+  }, [accountAddress,currentBlockNumber]);
 
   const transferQueue = (queueList) => {
     if (queueList.length === 0) return [];
