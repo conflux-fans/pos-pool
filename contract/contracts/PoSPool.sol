@@ -478,6 +478,10 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return stakers.length();
   }
 
+  function stakerAddress(uint256 i) public view returns (address) {
+    return stakers.at(i);
+  }
+
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     uint64 votePower = userSummaries[_addr].available;
     if (votePower == 0) return;

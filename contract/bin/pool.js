@@ -69,6 +69,54 @@ program
   }); */
 
 program
+  .command('chainStatus [type]')
+  .action(async (type) => {
+    if (type === 'pos') {
+      const status = await conflux.pos.getStatus();
+      console.log(status);
+    } else {
+      const status = await conflux.cfx.getStatus();
+      console.log(status);
+    }
+  });
+
+program
+  .command('poolStatus [address]')
+  .action(async (address) => {
+    const poolAddress = address || process.env.POOL_ADDRESS;
+    const contract = conflux.Contract({
+      address: poolAddress,
+      abi: poolContractInfo.abi,
+    });
+
+    console.log('\n======== Addresses:');
+    console.log('Pool address: ', poolAddress);
+    let posAddress = await contract.posAddress();
+    posAddress = format.hex(posAddress);
+    console.log('PoS node address: ', posAddress);
+
+    console.log('\n======== Pool summary:');
+    const poolSummary = await contract.poolSummary();
+    console.log(poolSummary);
+    const stakerCount = await contract.stakerNumber();
+    console.log('Staker count: ', stakerCount);
+
+    const accountInfo = await conflux.cfx.getAccount(poolAddress);
+    console.log('\n========Staking balance: ');
+    console.log(Drip(accountInfo.stakingBalance).toCFX(), 'CFX');
+
+    console.log('\n======== PoS account info: ');
+    const posAccount = await conflux.pos.getAccount(posAddress);
+    console.log(`forceRetired: `, posAccount.status.forceRetired);
+    console.log('forfeited: ', posAccount.status.forfeited);
+    console.log('locked', posAccount.status.locked);
+    console.log('availableVotes', posAccount.status.availableVotes);
+    console.log('unlocked', posAccount.status.unlocked);
+    console.log('inQueue length', posAccount.status.inQueue.length);
+    console.log('outQueue length', posAccount.status.outQueue.length);
+  });
+
+program
   .command('registerPool')
   .action(async () => {
     const _poolAddress = process.env.POOL_ADDRESS;
@@ -102,6 +150,16 @@ program
   });
 
 program
+  .command('Pool <method> [arg]')
+  .action(async (method, arg) => {
+    const contract = poolContract;
+    const receipt = await contract[method](arg).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, method);
+  });
+
+program
   .command('restake <amount>')
   .action(async (amount) => {
     const contract = poolContract;
@@ -109,6 +167,16 @@ program
       from: account.address,
     }).executed();
     checkReceiptStatus(receipt, 'restake');
+  });
+
+program
+  .command('retireUserStake <user> <endBlock>')
+  .action(async (user, endBlock) => {
+    const contract = poolContract;
+    const receipt = await contract._retireUserStake(user, parseInt(endBlock)).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, 'retire');
   });
 
 program
