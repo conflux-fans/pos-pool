@@ -103,9 +103,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
   // ======================== Contract methods =========================
-
-  // constructor() {}
-
+  
   ///
   /// @notice Regist the pool contract in PoS internal contract 
   /// @dev Only admin can do this
@@ -177,7 +175,6 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _poolSummary.available -= votePower;
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
-
     //
     userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
 
@@ -337,10 +334,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   ///
   function userSummary(address _user) public view returns (UserSummary memory) {
     UserSummary memory summary = userSummaries[_user];
-
     summary.locked += userInqueues[_user].sumEndedVotes();
     summary.unlocked += userOutqueues[_user].sumEndedVotes();
-
     return summary;
   }
 
@@ -384,11 +379,11 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function poolAPY () public view returns (uint32) {
+    uint256 startBlock = 0;
     if (block.number > SEVEN_DAY_BLOCK_COUNT) {
-      return _poolAPY(block.number - SEVEN_DAY_BLOCK_COUNT);
-    } else {
-      return _poolAPY(0);
+      startBlock = block.number - SEVEN_DAY_BLOCK_COUNT;
     }
+    return _poolAPY(startBlock);
   }
 
   /// 
