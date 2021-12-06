@@ -73,9 +73,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   function _shotVotePowerSection() private {
     UserShot memory lastShot = lastUserShots[msg.sender];
-    if (lastShot.available == 0) {
-      return;
-    }
+    if (lastShot.available == 0) return;
     votePowerSections[msg.sender].push(VotePowerSection({
       startBlock: lastShot.blockNumber, 
       endBlock: _blockNumber(), 
@@ -204,6 +202,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function _calculateShare(uint256 reward, uint64 userVotes, uint64 poolVotes) private view returns (uint256) {
+    if (userVotes == 0 || reward == 0) return 0;
     return reward.mul(userVotes).mul(poolUserShareRatio).div(poolVotes * RATIO_BASE);
   }
 
@@ -217,6 +216,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   function _userLatestInterest(address _address) public view returns (uint256) {
     uint latestInterest = 0;
     UserShot memory uShot = lastUserShots[_address];
+    if (uShot.available == 0) return 0;
     // include latest not shot reward section
     if (_selfBalance() > lastPoolShot.balance) {
       uint256 latestReward = _selfBalance().sub(lastPoolShot.balance);
@@ -227,15 +227,10 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     uint64 start = _rSectionStartIndex(uShot.blockNumber);
 
     // If user shot is the last one of all shots, then can't get start index from blockNumber
-    if (start == 0) {
-      return latestInterest;
-    }
+    if (start == 0) return latestInterest;
 
     for (uint64 i = start; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
-      /* if (uShot.blockNumber >= pSection.endBlock) {
-        continue;
-      } */
       uint256 _currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
       latestInterest = latestInterest.add(_currentShare);
     }
@@ -246,9 +241,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   function _userSectionInterest(address _address) public view returns (uint256) {
     uint totalInterest = 0;
     VotePowerSection[] memory uSections = votePowerSections[_address];
-    if (uSections.length == 0) {
-      return totalInterest;
-    }
+    if (uSections.length == 0) return 0;
+    
     uint64 start = _rSectionStartIndex(uSections[0].startBlock);
     for (uint64 i = start; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
