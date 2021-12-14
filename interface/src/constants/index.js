@@ -6,7 +6,7 @@ export const TypeConnectWallet = {
 }
 
 export const NETWORK_ID_MAINNET = 1029
-export const NETWORK_ID_TESTNET = 8888
+export const NETWORK_ID_TESTNET = 1
 export const CFX_BASE_PER_VOTE=1000
 export const SCAN_URL = "https://confluxscan.io"
 export const SCAN_URL_TESTNET = "https://testnet.confluxscan.io"
