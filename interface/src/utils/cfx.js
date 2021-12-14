@@ -26,7 +26,7 @@ const conflux = new Conflux({
 //   ? posPoolAddressTestnet
 //   : posPoolAddressMainnet;
 const posPoolManagerAddressTestnet =
-  "NET8888:TYPE.CONTRACT:ACC7ANC643M4W2VUHRNP5F0ZGZHUW8ZK6AENY2XB11";
+  "cfxtest:acarejybbjfhs6uyaxdjcnex5rf8t1k2h6zw7kmw45";
 //TODO: modify mainnet address
 const posPoolManagerAddressMainnet = "";
 const posPoolManagerAddress = isTestNetEnv()
