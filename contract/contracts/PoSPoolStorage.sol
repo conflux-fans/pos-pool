@@ -14,7 +14,7 @@ contract PoSPoolStorage {
 
   bool public _poolRegisted;
   uint64 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
-  uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT;
+  uint64 public _poolLockPeriod = SEVEN_DAY_BLOCK_COUNT + 3600; // lock period: 7 days + half hour
   string public poolName;
 
   // ======================== Struct definitions =========================
