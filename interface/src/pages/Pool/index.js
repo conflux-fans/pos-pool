@@ -50,7 +50,7 @@ function Pool() {
   const [stakeBtnDisabled,setStakeBtnDisabled]=useState(true)
   const [unstakeBtnDisabled,setUnstakeBtnDisabled]=useState(true)
   const [isLoading,setIsLoading]=useState(false)
-
+  
   useEffect(() => {
     async function fetchData() {
       const proArr = [];
@@ -173,7 +173,7 @@ function Pool() {
         resetData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountAddress,currentBlockNumber]);
+  }, [accountAddress,currentBlockNumber, balance]);
 
   const transferQueue = (queueList) => {
     if (queueList.length === 0) return [];
