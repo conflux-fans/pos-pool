@@ -27,17 +27,17 @@ function Header({ status }) {
       case StatusPosNode.loading:
         icon=<SyncOutlined spin />
         color='default'
-        text='loading'
+        text='Loading'
         break;
       case StatusPosNode.success:
         icon=<CheckCircleOutlined />
         color='success'
-        text='good'
+        text='Good'
         break;
       case StatusPosNode.error:
         icon=<CloseCircleOutlined />
         color='error'
-        text='error'
+        text='Error'
         break;  
       default:break  
     }

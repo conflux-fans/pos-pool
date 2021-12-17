@@ -32,7 +32,7 @@ function Home() {
         <>
           {
             <Tag color={`${status ? "green" : "error"}`}>
-              {status ? "good" : "error"}
+              {status ? "Good" : "Error"}
             </Tag>
           }
         </>
