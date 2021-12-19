@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Input, Button, Divider, Form, List, message, Col, Row,Spin } from "antd";
 import { useParams } from "react-router-dom";
 import BigNumber from "bignumber.js";
@@ -50,7 +50,8 @@ function Pool() {
   const [stakeBtnDisabled,setStakeBtnDisabled]=useState(true)
   const [unstakeBtnDisabled,setUnstakeBtnDisabled]=useState(true)
   const [isLoading,setIsLoading]=useState(false)
-  
+  const [waitStakeRes, setWaitStakeRes]=useState(false)
+
   useEffect(() => {
     async function fetchData() {
       const proArr = [];
@@ -140,40 +141,51 @@ function Pool() {
     setCfxCanWithdraw(0)
   }
 
-  useEffect(() => {
-    async function fetchData() {
-        setIsLoading(true)  
-      try {
-        const proArr = [];
-        proArr.push(posPoolContract.userSummary(accountAddress));
-        proArr.push(posPoolContract.userInterest(accountAddress));
-        proArr.push(posPoolContract.poolUserShareRatio());
-        proArr.push(posPoolContract.userOutQueue(accountAddress));
-        const data = await Promise.all(proArr);
-        const userSum = data[0];
-        setUserSummary(userSum);
-        setStakedCfx(
-          new BigNumber(userSum[1] || 0)
-            .multipliedBy(CFX_BASE_PER_VOTE)
-            .toString(10)
-        );
-        setCfxCanUnstate(getCfxByVote(userSum[2] || 0));
-        setCfxCanWithdraw(getCfxByVote(userSum[3] || 0));
-        setRewards(getPrecisionAmount(new Drip(new BigNumber(data[1]).toString(10)).toCFX(),5));
-        setFee(getFee(data[2]));
-        setUnstakeList(transferQueue(data[3]));
-        setIsLoading(false)
-      } catch (error) {
-        setIsLoading(false)
-      }
+  const fetchPoolData = useCallback(async () => {
+    setIsLoading(true)  
+    try {
+      const proArr = [];
+      proArr.push(posPoolContract.userSummary(accountAddress));
+      proArr.push(posPoolContract.userInterest(accountAddress));
+      proArr.push(posPoolContract.poolUserShareRatio());
+      proArr.push(posPoolContract.userOutQueue(accountAddress));
+      const data = await Promise.all(proArr);
+      const userSum = data[0];
+      setUserSummary(userSum);
+      setStakedCfx(
+        new BigNumber(userSum[1] || 0)
+          .multipliedBy(CFX_BASE_PER_VOTE)
+          .toString(10)
+      );
+      setCfxCanUnstate(getCfxByVote(userSum[2] || 0));
+      setCfxCanWithdraw(getCfxByVote(userSum[3] || 0));
+      setRewards(getPrecisionAmount(new Drip(new BigNumber(data[1]).toString(10)).toCFX(),5));
+      setFee(getFee(data[2]));
+      setUnstakeList(transferQueue(data[3]));
+      setIsLoading(false)
+    } catch (error) {
+      setIsLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountAddress, currentBlockNumber]);
+
+  useEffect(() => {
+    if (!waitStakeRes) return;
     if (accountAddress) {
-      fetchData();
+      fetchPoolData();
+      setWaitStakeRes(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [balance]);
+
+  useEffect(() => {
+    if (accountAddress) {
+      fetchPoolData();
     }else{
         resetData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountAddress,currentBlockNumber, balance]);
+  }, [accountAddress, currentBlockNumber]);
 
   const transferQueue = (queueList) => {
     if (queueList.length === 0) return [];
@@ -221,6 +233,7 @@ function Pool() {
               value,
             });
           data = posPoolContract.increaseStake(stakeVote).data;
+          setWaitStakeRes(true);
           break;
         case "unstake":
           value = 0;
