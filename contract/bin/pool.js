@@ -8,7 +8,8 @@ const poolContractInterface = require("../artifacts/contracts/IPoSPool.sol/IPoSP
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
 const mockStakingInfo = require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
 const mockPosRegisterInfo = require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
-const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy.sol/PoSPoolProxy.json");
+// const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy.sol/PoSPoolProxy.json");
+const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
 const {Conflux, Drip, format} = require('js-conflux-sdk');
 const { program } = require("commander");
 require('dotenv').config();
