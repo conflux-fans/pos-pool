@@ -38,7 +38,7 @@ const conflux = new Conflux({
 });
 const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
 
-const posRegisterContract = conflux.InternalContract('PoSRegister');
+// const posRegisterContract = conflux.InternalContract('PoSRegister');
 
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,
@@ -150,11 +150,12 @@ program
   });
 
 program
-  .command('Pool <method> [arg]')
-  .action(async (method, arg) => {
+  .command('Pool <method> [arg] [value]')
+  .action(async (method, arg, value=0) => {
     const contract = poolContract;
     const receipt = await contract[method](arg).sendTransaction({
       from: account.address,
+      value: Drip.fromCFX(parseInt(value)),
     }).executed();
     checkReceiptStatus(receipt, method);
   });
