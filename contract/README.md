@@ -16,11 +16,10 @@ All contracts are in the `contracts` folder:
 
 1. Deploy `PoolManager.sol` then get pool manager's address `PMA`.
 2. Deploy `PoSPool.sol` then get pool's address `P`.
-3. Deploy `PoSPoolProxy.sol` then get poolProxy's address `PA`.
-4. Invoke `PA`'s `setLogicContractAddress` method to set proxy's logic contract address to `P`.
-5. Invoke `PA`'s `setPoolName` to set pool's name
-6. Invoke `PA`'s register method (with `PoSPool`'s ABI) to regist it in PoS, the votePower is `1 vote`, which mean `1000 CFX`
-7. Invoke `PMA`'s `addPool` method to add `PA` to PoolManager.
+3. Deploy `PoSPoolProxy.sol`, use `P` as constructor's parameter, then get poolProxy's address `PA`.
+4. Invoke `PA`'s `setPoolName` to set pool's name
+5. Invoke `PA`'s register method (with `PoSPool`'s ABI) to regist it in PoS, the votePower is `1 vote`, which mean `1000 CFX`
+6. Invoke `PMA`'s `addPool` method to add `PA` to PoolManager.
 
 If want to add more pool to PoolManager then walk through step `2-6`.
 

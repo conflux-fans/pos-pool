@@ -73,9 +73,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   function _shotVotePowerSection() private {
     UserShot memory lastShot = lastUserShots[msg.sender];
-    if (lastShot.available == 0) {
-      return;
-    }
+    if (lastShot.available == 0) return;
     votePowerSections[msg.sender].push(VotePowerSection({
       startBlock: lastShot.blockNumber, 
       endBlock: _blockNumber(), 
@@ -103,9 +101,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
   // ======================== Contract methods =========================
-
-  // constructor() {}
-
+  
   ///
   /// @notice Regist the pool contract in PoS internal contract 
   /// @dev Only admin can do this
@@ -177,7 +173,6 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _poolSummary.available -= votePower;
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
-
     //
     userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
 
@@ -207,6 +202,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function _calculateShare(uint256 reward, uint64 userVotes, uint64 poolVotes) private view returns (uint256) {
+    if (userVotes == 0 || reward == 0) return 0;
     return reward.mul(userVotes).mul(poolUserShareRatio).div(poolVotes * RATIO_BASE);
   }
 
@@ -217,9 +213,10 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   /**
     Calculate user's latest interest (not in sections)
    */
-  function _userLatestInterest(address _address) private view returns (uint256) {
+  function _userLatestInterest(address _address) public view returns (uint256) {
     uint latestInterest = 0;
     UserShot memory uShot = lastUserShots[_address];
+    if (uShot.available == 0) return 0;
     // include latest not shot reward section
     if (_selfBalance() > lastPoolShot.balance) {
       uint256 latestReward = _selfBalance().sub(lastPoolShot.balance);
@@ -230,15 +227,10 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     uint64 start = _rSectionStartIndex(uShot.blockNumber);
 
     // If user shot is the last one of all shots, then can't get start index from blockNumber
-    if (start == 0) {
-      return latestInterest;
-    }
+    if (start == 0) return latestInterest;
 
     for (uint64 i = start; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
-      /* if (uShot.blockNumber >= pSection.endBlock) {
-        continue;
-      } */
       uint256 _currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
       latestInterest = latestInterest.add(_currentShare);
     }
@@ -246,12 +238,11 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return latestInterest;
   }
 
-  function _userSectionInterest(address _address) private view returns (uint256) {
+  function _userSectionInterest(address _address) public view returns (uint256) {
     uint totalInterest = 0;
     VotePowerSection[] memory uSections = votePowerSections[_address];
-    if (uSections.length == 0) {
-      return totalInterest;
-    }
+    if (uSections.length == 0) return 0;
+    
     uint64 start = _rSectionStartIndex(uSections[0].startBlock);
     for (uint64 i = start; i < rewardSections.length; i++) {
       RewardSection memory pSection = rewardSections[i];
@@ -337,10 +328,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   ///
   function userSummary(address _user) public view returns (UserSummary memory) {
     UserSummary memory summary = userSummaries[_user];
-
     summary.locked += userInqueues[_user].sumEndedVotes();
     summary.unlocked += userOutqueues[_user].sumEndedVotes();
-
     return summary;
   }
 
@@ -359,6 +348,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     uint256 totalWorkload = 0;
     uint256 totalReward = 0;
 
+    // latest section APY
     RewardSection memory latestSection = RewardSection({
       startBlock: lastPoolShot.blockNumber,
       endBlock: _blockNumber(),
@@ -376,19 +366,18 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
         break;
       }
       totalWorkload = totalWorkload.add(_rewardSeciontWorkload(section));
-      totalReward = totalReward.add(latestSection.reward);
+      totalReward = totalReward.add(section.reward);
     }
 
-    // latest section APY
     return uint32(totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload));
   }
 
   function poolAPY () public view returns (uint32) {
+    uint256 startBlock = 0;
     if (block.number > SEVEN_DAY_BLOCK_COUNT) {
-      return _poolAPY(block.number - SEVEN_DAY_BLOCK_COUNT);
-    } else {
-      return _poolAPY(0);
+      startBlock = block.number - SEVEN_DAY_BLOCK_COUNT;
     }
+    return _poolAPY(startBlock);
   }
 
   /// 
@@ -478,13 +467,31 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return stakers.length();
   }
 
+  function stakerAddress(uint256 i) public view returns (address) {
+    return stakers.at(i);
+  }
+
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    if (userSummaries[_addr].available == 0) return;
     uint64 votePower = userSummaries[_addr].available;
+    if (votePower == 0) return;
     _poolSummary.available -= votePower;
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+
+    // clear user inqueue
+    userInqueues[_addr].clear();
+    
+    // add votePowerSection
+    UserShot memory lastShot = lastUserShots[_addr];
+    if (lastShot.available > 0) {
+      votePowerSections[_addr].push(VotePowerSection({
+        startBlock: lastShot.blockNumber, 
+        endBlock: _blockNumber(), 
+        available: lastShot.available
+      }));
+    }
+
     // update user shot
     lastUserShots[_addr].available = 0;
     lastUserShots[_addr].blockNumber = _blockNumber();
@@ -500,7 +507,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
-    _updateLastPoolShot();
+    _shotRewardSectionAndUpdateLastShot();
   }
 
   function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
@@ -515,6 +522,7 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _collectUserLastVotePowerSectionPagination(_addr, limit);
   }
 
+  // These methods are used to collect user's interest in a pagination way to avoid gas OOM
   function _collectUserLatestSectionsInterest(address _user, uint256 sectionCount) private {
     require(sectionCount <= 100, "Max section count is 100");
     
