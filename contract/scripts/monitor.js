@@ -4,12 +4,17 @@
 // If the node is forceRetired, this script will push Dingding message to notify the Manager.
 const {conflux} = require("./conflux");
 const posNodeAddresses = require('./pos-node-addresses.json');
+const { dingAlert } = require('./dingAlert');
 
 async function main() {
   setInterval(async () => {
     for (const posNodeAddress of posNodeAddresses) {
       const forceRetired = await checkForceRetired(posNodeAddress);
-      console.log(`${(new Date()).toLocaleString()} is ${posNodeAddress} forceRetired ? : ${forceRetired}`);
+      const message = `${(new Date()).toLocaleString()} is ${posNodeAddress} forceRetired ? : ${forceRetired}`;
+      console.log(message);
+      if (forceRetired) {
+        dingAlert(message);
+      }
     }
   }, 1000 * 60);
 }
