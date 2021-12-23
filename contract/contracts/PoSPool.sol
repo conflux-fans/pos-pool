@@ -452,9 +452,11 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   }
 
   function _withdrawCFX(uint256 amount) public onlyOwner {
-    require(_selfBalance() > amount, "Balance must be greater than amount");
+    require(_poolSummary.interest > amount, "Not enough interest");
+    require(_selfBalance() > amount, "Balance not enough");
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
+    _poolSummary.interest = _poolSummary.interest.sub(amount);
   }
 
   // Used to bring account's retired votes back to work
