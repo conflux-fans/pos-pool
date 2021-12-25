@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
+import "./PoolAPY.sol";
 
 ///
 ///  @title PoSPool
@@ -23,6 +24,7 @@ contract PoSPool is PoolContext, Ownable {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
   using VotePowerQueue for VotePowerQueue.InOutQueue;
+  using PoolAPY for PoolAPY.ApyQueue;
 
   uint256 constant private RATIO_BASE = 10000;
   uint256 private CFX_COUNT_OF_ONE_VOTE = 1000;
@@ -34,8 +36,10 @@ contract PoSPool is PoolContext, Ownable {
 
   string public poolName;
   bool public _poolRegisted;
-  uint256 public poolUserShareRatio = 9000; // ratio shared by user: 1-10000
-  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600; // lock period: 7 days + half hour
+  // ratio shared by user: 1-10000
+  uint256 public poolUserShareRatio = 9000; 
+  // lock period: 7 days + half hour
+  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600; 
 
   // ======================== Struct definitions =========================
 
@@ -74,7 +78,8 @@ contract PoSPool is PoolContext, Ownable {
   }
 
   // ======================== Contract states =========================
-  // pool global accumulative reward for each cfx
+
+  // global pool accumulative reward for each cfx
   uint256 private accRewardPerCfx = 0;
 
   PoolSummary private _poolSummary;
@@ -86,6 +91,8 @@ contract PoSPool is PoolContext, Ownable {
   mapping(address => UserShot) private lastUserShots;
   
   EnumerableSet.AddressSet private stakers;
+  
+  PoolAPY.ApyQueue private apyNodes;
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -117,10 +124,24 @@ contract PoSPool is PoolContext, Ownable {
 
   function _updateAccRewardPerCfx() private {
     uint256 reward = _selfBalance() - lastPoolShot.balance;
+
+    // record APY info
+    if (_blockNumber() > lastPoolShot.blockNumber) {
+      PoolAPY.ApyNode memory node = PoolAPY.ApyNode({
+        startBlock: lastPoolShot.blockNumber,
+        endBlock: _blockNumber(),
+        reward: reward,
+        available: lastPoolShot.available
+      });
+      apyNodes.enqueueAndClearOutdated(node, _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7)));
+    }
+
     if (reward == 0 || lastPoolShot.available == 0) return;
+
     // update global accRewardPerCfx
     uint256 cfxCount = lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE);
     accRewardPerCfx = accRewardPerCfx.add(_calUserShare(reward).div(cfxCount));
+
     // update pool interest info
     _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
     _poolSummary.interest = _poolSummary.interest.add(_calPoolShare(reward));
@@ -204,13 +225,12 @@ contract PoSPool is PoolContext, Ownable {
     _poolSummary.available += votePower;
     _updatePoolShot();
 
-    // update user interest
-    _updateUserInterest(msg.sender);
-    
     // put stake info in queue
     userInqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
+    // update user interest
+    _updateUserInterest(msg.sender);
     _updateUserShot(msg.sender);
 
     stakers.add(msg.sender);
@@ -232,13 +252,12 @@ contract PoSPool is PoolContext, Ownable {
     _poolSummary.available -= votePower;
     _updatePoolShot();
 
-    // update user interest
-    _updateUserInterest(msg.sender);
-
     //
     userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
+    // update user interest
+    _updateUserInterest(msg.sender);
     _updateUserShot(msg.sender);
   }
 
@@ -298,16 +317,16 @@ contract PoSPool is PoolContext, Ownable {
       // update poolShot's balance
       _updatePoolShot();
     }
+
     _updateUserInterest(msg.sender);
+    // update userShot's accRewardPerCfx
+    _updateUserShot(msg.sender);
     //
     userSummaries[msg.sender].claimedInterest = userSummaries[msg.sender].claimedInterest.add(amount);
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.sub(amount);
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     emit ClaimInterest(msg.sender, amount);
-    
-    // update userShot's accRewardPerCfx
-    _updateUserShot(msg.sender);
   }
 
   ///
@@ -339,7 +358,15 @@ contract PoSPool is PoolContext, Ownable {
   }
 
   function poolAPY() public view returns (uint256) {
-    return 0;
+    uint256 totalReward = 0;
+    uint256 totalWorkload = 0;
+    for(uint256 i = apyNodes.start; i < apyNodes.end; i++) {
+      PoolAPY.ApyNode memory node = apyNodes.items[i];
+      totalReward = totalReward.add(node.reward);
+      totalWorkload = totalWorkload.add(node.available.mul(CFX_VALUE_OF_ONE_VOTE).mul(node.endBlock - node.startBlock));
+    }
+
+    return totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload);
   }
 
   /// 
@@ -364,6 +391,14 @@ contract PoSPool is PoolContext, Ownable {
 
   function userOutQueue(address account, uint64 offset, uint64 limit) public view returns (VotePowerQueue.QueueNode[] memory) {
     return userOutqueues[account].queueItems(offset, limit);
+  }
+
+  function stakerNumber() public view returns (uint) {
+    return stakers.length();
+  }
+
+  function stakerAddress(uint256 i) public view returns (address) {
+    return stakers.at(i);
   }
 
   // ======================== admin methods =====================
@@ -413,14 +448,6 @@ contract PoSPool is PoolContext, Ownable {
   // reStake _poolSummary.available
   function reStake(uint64 votePower) public onlyOwner {
     _posRegisterIncreaseStake(votePower);
-  }
-
-  function stakerNumber() public view returns (uint) {
-    return stakers.length();
-  }
-
-  function stakerAddress(uint256 i) public view returns (address) {
-    return stakers.at(i);
   }
 
   /* function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {

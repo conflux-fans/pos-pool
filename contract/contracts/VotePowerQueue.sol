@@ -20,7 +20,6 @@ library VotePowerQueue {
 
   function dequeue(InOutQueue storage queue) internal returns (QueueNode memory) {
     QueueNode memory item = queue.items[queue.start];
-    // queue.items[queue.start++] = QueueNode(0, 0);
     delete queue.items[queue.start++];
     return item;
   }
@@ -50,7 +49,7 @@ library VotePowerQueue {
   }
 
   /**
-    Collect all ended vote powers from queue
+  * Collect all ended vote powers from queue
   */
   function collectEndedVotes(InOutQueue storage q) internal returns (uint256) {
     uint256 total = 0;
