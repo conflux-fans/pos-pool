@@ -321,7 +321,7 @@ contract PoSPool is PoolContext, Ownable {
     require(claimableInterest >= amount, "Interest not enough");
 
     _updateAccRewardPerCfx();
-    
+
     _updateAPY();
 
     // update blockNumber and balance
@@ -459,35 +459,29 @@ contract PoSPool is PoolContext, Ownable {
     _posRegisterIncreaseStake(votePower);
   }
 
-  /* function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    uint64 votePower = userSummaries[_addr].available;
+  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
+    uint256 votePower = userSummaries[_addr].available;
     if (votePower == 0) return;
     _poolSummary.available -= votePower;
+
+    _updateUserInterest(_addr);
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+    _updateUserShot(_addr);
 
     // clear user inqueue
     userInqueues[_addr].clear();
-    
-    // add votePowerSection
-    UserShot memory lastShot = lastUserShots[_addr];
-    if (lastShot.available > 0) {
-      votePowerSections[_addr].push(VotePowerSection({
-        startBlock: lastShot.blockNumber, 
-        endBlock: _blockNumber(), 
-        available: lastShot.available
-      }));
-    }
-
-    // update user shot
-    lastUserShots[_addr].available = 0;
-    lastUserShots[_addr].blockNumber = _blockNumber();
   }
 
   // When pool node is force retired, use this method to make all user's available stake to unlocking
   function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
     uint256 len = stakers.length();
+    if (len == 0) return;
+    
+    _updateAccRewardPerCfx();
+    _updateAPY();
+
     uint256 end = offset + limit;
     if (end > len) {
       end = len;
@@ -495,7 +489,8 @@ contract PoSPool is PoolContext, Ownable {
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
-    _shotRewardSectionAndUpdateLastShot();
-  } */
+
+    _updatePoolShot();
+  }
 
 }
