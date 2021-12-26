@@ -87,8 +87,8 @@ contract PoSPool is PoolContext, Ownable {
   mapping(address => VotePowerQueue.InOutQueue) private userInqueues;
   mapping(address => VotePowerQueue.InOutQueue) private userOutqueues;
 
-  PoolShot private lastPoolShot;
-  mapping(address => UserShot) private lastUserShots;
+  PoolShot internal lastPoolShot;
+  mapping(address => UserShot) internal lastUserShots;
   
   EnumerableSet.AddressSet private stakers;
   
@@ -158,7 +158,11 @@ contract PoSPool is PoolContext, Ownable {
       reward: reward,
       available: lastPoolShot.available
     });
-    apyNodes.enqueueAndClearOutdated(node, _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7)));
+    uint256 startBlock = 0;
+    if (_blockNumber() > ONE_DAY_BLOCK_COUNT.mul(7)) {
+      startBlock = _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7));
+    }
+    apyNodes.enqueueAndClearOutdated(node, startBlock);
   }
 
   // ======================== Events =========================
@@ -324,9 +328,6 @@ contract PoSPool is PoolContext, Ownable {
 
     _updateAPY();
 
-    // update blockNumber and balance
-    _updatePoolShot();
-
     _updateUserInterest(msg.sender);
     // update userShot's accRewardPerCfx
     _updateUserShot(msg.sender);
@@ -336,6 +337,9 @@ contract PoSPool is PoolContext, Ownable {
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     emit ClaimInterest(msg.sender, amount);
+
+    // update blockNumber and balance
+    _updatePoolShot();
   }
 
   ///
