@@ -110,31 +110,24 @@ contract PoSPool is PoolContext, Ownable {
     return reward.mul(RATIO_BASE - poolUserShareRatio).div(RATIO_BASE);
   }
 
+  // used to update lastPoolShot after _poolSummary.available changed 
   function _updatePoolShot() private {
     lastPoolShot.available = _poolSummary.available;
     lastPoolShot.balance = _selfBalance();
     lastPoolShot.blockNumber = _blockNumber();
   }
 
+  // used to update lastUserShot after userSummary.available and accRewardPerCfx changed
   function _updateUserShot(address _user) private {
     lastUserShots[_user].available = userSummaries[_user].available;
     lastUserShots[_user].accRewardPerCfx = accRewardPerCfx;
     lastUserShots[_user].blockNumber = _blockNumber();
   }
 
+  // used to update accRewardPerCfx after _poolSummary.available changed or user claimed interest
+  // depend on: lastPoolShot.available and lastPoolShot.balance
   function _updateAccRewardPerCfx() private {
     uint256 reward = _selfBalance() - lastPoolShot.balance;
-
-    // record APY info
-    if (_blockNumber() > lastPoolShot.blockNumber) {
-      PoolAPY.ApyNode memory node = PoolAPY.ApyNode({
-        startBlock: lastPoolShot.blockNumber,
-        endBlock: _blockNumber(),
-        reward: reward,
-        available: lastPoolShot.available
-      });
-      apyNodes.enqueueAndClearOutdated(node, _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7)));
-    }
 
     if (reward == 0 || lastPoolShot.available == 0) return;
 
@@ -147,11 +140,25 @@ contract PoSPool is PoolContext, Ownable {
     _poolSummary.interest = _poolSummary.interest.add(_calPoolShare(reward));
   }
 
+  // depend on: accRewardPerCfx and lastUserShot
   function _updateUserInterest(address _user) private {
     UserShot memory uShot = lastUserShots[_user];
     if (uShot.available == 0) return;
     uint256 latestInterest = accRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
     userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(latestInterest);
+  }
+
+  // depend on: lastPoolShot
+  function _updateAPY() private {
+    if (_blockNumber() == lastPoolShot.blockNumber)  return;
+    uint256 reward = _selfBalance() - lastPoolShot.balance;
+    PoolAPY.ApyNode memory node = PoolAPY.ApyNode({
+      startBlock: lastPoolShot.blockNumber,
+      endBlock: _blockNumber(),
+      reward: reward,
+      available: lastPoolShot.available
+    });
+    apyNodes.enqueueAndClearOutdated(node, _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7)));
   }
 
   // ======================== Events =========================
@@ -220,17 +227,18 @@ contract PoSPool is PoolContext, Ownable {
     emit IncreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
+    _updateAPY();
     
     //
     _poolSummary.available += votePower;
     _updatePoolShot();
 
+    // update user interest
+    _updateUserInterest(msg.sender);
     // put stake info in queue
     userInqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
-    // update user interest
-    _updateUserInterest(msg.sender);
     _updateUserShot(msg.sender);
 
     stakers.add(msg.sender);
@@ -247,17 +255,18 @@ contract PoSPool is PoolContext, Ownable {
     emit DecreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
+    _updateAPY();
 
     //
     _poolSummary.available -= votePower;
     _updatePoolShot();
 
+    // update user interest
+    _updateUserInterest(msg.sender);
     //
     userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
-    // update user interest
-    _updateUserInterest(msg.sender);
     _updateUserShot(msg.sender);
   }
 
@@ -311,12 +320,12 @@ contract PoSPool is PoolContext, Ownable {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "Interest not enough");
 
-    uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
-    if (_latestReward > 0) {
-      _updateAccRewardPerCfx();
-      // update poolShot's balance
-      _updatePoolShot();
-    }
+    _updateAccRewardPerCfx();
+    
+    _updateAPY();
+
+    // update blockNumber and balance
+    _updatePoolShot();
 
     _updateUserInterest(msg.sender);
     // update userShot's accRewardPerCfx
