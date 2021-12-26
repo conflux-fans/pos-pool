@@ -75,19 +75,10 @@ describe("Staking", async function () {
     let poolShot = await pool._poolShot();
     expect(poolShot.available).to.equal(11);
 
-    let lastRewardSection = await pool._lastRewardSection();
-    expect(lastRewardSection.available).to.equal(lastPoolAvailable);
-
     poolSummary = await pool.poolSummary();
     expect(poolSummary.available).to.equal(11);
 
     lastPoolAvailable = poolSummary.available;
-
-    /* const sections = await pool._rewardSections();
-    console.log(sections);
-    
-    let apy = await pool.poolAPY();
-    console.log(apy); */
 
     // ====================================== Test B increase stake
     // total 14
@@ -99,17 +90,14 @@ describe("Staking", async function () {
     poolSummary = await pool.poolSummary();
     expect(poolSummary.available).to.equal(14);
 
-    lastRewardSection = await pool._lastRewardSection();
-    expect(lastRewardSection.available).to.equal(lastPoolAvailable);
-
     poolShot = await pool._poolShot();
     expect(poolShot.available).to.equal(14);
 
-    let user2Summary = await pool.userSummary(accounts[1].address);
+    const user2Summary = await pool.userSummary(accounts[1].address);
     expect(user2Summary.votes).to.equal(3);
     expect(user2Summary.available).to.equal(3);
 
-    let user2Shot = await pool._userShot(accounts[1].address);
+    const user2Shot = await pool._userShot(accounts[1].address);
     expect(user2Shot.available).to.equal(3);
 
     lastPoolAvailable = poolSummary.available;
@@ -119,8 +107,14 @@ describe("Staking", async function () {
       14 * ONE_VOTE_CFX + ".0"
     );
 
+    // let poolBalance = await ethers.provider.getBalance(pool.address);
+    // console.log('Balance', poolBalance);
+
     const sendUserInterestTx = await staking._sendUserInterest(pool.address);
     await sendUserInterestTx.wait();
+
+    // poolBalance = await ethers.provider.getBalance(pool.address);
+    // console.log('Balance2', poolBalance);
 
     // wait specific block number
     await mineBlocks(LOCK_PERIOD);
@@ -133,18 +127,8 @@ describe("Staking", async function () {
     poolSummary = await pool.poolSummary();
     expect(poolSummary.available).to.equal(9);
 
-    lastRewardSection = await pool._lastRewardSection();
-    expect(lastRewardSection.available).to.equal(lastPoolAvailable);
-    expect(lastRewardSection.reward).to.equal(
-      poolStakeBalance.mul(400).div(10000)
-    );
-
-    expect(poolSummary.interest).to.equal(
-      lastRewardSection.reward.mul(1000).div(10000)
-    );
-
-    let user1Interest = await pool.userInterest(accounts[0].address);
-    console.log(user1Interest);
+    const user1Interest = await pool.userInterest(accounts[0].address);
+    console.log("User1 interest", user1Interest);
 
     user1Summary = await pool.userSummary(accounts[0].address);
     expect(user1Summary.available).to.equal(6);

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
-import "./PoSPoolStorage.sol";
+import "./PoolAPY.sol";
 
 ///
 ///  @title PoSPool
@@ -20,13 +20,81 @@ import "./PoSPoolStorage.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
+contract PoSPool is PoolContext, Ownable {
   using SafeMath for uint256;
-  using VotePowerQueue for VotePowerQueue.InOutQueue;
   using EnumerableSet for EnumerableSet.AddressSet;
+  using VotePowerQueue for VotePowerQueue.InOutQueue;
+  using PoolAPY for PoolAPY.ApyQueue;
+
+  uint256 constant private RATIO_BASE = 10000;
+  uint256 private CFX_COUNT_OF_ONE_VOTE = 1000;
+  uint256 private CFX_VALUE_OF_ONE_VOTE = 1000 ether;
+  uint256 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
+  uint256 constant private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
+  
+  // ======================== Pool config =========================
+
+  string public poolName;
+  bool public _poolRegisted;
+  // ratio shared by user: 1-10000
+  uint256 public poolUserShareRatio = 9000; 
+  // lock period: 7 days + half hour
+  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600; 
+
+  // ======================== Struct definitions =========================
+
+  struct PoolSummary {
+    uint256 available;
+    uint256 interest; // PoS pool interest share
+    uint256 totalInterest; // total interest of whole pools
+  }
+
+  /// @title UserSummary
+  /// @custom:field votes User's total votes
+  /// @custom:field available User's avaliable votes
+  /// @custom:field locked
+  /// @custom:field unlocked
+  /// @custom:field claimedInterest
+  /// @custom:field currentInterest
+  struct UserSummary {
+    uint256 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
+    uint256 available; // locking + locked
+    uint256 locked;
+    uint256 unlocked;
+    uint256 claimedInterest;
+    uint256 currentInterest;
+  }
+
+  struct PoolShot {
+    uint256 available;
+    uint256 balance;
+    uint256 blockNumber;
+  } 
+
+  struct UserShot {
+    uint256 available;
+    uint256 accRewardPerCfx;
+    uint256 blockNumber;
+  }
+
+  // ======================== Contract states =========================
+
+  // global pool accumulative reward for each cfx
+  uint256 private accRewardPerCfx = 0;
+
+  PoolSummary private _poolSummary;
+  mapping(address => UserSummary) private userSummaries;
+  mapping(address => VotePowerQueue.InOutQueue) private userInqueues;
+  mapping(address => VotePowerQueue.InOutQueue) private userOutqueues;
+
+  PoolShot internal lastPoolShot;
+  mapping(address => UserShot) internal lastUserShots;
+  
+  EnumerableSet.AddressSet private stakers;
+  
+  PoolAPY.ApyQueue private apyNodes;
 
   // ======================== Modifiers =========================
-
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
     _;
@@ -34,71 +102,82 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   // ======================== Helpers =========================
 
-  function _updateLastPoolShot() private {
-    lastPoolShot.available = _poolSummary.available;
-    lastPoolShot.blockNumber = _blockNumber();
-    lastPoolShot.balance = _selfBalance();
+  function _calUserShare(uint256 reward) private view returns (uint256) {
+    return reward.mul(poolUserShareRatio).div(RATIO_BASE);
   }
 
-  function _shotRewardSection() private {
-    if (_selfBalance() < lastPoolShot.balance) {
-      revert UnnormalReward(lastPoolShot.balance, _selfBalance(), block.number);
-    }
-    // create section startBlock number -> section index mapping
-    rewardSectionIndexByBlockNumber[lastPoolShot.blockNumber] = rewardSections.length;
-    
-    uint reward = _selfBalance().sub(lastPoolShot.balance);
-    // save new section
-    rewardSections.push(RewardSection({
+  function _calPoolShare(uint256 reward) private view returns (uint256) {
+    return reward.mul(RATIO_BASE - poolUserShareRatio).div(RATIO_BASE);
+  }
+
+  // used to update lastPoolShot after _poolSummary.available changed 
+  function _updatePoolShot() private {
+    lastPoolShot.available = _poolSummary.available;
+    lastPoolShot.balance = _selfBalance();
+    lastPoolShot.blockNumber = _blockNumber();
+  }
+
+  // used to update lastUserShot after userSummary.available and accRewardPerCfx changed
+  function _updateUserShot(address _user) private {
+    lastUserShots[_user].available = userSummaries[_user].available;
+    lastUserShots[_user].accRewardPerCfx = accRewardPerCfx;
+    lastUserShots[_user].blockNumber = _blockNumber();
+  }
+
+  // used to update accRewardPerCfx after _poolSummary.available changed or user claimed interest
+  // depend on: lastPoolShot.available and lastPoolShot.balance
+  function _updateAccRewardPerCfx() private {
+    uint256 reward = _selfBalance() - lastPoolShot.balance;
+
+    if (reward == 0 || lastPoolShot.available == 0) return;
+
+    // update global accRewardPerCfx
+    uint256 cfxCount = lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE);
+    accRewardPerCfx = accRewardPerCfx.add(_calUserShare(reward).div(cfxCount));
+
+    // update pool interest info
+    _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
+    _poolSummary.interest = _poolSummary.interest.add(_calPoolShare(reward));
+  }
+
+  // depend on: accRewardPerCfx and lastUserShot
+  function _updateUserInterest(address _user) private {
+    UserShot memory uShot = lastUserShots[_user];
+    if (uShot.available == 0) return;
+    uint256 latestInterest = accRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(latestInterest);
+  }
+
+  // depend on: lastPoolShot
+  function _updateAPY() private {
+    if (_blockNumber() == lastPoolShot.blockNumber)  return;
+    uint256 reward = _selfBalance() - lastPoolShot.balance;
+    PoolAPY.ApyNode memory node = PoolAPY.ApyNode({
       startBlock: lastPoolShot.blockNumber,
       endBlock: _blockNumber(),
-      available: lastPoolShot.available,
-      reward: reward
-    }));
-    // acumulate pool interest
-    uint _poolShare = reward.mul(RATIO_BASE - poolUserShareRatio).div(RATIO_BASE);
-    _poolSummary.interest = _poolSummary.interest.add(_poolShare);
-    _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
-  }
-
-  function _shotRewardSectionAndUpdateLastShot() private {
-    _shotRewardSection();
-    _updateLastPoolShot();
-  }
-
-  function _updateLastUserShot() private {
-    lastUserShots[msg.sender].available = userSummaries[msg.sender].available;
-    lastUserShots[msg.sender].blockNumber = _blockNumber();
-  }
-
-  function _shotVotePowerSection() private {
-    UserShot memory lastShot = lastUserShots[msg.sender];
-    if (lastShot.available == 0) return;
-    votePowerSections[msg.sender].push(VotePowerSection({
-      startBlock: lastShot.blockNumber, 
-      endBlock: _blockNumber(), 
-      available: lastShot.available
-    }));
-  }
-
-  function _shotVotePowerSectionAndUpdateLastShot() private {
-    _shotVotePowerSection();
-    _updateLastUserShot();
+      reward: reward,
+      available: lastPoolShot.available
+    });
+    uint256 startBlock = 0;
+    if (_blockNumber() > ONE_DAY_BLOCK_COUNT.mul(7)) {
+      startBlock = _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7));
+    }
+    apyNodes.enqueueAndClearOutdated(node, startBlock);
   }
 
   // ======================== Events =========================
 
-  event IncreasePoSStake(address indexed user, uint64 votePower);
+  event IncreasePoSStake(address indexed user, uint256 votePower);
 
-  event DecreasePoSStake(address indexed user, uint64 votePower);
+  event DecreasePoSStake(address indexed user, uint256 votePower);
 
-  event WithdrawStake(address indexed user, uint64 votePower);
+  event WithdrawStake(address indexed user, uint256 votePower);
 
   event ClaimInterest(address indexed user, uint256 amount);
 
-  event RatioChanged(uint64 ratio);
+  event RatioChanged(uint256 ratio);
 
-  error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
+  // error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
   // ======================== Contract methods =========================
   
@@ -120,19 +199,22 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   ) public virtual payable onlyOwner {
     require(!_poolRegisted, "Pool is already registed");
     require(votePower == 1, "votePower should be 1");
-    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "msg.value should be 1000 CFX");
+    require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be 1000 CFX");
     _stakingDeposit(msg.value);
     _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
-    // update pool and user info
+
+    // update pool info
     _poolSummary.available += votePower;
+    _updatePoolShot();
+
+    // update user info
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
-    // create the initial shot of pool and admin
-    _updateLastUserShot();
-    _updateLastPoolShot();
-
+    _updateUserShot(msg.sender);
+    
+    //
     stakers.add(msg.sender);
   }
 
@@ -142,20 +224,26 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   ///
   function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
     require(votePower > 0, "Minimal votePower is 1");
-    require(msg.value == votePower * CFX_COUNT_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
+    require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
+    
     _stakingDeposit(msg.value);
     _posRegisterIncreaseStake(votePower);
     emit IncreasePoSStake(msg.sender, votePower);
+
+    _updateAccRewardPerCfx();
+    _updateAPY();
+    
     //
     _poolSummary.available += votePower;
-    userSummaries[msg.sender].votes += votePower;
-    userSummaries[msg.sender].available += votePower;
+    _updatePoolShot();
 
+    // update user interest
+    _updateUserInterest(msg.sender);
     // put stake info in queue
     userInqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
-
-    _shotVotePowerSectionAndUpdateLastShot();
-    _shotRewardSectionAndUpdateLastShot();
+    userSummaries[msg.sender].votes += votePower;
+    userSummaries[msg.sender].available += votePower;
+    _updateUserShot(msg.sender);
 
     stakers.add(msg.sender);
   }
@@ -169,15 +257,21 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
+
+    _updateAccRewardPerCfx();
+    _updateAPY();
+
     //
     _poolSummary.available -= votePower;
-    userSummaries[msg.sender].available -= votePower;
-    userSummaries[msg.sender].locked -= votePower;
+    _updatePoolShot();
+
+    // update user interest
+    _updateUserInterest(msg.sender);
     //
     userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
-
-    _shotVotePowerSectionAndUpdateLastShot();
-    _shotRewardSectionAndUpdateLastShot();
+    userSummaries[msg.sender].available -= votePower;
+    userSummaries[msg.sender].locked -= votePower;
+    _updateUserShot(msg.sender);
   }
 
   ///
@@ -187,91 +281,18 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    _stakingWithdraw(votePower * CFX_COUNT_OF_ONE_VOTE);
+    _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
-    receiver.transfer(votePower * CFX_COUNT_OF_ONE_VOTE);
+    receiver.transfer(votePower * CFX_VALUE_OF_ONE_VOTE);
     emit WithdrawStake(msg.sender, votePower);
 
     if (userSummaries[msg.sender].votes == 0) {
       stakers.remove(msg.sender);
     }
-  }
-
-  function _calculateShare(uint256 reward, uint64 userVotes, uint64 poolVotes) private view returns (uint256) {
-    if (userVotes == 0 || reward == 0) return 0;
-    return reward.mul(userVotes).mul(poolUserShareRatio).div(poolVotes * RATIO_BASE);
-  }
-
-  function _rSectionStartIndex(uint256 _bNumber) private view returns (uint64) {
-    return uint64(rewardSectionIndexByBlockNumber[_bNumber]);
-  }
-
-  /**
-    Calculate user's latest interest (not in sections)
-   */
-  function _userLatestInterest(address _address) public view returns (uint256) {
-    uint latestInterest = 0;
-    UserShot memory uShot = lastUserShots[_address];
-    if (uShot.available == 0) return 0;
-    // include latest not shot reward section
-    if (_selfBalance() > lastPoolShot.balance) {
-      uint256 latestReward = _selfBalance().sub(lastPoolShot.balance);
-      uint256 currentShare = _calculateShare(latestReward, uShot.available, lastPoolShot.available);
-      latestInterest = latestInterest.add(currentShare);
-    }
-
-    uint64 start = _rSectionStartIndex(uShot.blockNumber);
-
-    // If user shot is the last one of all shots, then can't get start index from blockNumber
-    if (start == 0) return latestInterest;
-
-    for (uint64 i = start; i < rewardSections.length; i++) {
-      RewardSection memory pSection = rewardSections[i];
-      uint256 _currentShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
-      latestInterest = latestInterest.add(_currentShare);
-    }
-    
-    return latestInterest;
-  }
-
-  function _userSectionInterest(address _address) public view returns (uint256) {
-    uint totalInterest = 0;
-    VotePowerSection[] memory uSections = votePowerSections[_address];
-    if (uSections.length == 0) return 0;
-    
-    uint64 start = _rSectionStartIndex(uSections[0].startBlock);
-    for (uint64 i = start; i < rewardSections.length; i++) {
-      RewardSection memory pSection = rewardSections[i];
-      if (pSection.reward == 0) {
-        continue;
-      }
-      for (uint32 j = 0; j < uSections.length; j++) {
-        if (uSections[j].startBlock >= pSection.endBlock) {
-          break;
-        }
-        if (uSections[j].endBlock <= pSection.startBlock) {
-          continue;
-        }
-        bool include = uSections[j].startBlock <= pSection.startBlock && uSections[j].endBlock >= pSection.endBlock;
-        if (!include) {
-          continue;
-        }
-        uint256 currentSectionShare = _calculateShare(pSection.reward, uSections[j].available, pSection.available);
-        totalInterest = totalInterest.add(currentSectionShare);
-      }
-    }
-    return totalInterest;
-  }
-
-  // collet all user section interest to currentInterest and clear user's votePowerSections
-  function _collectUserInterestAndCleanVoteSection() private onlyRegisted {
-    uint256 collectedInterest = _userSectionInterest(msg.sender);
-    userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.add(collectedInterest);
-    delete votePowerSections[msg.sender]; // delete all user's votePowerSection or use arr.length = 0
   }
 
   ///
@@ -280,10 +301,19 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   /// @return CFX interest in Drip
   ///
   function userInterest(address _address) public view returns (uint256) {
-    uint interest = 0;
-    interest = interest.add(_userSectionInterest(_address));
-    interest = interest.add(_userLatestInterest(_address));
-    return interest.add(userSummaries[_address].currentInterest);
+    uint256 _interest = userSummaries[_address].currentInterest;
+
+    // add latest profit
+    uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
+    UserShot memory uShot = lastUserShots[_address];
+    if (_latestReward > 0 && uShot.available > 0) {
+      uint256 _deltaAcc = _calUserShare(_latestReward).div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
+      uint256 _latestAccRewardPerCfx = accRewardPerCfx.add(_deltaAcc);
+      uint256 _latestInterest = _latestAccRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
+      _interest = _interest.add(_latestInterest);
+    }
+
+    return _interest;
   }
 
   ///
@@ -293,23 +323,23 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
   function claimInterest(uint amount) public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "Interest not enough");
-    /*
-      NOTE: The order is important:
-      1. shot pool section
-      2. send reward
-      3. update lastPoolShot
-    */
-    _shotVotePowerSectionAndUpdateLastShot();
-    _shotRewardSection();
-    _collectUserInterestAndCleanVoteSection();
+
+    _updateAccRewardPerCfx();
+
+    _updateAPY();
+
+    _updateUserInterest(msg.sender);
+    // update userShot's accRewardPerCfx
+    _updateUserShot(msg.sender);
     //
     userSummaries[msg.sender].claimedInterest = userSummaries[msg.sender].claimedInterest.add(amount);
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.sub(amount);
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     emit ClaimInterest(msg.sender, amount);
-    //
-    _updateLastPoolShot();
+
+    // update blockNumber and balance
+    _updatePoolShot();
   }
 
   ///
@@ -340,44 +370,16 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return summary;
   }
 
-  function _rewardSeciontWorkload(RewardSection memory _section) private view returns(uint256) {
-    return CFX_COUNT_OF_ONE_VOTE.mul(_section.available).mul(_section.endBlock - _section.startBlock);
-  }
-
-  function _poolAPY(uint256 startBlock) public view returns (uint32) {
-    uint256 totalWorkload = 0;
+  function poolAPY() public view returns (uint256) {
     uint256 totalReward = 0;
-
-    // latest section APY
-    RewardSection memory latestSection = RewardSection({
-      startBlock: lastPoolShot.blockNumber,
-      endBlock: _blockNumber(),
-      reward: _selfBalance().sub(lastPoolShot.balance),
-      available: lastPoolShot.available
-    });
-
-    totalWorkload = totalWorkload.add(_rewardSeciontWorkload(latestSection));
-    totalReward = totalReward.add(latestSection.reward);
-
-    uint256 rLen = rewardSections.length;
-    for (uint256 i = 0; i < rLen; i++) {
-      RewardSection memory section = rewardSections[rLen - i - 1];
-      if (section.endBlock < startBlock) {
-        break;
-      }
-      totalWorkload = totalWorkload.add(_rewardSeciontWorkload(section));
-      totalReward = totalReward.add(section.reward);
+    uint256 totalWorkload = 0;
+    for(uint256 i = apyNodes.start; i < apyNodes.end; i++) {
+      PoolAPY.ApyNode memory node = apyNodes.items[i];
+      totalReward = totalReward.add(node.reward);
+      totalWorkload = totalWorkload.add(node.available.mul(CFX_VALUE_OF_ONE_VOTE).mul(node.endBlock - node.startBlock));
     }
 
-    return uint32(totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload));
-  }
-
-  function poolAPY () public view returns (uint32) {
-    uint256 startBlock = 0;
-    if (block.number > SEVEN_DAY_BLOCK_COUNT) {
-      startBlock = block.number - SEVEN_DAY_BLOCK_COUNT;
-    }
-    return _poolAPY(startBlock);
+    return totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload);
   }
 
   /// 
@@ -404,17 +406,12 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     return userOutqueues[account].queueItems(offset, limit);
   }
 
-  // collect user interest in a pagination way to avoid gas OOM
-  function collectUserLatestSectionsInterest(uint256 sectionCount) public onlyRegisted {
-    _collectUserLatestSectionsInterest(msg.sender, sectionCount);
+  function stakerNumber() public view returns (uint) {
+    return stakers.length();
   }
 
-  function collectUserLatestInterestPagination(uint64 limit) public onlyRegisted {
-    _collectUserLatestInterestPagination(msg.sender, limit);
-  }
-
-  function collectUserLastVotePowerSectionPagination(uint64 limit) public onlyRegisted {
-    _collectUserLastVotePowerSectionPagination(msg.sender, limit);
+  function stakerAddress(uint256 i) public view returns (address) {
+    return stakers.at(i);
   }
 
   // ======================== admin methods =====================
@@ -448,7 +445,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
 
   /// @param count Vote cfx count, unit is cfx
   function setCfxCountOfOneVote(uint256 count) public onlyOwner {
-    CFX_COUNT_OF_ONE_VOTE = count * 1 ether;
+    CFX_COUNT_OF_ONE_VOTE = count;
+    CFX_VALUE_OF_ONE_VOTE = count * 1 ether;
   }
 
   function _withdrawCFX(uint256 amount) public onlyOwner {
@@ -465,43 +463,29 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     _posRegisterIncreaseStake(votePower);
   }
 
-  function stakerNumber() public view returns (uint) {
-    return stakers.length();
-  }
-
-  function stakerAddress(uint256 i) public view returns (address) {
-    return stakers.at(i);
-  }
-
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    uint64 votePower = userSummaries[_addr].available;
+    uint256 votePower = userSummaries[_addr].available;
     if (votePower == 0) return;
     _poolSummary.available -= votePower;
+
+    _updateUserInterest(_addr);
     userSummaries[_addr].available = 0;
     userSummaries[_addr].locked = 0;
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+    _updateUserShot(_addr);
 
     // clear user inqueue
     userInqueues[_addr].clear();
-    
-    // add votePowerSection
-    UserShot memory lastShot = lastUserShots[_addr];
-    if (lastShot.available > 0) {
-      votePowerSections[_addr].push(VotePowerSection({
-        startBlock: lastShot.blockNumber, 
-        endBlock: _blockNumber(), 
-        available: lastShot.available
-      }));
-    }
-
-    // update user shot
-    lastUserShots[_addr].available = 0;
-    lastUserShots[_addr].blockNumber = _blockNumber();
   }
 
   // When pool node is force retired, use this method to make all user's available stake to unlocking
   function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
     uint256 len = stakers.length();
+    if (len == 0) return;
+    
+    _updateAccRewardPerCfx();
+    _updateAPY();
+
     uint256 end = offset + limit;
     if (end > len) {
       end = len;
@@ -509,131 +493,8 @@ contract PoSPool is PoolContext, PoSPoolStorage, Ownable {
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
-    _shotRewardSectionAndUpdateLastShot();
-  }
 
-  function collectUserLatestSectionsInterestByAdmin(address _addr, uint256 sectionCount) public onlyRegisted onlyOwner {
-    _collectUserLatestSectionsInterest(_addr, sectionCount);
-  }
-
-  function collectUserLatestInterestPaginationByAdmin(address _addr, uint64 limit) public onlyRegisted onlyOwner {
-    _collectUserLatestInterestPagination(_addr, limit);
-  }
-
-  function collectUserLastVotePowerSectionPaginationByAdmin(address _addr, uint64 limit) public onlyRegisted onlyOwner {
-    _collectUserLastVotePowerSectionPagination(_addr, limit);
-  }
-
-  // These methods are used to collect user's interest in a pagination way to avoid gas OOM
-  function _collectUserLatestSectionsInterest(address _user, uint256 sectionCount) private {
-    require(sectionCount <= 100, "Max section count is 100");
-    
-    VotePowerSection[] storage uSections = votePowerSections[_user];
-    require(uSections.length > 0, "No sections");
-
-    if (uSections.length < sectionCount) {
-      sectionCount = uSections.length;
-    }
-
-    uint totalInterest = 0;
-    // from back to start
-    for(uint256 i = 0; i < sectionCount; i++) {
-      VotePowerSection memory vSection = uSections[uSections.length - i - 1];
-      uint64 start = _rSectionStartIndex(vSection.startBlock);
-      for (uint64 j = start; j < rewardSections.length; j++) {
-        if (rewardSections[j].startBlock >= vSection.endBlock) {
-          break;
-        }
-        if (rewardSections[j].reward == 0) {
-          continue;
-        }
-        uint256 currentSectionShare = _calculateShare(rewardSections[j].reward, vSection.available, rewardSections[j].available);
-        totalInterest = totalInterest.add(currentSectionShare);
-      }
-      uSections.pop();
-    }
-    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
-  }
-
-  function _collectUserLatestInterestPagination(address _user, uint64 limit) private {
-    require(limit <= 100, "Max section count is 100");
-
-    UserShot storage uShot = lastUserShots[_user];
-    require(uShot.blockNumber < lastPoolShot.blockNumber, "No new user shot");
-
-    uint64 start = _rSectionStartIndex(uShot.blockNumber);
-    uint64 end = start + limit;
-    if (end > rewardSections.length) {
-      end = uint64(rewardSections.length);
-    }
-
-    uint256 totalInterest = 0;
-    for (uint64 i = start; i < end; i++) {
-      RewardSection memory pSection = rewardSections[i];
-      if (pSection.reward == 0) {
-        continue;
-      }
-      uint256 currentSectionShare = _calculateShare(pSection.reward, uShot.available, pSection.available);
-      totalInterest = totalInterest.add(currentSectionShare);
-    }
-
-    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
-    uShot.blockNumber = rewardSections[end - 1].endBlock;
-  }
-
-  function _collectUserLastVotePowerSectionPagination(address _user, uint64 limit) private {
-    require(limit <= 100, "Max section count is 100");
-
-    VotePowerSection[] storage uSections = votePowerSections[_user];
-    require(uSections.length > 0, "No vote power section");
-
-    uint64 start = _rSectionStartIndex(uSections[uSections.length - 1].startBlock);
-    uint64 end = start + limit;
-    if (end > rewardSections.length) {
-      end = uint64(rewardSections.length);
-    }
-
-    uint256 totalInterest = 0;
-    for (uint64 i = start; i < end; i++) {
-      RewardSection memory pSection = rewardSections[i];
-      if (pSection.reward == 0) {
-        continue;
-      }
-      uint256 currentSectionShare = _calculateShare(pSection.reward, uSections[uSections.length - 1].available, pSection.available);
-      totalInterest = totalInterest.add(currentSectionShare);
-    }
-    
-    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(totalInterest);
-    if (end == rewardSections.length) {
-      uSections.pop();
-    } else {
-      uSections[uSections.length - 1].startBlock = rewardSections[end - 1].endBlock;
-    }
-  }
-
-  ///////// debug methods
-  function _rewardSections() public view returns (RewardSection[] memory) {
-    return rewardSections;
-  }
-
-  function _votePowerSections(address _address) public view returns (VotePowerSection[] memory) {
-    return votePowerSections[_address];
-  }
-
-  function _lastRewardSection() public view returns (RewardSection memory) {
-    return rewardSections[rewardSections.length - 1];
-  }
-
-  function _lastVotePowerSection(address _address) public view returns (VotePowerSection memory) {
-    return votePowerSections[_address][votePowerSections[_address].length - 1];
-  }
-
-  function _userShot(address _address) public view returns (UserShot memory) {
-    return lastUserShots[_address];
-  }
-
-  function _poolShot() public view returns (PoolShot memory) {
-    return lastPoolShot;
+    _updatePoolShot();
   }
 
 }
