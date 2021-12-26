@@ -35,6 +35,7 @@ contract PoSPool is PoolContext, Ownable {
   // ======================== Pool config =========================
 
   string public poolName;
+  // wheter this poolContract registed in PoS
   bool public _poolRegisted;
   // ratio shared by user: 1-10000
   uint256 public poolUserShareRatio = 9000; 
@@ -91,7 +92,7 @@ contract PoSPool is PoolContext, Ownable {
   mapping(address => UserShot) internal lastUserShots;
   
   EnumerableSet.AddressSet private stakers;
-  
+  // used to calculate latest seven days APY
   PoolAPY.ApyQueue private apyNodes;
 
   // ======================== Modifiers =========================
@@ -158,11 +159,12 @@ contract PoSPool is PoolContext, Ownable {
       reward: reward,
       available: lastPoolShot.available
     });
-    uint256 startBlock = 0;
+
+    uint256 outdatedBlock = 0;
     if (_blockNumber() > ONE_DAY_BLOCK_COUNT.mul(7)) {
-      startBlock = _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7));
+      outdatedBlock = _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7));
     }
-    apyNodes.enqueueAndClearOutdated(node, startBlock);
+    apyNodes.enqueueAndClearOutdated(node, outdatedBlock);
   }
 
   // ======================== Events =========================
@@ -325,7 +327,6 @@ contract PoSPool is PoolContext, Ownable {
     require(claimableInterest >= amount, "Interest not enough");
 
     _updateAccRewardPerCfx();
-
     _updateAPY();
 
     _updateUserInterest(msg.sender);
@@ -373,6 +374,7 @@ contract PoSPool is PoolContext, Ownable {
   function poolAPY() public view returns (uint256) {
     uint256 totalReward = 0;
     uint256 totalWorkload = 0;
+
     for(uint256 i = apyNodes.start; i < apyNodes.end; i++) {
       PoolAPY.ApyNode memory node = apyNodes.items[i];
       totalReward = totalReward.add(node.reward);
@@ -449,12 +451,13 @@ contract PoSPool is PoolContext, Ownable {
     CFX_VALUE_OF_ONE_VOTE = count * 1 ether;
   }
 
-  function _withdrawCFX(uint256 amount) public onlyOwner {
+  function _withdrawPoolProfit(uint256 amount) public onlyOwner {
     require(_poolSummary.interest > amount, "Not enough interest");
     require(_selfBalance() > amount, "Balance not enough");
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     _poolSummary.interest = _poolSummary.interest.sub(amount);
+    _updatePoolShot();
   }
 
   // Used to bring account's retired votes back to work
