@@ -160,7 +160,13 @@ describe("Staking", async function () {
     expect(poolShot.balance).to.equal(afterBalance);
   });
 
-  it("PoS reward calculate", async function () {});
+  it("PoS reward calculate - one user", async function () {
+    // one people
+  });
+
+  it("PoS reward calculate - two user", async function () {
+    // two people
+  });
 
   it("PoS restake", async function () {});
 });
