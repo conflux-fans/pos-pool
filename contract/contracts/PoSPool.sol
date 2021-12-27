@@ -470,7 +470,6 @@ contract PoSPool is PoolContext, Ownable {
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     uint256 votePower = userSummaries[_addr].available;
     if (votePower == 0) return;
-    _poolSummary.available -= votePower;
 
     _updateUserInterest(_addr);
     userSummaries[_addr].available = 0;
@@ -479,6 +478,8 @@ contract PoSPool is PoolContext, Ownable {
     userInqueues[_addr].clear();
     userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
     _updateUserShot(_addr);
+
+    _poolSummary.available -= votePower;
   }
 
   // When pool node is force retired, use this method to make all user's available stake to unlocking
