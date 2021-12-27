@@ -48,7 +48,7 @@ async function main() {
     bytecode: poolProxyInfo.bytecode,
   });
   const deployProxyContract = await poolProxyContract
-    .constructor(deployPoolReceipt.contractCreated)
+    .constructor(deployPoolReceipt.contractCreated, "0x8129fc1c") // 0x8129fc1c - initialize
     .sendTransaction({
       from: account.address,
     })

@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 import "./PoolAPY.sol";
@@ -20,17 +21,17 @@ import "./PoolAPY.sol";
 ///  Note:
 ///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
 ///
-contract PoSPool is PoolContext, Ownable {
+contract PoSPool is PoolContext, Ownable, Initializable {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
   using VotePowerQueue for VotePowerQueue.InOutQueue;
   using PoolAPY for PoolAPY.ApyQueue;
 
-  uint256 constant private RATIO_BASE = 10000;
+  uint256 private RATIO_BASE = 10000;
   uint256 private CFX_COUNT_OF_ONE_VOTE = 1000;
   uint256 private CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-  uint256 constant private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
-  uint256 constant private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
+  uint256 private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
+  uint256 private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
   
   // ======================== Pool config =========================
 
@@ -81,7 +82,7 @@ contract PoSPool is PoolContext, Ownable {
   // ======================== Contract states =========================
 
   // global pool accumulative reward for each cfx
-  uint256 public accRewardPerCfx = 0;
+  uint256 public accRewardPerCfx;  // start from 0
 
   PoolSummary private _poolSummary;
   mapping(address => UserSummary) private userSummaries;
@@ -181,7 +182,18 @@ contract PoSPool is PoolContext, Ownable {
 
   // error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
-  // ======================== Contract methods =========================
+  // ======================== Init methods =========================
+
+  // call this method then depoly the 1967 proxy contract
+  function initialize() public initializer {
+    RATIO_BASE = 10000;
+    CFX_COUNT_OF_ONE_VOTE = 1000;
+    CFX_VALUE_OF_ONE_VOTE = 1000 ether;
+    ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
+    ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
+    poolUserShareRatio = 9000;
+    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
+  }
   
   ///
   /// @notice Regist the pool contract in PoS internal contract 
@@ -218,6 +230,8 @@ contract PoSPool is PoolContext, Ownable {
     _poolSummary.available += votePower;
     _updatePoolShot();
   }
+
+  // ======================== Contract methods =========================
 
   ///
   /// @notice Increase PoS vote power
