@@ -81,7 +81,7 @@ contract PoSPool is PoolContext, Ownable {
   // ======================== Contract states =========================
 
   // global pool accumulative reward for each cfx
-  uint256 private accRewardPerCfx = 0;
+  uint256 public accRewardPerCfx = 0;
 
   PoolSummary private _poolSummary;
   mapping(address => UserSummary) private userSummaries;
@@ -206,18 +206,17 @@ contract PoSPool is PoolContext, Ownable {
     _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
     _poolRegisted = true;
 
-    // update pool info
-    _poolSummary.available += votePower;
-    _updatePoolShot();
-
     // update user info
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
     _updateUserShot(msg.sender);
-    
     //
     stakers.add(msg.sender);
+
+    // update pool info
+    _poolSummary.available += votePower;
+    _updatePoolShot();
   }
 
   ///
@@ -235,10 +234,6 @@ contract PoSPool is PoolContext, Ownable {
     _updateAccRewardPerCfx();
     _updateAPY();
     
-    //
-    _poolSummary.available += votePower;
-    _updatePoolShot();
-
     // update user interest
     _updateUserInterest(msg.sender);
     // put stake info in queue
@@ -248,6 +243,10 @@ contract PoSPool is PoolContext, Ownable {
     _updateUserShot(msg.sender);
 
     stakers.add(msg.sender);
+
+    //
+    _poolSummary.available += votePower;
+    _updatePoolShot();
   }
 
   ///
@@ -263,10 +262,6 @@ contract PoSPool is PoolContext, Ownable {
     _updateAccRewardPerCfx();
     _updateAPY();
 
-    //
-    _poolSummary.available -= votePower;
-    _updatePoolShot();
-
     // update user interest
     _updateUserInterest(msg.sender);
     //
@@ -274,6 +269,10 @@ contract PoSPool is PoolContext, Ownable {
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
     _updateUserShot(msg.sender);
+
+    //
+    _poolSummary.available -= votePower;
+    _updatePoolShot();
   }
 
   ///
@@ -330,11 +329,13 @@ contract PoSPool is PoolContext, Ownable {
     _updateAPY();
 
     _updateUserInterest(msg.sender);
-    // update userShot's accRewardPerCfx
-    _updateUserShot(msg.sender);
     //
     userSummaries[msg.sender].claimedInterest = userSummaries[msg.sender].claimedInterest.add(amount);
     userSummaries[msg.sender].currentInterest = userSummaries[msg.sender].currentInterest.sub(amount);
+    // update userShot's accRewardPerCfx
+    _updateUserShot(msg.sender);
+
+    // send interest to user
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     emit ClaimInterest(msg.sender, amount);
