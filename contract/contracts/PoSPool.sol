@@ -396,6 +396,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
       totalWorkload = totalWorkload.add(node.available.mul(CFX_VALUE_OF_ONE_VOTE).mul(node.endBlock - node.startBlock));
     }
 
+    if (_blockNumber() > lastPoolShot.blockNumber) {
+      uint256 _latestReward = _selfBalance().sub(lastPoolShot.balance);
+      totalReward = totalReward.add(_latestReward);
+      totalWorkload = totalWorkload.add(lastPoolShot.available.mul(CFX_VALUE_OF_ONE_VOTE).mul(_blockNumber() - lastPoolShot.blockNumber));
+    }
+
     return totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload);
   }
 
