@@ -46,7 +46,6 @@ contract PoSPoolDebug is PoSPool {
 
   receive() external payable {}
 
-  
   function _userShot(address _address) public view returns (UserShot memory) {
     return lastUserShots[_address];
   }

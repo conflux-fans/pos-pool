@@ -14,13 +14,6 @@ import "./PoolAPY.sol";
 ///  @dev This is Conflux PoS pool contract
 ///  @notice Users can use this contract to participate Conflux PoS without running a PoS node.
 ///
-///  Key points:
-///  1. Record pool and user state correctly
-///  2. Calculate user reward correctly
-///
-///  Note:
-///  1. Do not send CFX directly to the pool contract, the received CFX will be treated as PoS reward.
-///
 contract PoSPool is PoolContext, Ownable, Initializable {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -252,6 +245,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updateUserInterest(msg.sender);
     // put stake info in queue
     userInqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     userSummaries[msg.sender].votes += votePower;
     userSummaries[msg.sender].available += votePower;
     _updateUserShot(msg.sender);
@@ -280,6 +274,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updateUserInterest(msg.sender);
     //
     userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
     _updateUserShot(msg.sender);
@@ -387,9 +382,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   }
 
   function poolAPY() public view returns (uint256) {
+    if(apyNodes.start == apyNodes.end) return 0;
+    
     uint256 totalReward = 0;
     uint256 totalWorkload = 0;
-
     for(uint256 i = apyNodes.start; i < apyNodes.end; i++) {
       PoolAPY.ApyNode memory node = apyNodes.items[i];
       totalReward = totalReward.add(node.reward);
@@ -520,5 +516,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
     _updatePoolShot();
   }
+  
+  // TODO REMOVE used for mocking reward
+  // receive() external payable {}
 
 }
