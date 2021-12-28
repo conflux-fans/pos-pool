@@ -34,6 +34,7 @@ function getContractInfo(name) {
 const conflux = new Conflux({
   url: process.env.CFX_RPC_URL,
   networkId: parseInt(process.env.CFX_NETWORK_ID),
+  // logger: console,
 });
 const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
 
@@ -203,10 +204,23 @@ program
       abi: contractInfo.abi,
       bytecode: contractInfo.bytecode,
     });
-    const receipt = await contract.constructor(logicAddress).sendTransaction({
+    const initializeAbiName = '0x8129fc1c';
+    const receipt = await contract.constructor(logicAddress, initializeAbiName).sendTransaction({
       from: account.address
     }).executed();
     checkDeployStatus(receipt, 'deploy proxy');
+  });
+
+program
+  .command('QueryProxy')
+  .action(async (logicAddress) => {
+    const contractInfo = getContractInfo('PoolProxy');
+    const contract = conflux.Contract({
+      abi: contractInfo.abi,
+      address: process.env.POOL_ADDRESS,
+    });
+    const impl = await contract.implementation();
+    console.log(impl);
   });
 
 program

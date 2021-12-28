@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PoSPoolProxy1967 is ERC1967Proxy, Ownable  {
+  // initialize() - "0x8129fc1c"
   constructor(address logic, bytes memory data) ERC1967Proxy(logic, data) {}
 
   function implementation() public view returns (address) {

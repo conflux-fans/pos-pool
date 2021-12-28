@@ -7,6 +7,9 @@ const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.jso
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
 const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
 
+ // 0x8129fc1c - initialize
+const InitializeMethodData = '0x8129fc1c';
+
 const managerContract = conflux.Contract({
   address: process.env.POOL_MANAGER_ADDRESS,
   abi: poolManagerInfo.abi,
@@ -48,7 +51,7 @@ async function main() {
     bytecode: poolProxyInfo.bytecode,
   });
   const deployProxyContract = await poolProxyContract
-    .constructor(deployPoolReceipt.contractCreated, "0x8129fc1c") // 0x8129fc1c - initialize
+    .constructor(deployPoolReceipt.contractCreated, InitializeMethodData)
     .sendTransaction({
       from: account.address,
     })
