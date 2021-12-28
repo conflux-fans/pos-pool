@@ -4,11 +4,9 @@
 /* eslint-disable prettier/prettier */
 const poolDebugContractInfo = require("../artifacts/contracts/PoSPoolDebug.sol/PoSPoolDebug.json");
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
-const poolContractInterface = require("../artifacts/contracts/IPoSPool.sol/IPoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
 const mockStakingInfo = require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
 const mockPosRegisterInfo = require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
-// const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy.sol/PoSPoolProxy.json");
 const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
 const {Conflux, Drip, format} = require('js-conflux-sdk');
 const { program } = require("commander");
@@ -36,6 +34,7 @@ function getContractInfo(name) {
 const conflux = new Conflux({
   url: process.env.CFX_RPC_URL,
   networkId: parseInt(process.env.CFX_NETWORK_ID),
+  // logger: console,
 });
 const account = conflux.wallet.addPrivateKey(process.env.PRIVATE_KEY);
 
@@ -205,10 +204,23 @@ program
       abi: contractInfo.abi,
       bytecode: contractInfo.bytecode,
     });
-    const receipt = await contract.constructor(logicAddress).sendTransaction({
+    const initializeAbiName = '0x8129fc1c';
+    const receipt = await contract.constructor(logicAddress, initializeAbiName).sendTransaction({
       from: account.address
     }).executed();
     checkDeployStatus(receipt, 'deploy proxy');
+  });
+
+program
+  .command('QueryProxy')
+  .action(async (logicAddress) => {
+    const contractInfo = getContractInfo('PoolProxy');
+    const contract = conflux.Contract({
+      abi: contractInfo.abi,
+      address: process.env.POOL_ADDRESS,
+    });
+    const impl = await contract.implementation();
+    console.log(impl);
   });
 
 program

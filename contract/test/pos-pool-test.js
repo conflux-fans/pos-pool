@@ -12,7 +12,7 @@ async function mineBlocks(n = 1) {
 }
 
 describe("Staking", async function () {
-  it("PoS pool basic tests", async function () {
+  it("PoS pool state change tests", async function () {
     const MockStaking = await ethers.getContractFactory("MockStaking");
     const staking = await MockStaking.deploy();
     await staking.deployed();
@@ -56,8 +56,6 @@ describe("Staking", async function () {
     expect(poolSummary.available).to.equal(1);
     expect(poolSummary.interest).to.equal(0);
 
-    let lastPoolAvailable = poolSummary.available;
-
     // ==================================== Test A increase stake
     // total 11
     const increaseTx = await pool.increaseStake(10, {
@@ -77,8 +75,6 @@ describe("Staking", async function () {
 
     poolSummary = await pool.poolSummary();
     expect(poolSummary.available).to.equal(11);
-
-    lastPoolAvailable = poolSummary.available;
 
     // ====================================== Test B increase stake
     // total 14
@@ -100,21 +96,19 @@ describe("Staking", async function () {
     const user2Shot = await pool._userShot(accounts[1].address);
     expect(user2Shot.available).to.equal(3);
 
-    lastPoolAvailable = poolSummary.available;
-
     let poolStakeBalance = await staking.getStakingBalance(pool.address);
     expect(ethers.utils.formatEther(poolStakeBalance)).to.equal(
       14 * ONE_VOTE_CFX + ".0"
     );
 
-    // let poolBalance = await ethers.provider.getBalance(pool.address);
-    // console.log('Balance', poolBalance);
-
-    const sendUserInterestTx = await staking._sendUserInterest(pool.address);
+    const sendUserInterestTx = await staking._sendUserInterest(
+      pool.address,
+      10,
+      {
+        value: ethers.utils.parseEther(`10`),
+      }
+    );
     await sendUserInterestTx.wait();
-
-    // poolBalance = await ethers.provider.getBalance(pool.address);
-    // console.log('Balance2', poolBalance);
 
     // wait specific block number
     await mineBlocks(LOCK_PERIOD);
@@ -128,7 +122,6 @@ describe("Staking", async function () {
     expect(poolSummary.available).to.equal(9);
 
     const user1Interest = await pool.userInterest(accounts[0].address);
-    console.log("User1 interest", user1Interest);
 
     user1Summary = await pool.userSummary(accounts[0].address);
     expect(user1Summary.available).to.equal(6);
@@ -167,5 +160,13 @@ describe("Staking", async function () {
     expect(poolShot.balance).to.equal(afterBalance);
   });
 
-  it("PoS reward calculate", async function () {});
+  it("PoS reward calculate - one user", async function () {
+    // one people
+  });
+
+  it("PoS reward calculate - two user", async function () {
+    // two people
+  });
+
+  it("PoS restake", async function () {});
 });
