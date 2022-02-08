@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Input, Button, Divider, Form, List, message, Col, Row,Spin } from "antd";
+import { Input, Button, Divider, Form, List, message, Col, Row, Spin } from "antd";
 import { useParams } from "react-router-dom";
 import BigNumber from "bignumber.js";
-import { useConfluxPortal } from "@cfxjs/react-hooks";
+import {format} from "js-conflux-sdk/dist/js-conflux-sdk.umd.min.js";
 
+import { isTestNetEnv } from "../../utils";
 import { getPosPoolContract, conflux, Drip,getPosAccountByPowAddress } from "../../utils/cfx";
 import {
   getCfxByVote,
@@ -13,18 +14,21 @@ import {
   getMax,
   getPrecisionAmount
 } from "../../utils";
-import { useConnect, useBalance } from "../../hooks/usePortal";
+import {useBalance, useAccount, useChainId, sendTransaction, Unit} from '@cfxjs/use-wallet';
 import { CFX_BASE_PER_VOTE,StatusPosNode } from "../../constants";
 import Header from "./Header";
 import ConfirmModal from "./ConfirmModal";
 import TxModal from "./TxModal";
 
+const isTest = isTestNetEnv();
+
 function Pool() {
-  const { address: accountAddress } = useConnect();
+  const chainId = useChainId();
+  const accountAddress = useAccount();
   const [form] = Form.useForm();
-  const balance = getPrecisionAmount(useBalance(accountAddress)||0,5);
+  const _balance = useBalance();
+  const balance = _balance?.toDecimalStandardUnit(5);
   const cfxMaxCanStake = getMax(balance);
-  const { confluxJS } = useConfluxPortal();
   let { poolAddress } = useParams();
   const posPoolContract = getPosPoolContract(poolAddress);
   const [status,setStatus]=useState(StatusPosNode.loading)
@@ -218,6 +222,7 @@ function Pool() {
       message.error("Please connect ConfluxPortal");
       return;
     }
+
     try {
       let data = "";
       let estimateData = {};
@@ -269,14 +274,13 @@ function Pool() {
           break;
       }
       const txParams = {
-        from: accountAddress,
-        to: poolAddress,
+        to: format.address(poolAddress, Number(chainId)),
         data,
-        gas: calculateGasMargin(estimateData?.gasLimit || 0),
-        storageLimit: calculateGasMargin(
-          estimateData?.storageCollateralized || 0
-        ),
-        value,
+        gas: Unit.fromMinUnit(calculateGasMargin(estimateData?.gasLimit || 0)).toHexMinUnit(),
+        storageLimit: Unit.fromMinUnit(calculateGasMargin(
+          String(estimateData?.storageCollateralized || 0)
+        )).toHexMinUnit(),
+        value: Unit.fromMinUnit(value).toHexMinUnit(),
       };
       if (stakeModalShown) {
         setStakeModalShown(false);
@@ -284,13 +288,21 @@ function Pool() {
       if (unstakeModalShown) {
         setUnStakeModalShown(false);
       }
-      const txHash = await confluxJS.sendTransaction(txParams);
+      const txHash = await sendTransaction(txParams);
       setTxHash(txHash);
       setTxModalShown(true);
     } catch (error) {
       console.error('error',error)
     }
   };
+
+  const checkNetwork = (callback) => {
+    if ((isTest && chainId === '1029') || (!isTest && chainId === '1')) {
+      return;
+    }
+    
+    if (typeof callback === 'function') callback();
+  }
 
   return (
     <div className="w-full h-full flex">
@@ -339,7 +351,7 @@ function Pool() {
                       type="primary"
                       size="middle"
                       onClick={() => {
-                        setStakeModalShown(true);
+                        checkNetwork(() => setStakeModalShown(true));
                       }}
                       disabled={stakeBtnDisabled}
                     >
@@ -377,7 +389,7 @@ function Pool() {
                       type="primary"
                       size="middle"
                       onClick={() => {
-                        setUnStakeModalShown(true);
+                        checkNetwork(() => setUnStakeModalShown(true));
                       }}
                       disabled={unstakeBtnDisabled}
                     >
@@ -404,7 +416,7 @@ function Pool() {
                       type="primary"
                       size="small"
                       onClick={() => {
-                        submit("claim");
+                        checkNetwork(() => submit("claim"));
                       }}
                       disabled={new BigNumber(rewards).isEqualTo(0)}
                     >
@@ -430,7 +442,7 @@ function Pool() {
                       type="primary"
                       size="small"
                       onClick={() => {
-                        submit("withdraw");
+                        checkNetwork(() => submit("withdraw"));
                       }}
                       disabled={!cfxCanWithdraw}
                     >
