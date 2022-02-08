@@ -8,13 +8,13 @@ import {
   posPoolManagerContract,
   getPosAccountByPowAddress,
 } from "../../utils/cfx";
-import { useConnect } from "../../hooks/usePortal";
+import {connect as tryActivate, useAccount} from '@cfxjs/use-wallet';
 
 function Home() {
   const [dataList, setDataList] = useState([]);
   const [loading,setLoading]=useState(false)
   const history = useHistory();
-  const { address: accountAddress, tryActivate } = useConnect();
+  const accountAddress = useAccount();
   const gotoPoolPage = (record) => {
     if (accountAddress) {
       history.push(`/pool/${record?.address}`);
