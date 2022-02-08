@@ -14,14 +14,20 @@ function HeaderComp() {
     const networkError = (isTest && chainId === '1029') || (!isTest && chainId === '1');
 
     return (
-      <Header style={{width: '100%' }}>
-        <div className='flex justify-between text-white bg-main-back bg-opacity-0'>
+      <Header style={{width: '100%', height: 'fit-content', padding: 0 }}>
+        {isTest &&
+          <div className='w-full h-[64px] leading-[64px] text-[#f3504f] bg-[#f3504f] bg-opacity-20 z-[49] text-[16px] text-center border-b border-[#f3504f]'>
+            Please note: the current page is a test environment!
+          </div>
+        }
+        <div className='flex justify-between text-white bg-main-back bg-opacity-0 px-[50px]'>
           <Link to="/">Pos Pool</Link>
           <div>
           {address&&<div>{address}</div>}
           {!address&&<Button type='primary' onClick={tryActivate}>Connect Portal</Button>}
           </div>
         </div>
+
         {networkError &&
           createPortal(
             <div className='fixed top-0 left-0 w-[100vw] h-[100vh] bg-black bg-opacity-25 z-50'>
