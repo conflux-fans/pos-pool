@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Input, Button, Divider, Form, List, message, Col, Row,Spin } from "antd";
+import { Input, Button, Divider, Form, List, message, Col, Row, Spin } from "antd";
 import { useParams } from "react-router-dom";
 import BigNumber from "bignumber.js";
 import {format} from "js-conflux-sdk/dist/js-conflux-sdk.umd.min.js";
 
+import { isTestNetEnv } from "../../utils";
 import { getPosPoolContract, conflux, Drip,getPosAccountByPowAddress } from "../../utils/cfx";
 import {
   getCfxByVote,
@@ -18,6 +19,8 @@ import { CFX_BASE_PER_VOTE,StatusPosNode } from "../../constants";
 import Header from "./Header";
 import ConfirmModal from "./ConfirmModal";
 import TxModal from "./TxModal";
+
+const isTest = isTestNetEnv();
 
 function Pool() {
   const chainId = useChainId();
@@ -219,6 +222,7 @@ function Pool() {
       message.error("Please connect ConfluxPortal");
       return;
     }
+
     try {
       let data = "";
       let estimateData = {};
@@ -292,6 +296,14 @@ function Pool() {
     }
   };
 
+  const checkNetwork = (callback) => {
+    if ((isTest && chainId === '1029') || (!isTest && chainId === '1')) {
+      return;
+    }
+    
+    if (typeof callback === 'function') callback();
+  }
+
   return (
     <div className="w-full h-full flex">
       {isLoading?<div className="flex items-center justify-center w-full h-screen"><Spin></Spin></div>:(<div className="container mx-auto">
@@ -339,7 +351,7 @@ function Pool() {
                       type="primary"
                       size="middle"
                       onClick={() => {
-                        setStakeModalShown(true);
+                        checkNetwork(() => setStakeModalShown(true));
                       }}
                       disabled={stakeBtnDisabled}
                     >
@@ -377,7 +389,7 @@ function Pool() {
                       type="primary"
                       size="middle"
                       onClick={() => {
-                        setUnStakeModalShown(true);
+                        checkNetwork(() => setUnStakeModalShown(true));
                       }}
                       disabled={unstakeBtnDisabled}
                     >
@@ -404,7 +416,7 @@ function Pool() {
                       type="primary"
                       size="small"
                       onClick={() => {
-                        submit("claim");
+                        checkNetwork(() => submit("claim"));
                       }}
                       disabled={new BigNumber(rewards).isEqualTo(0)}
                     >
@@ -430,7 +442,7 @@ function Pool() {
                       type="primary"
                       size="small"
                       onClick={() => {
-                        submit("withdraw");
+                        checkNetwork(() => submit("withdraw"));
                       }}
                       disabled={!cfxCanWithdraw}
                     >
