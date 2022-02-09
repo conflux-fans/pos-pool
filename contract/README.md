@@ -10,7 +10,6 @@ This is the contract code of PoS pool, which are developed by Solidity. Featured
 
 All contracts are in the `contracts` folder:
 
-* `PoSPoolStorage.sol`: Define all the storage variable the pool contract used
 * `PoSPool.sol`: This is the pool logic methods
 * `PoSPoolProxy1967.sol`: This is the pool proxy contract, used to make the pool logic upgradable.
 * `PoolManager.sol`: A simple manager contract just store pool's address.
