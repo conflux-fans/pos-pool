@@ -7,7 +7,6 @@ import { Header } from "./pages/components";
 import Home from "./pages/Home";
 import Pool from "./pages/Pool";
 
-
 const { Content } = Layout;
 
 function App() {

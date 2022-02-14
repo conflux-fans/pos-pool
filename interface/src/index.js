@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {completeDetect} from '@cfxjs/use-wallet';
+import '../public/locales';
 
 completeDetect().then(() => {
   ReactDOM.render(

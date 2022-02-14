@@ -36,3 +36,16 @@ In interface/src/constants/index.js, modify the value of NETWORK_ID_MAINNET | NE
 ### modify contract address
 
 In interface/src/utils/cfx.js, modify the value of posPoolManagerAddressTestnet | posPoolManagerAddressMainnet to configure the contract address.
+
+
+### add i18n text
+
+First, add a folder named target language key to the interface/public/locales folder.
+copy the translation.json file from the locales/en folder.
+
+Then change the value in the copied translation.json file to the translation of the target language.
+
+Next, import the new language file in locales/index.js and add it to the resources field.
+(You can change the default language by modifying the lng field.)
+
+Finally, in Interface/src/pages/components/Header/index.js, add an Option corresponding to the language key under Language Select.

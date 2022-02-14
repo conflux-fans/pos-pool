@@ -1,37 +1,37 @@
-import { Modal } from "antd";
+import {Modal} from 'antd'
+import {useTranslation} from 'react-i18next'
 
-function ConfirmModal({ type, visible, setVisible, onOk }) {
-  let content = <></>;
-  let okText=''
+function ConfirmModal({type, visible, setVisible, onOk}) {
+  const {t} = useTranslation()
+
+  let content = <></>
+  let okText = ''
   switch (type) {
-    case "stake":
-        okText='stake'  
+    case 'stake':
+      okText = t('ConfirmModal.stake')
       content = (
         <div>
-          <div className="text-center text-error text-base font-bold mt-2 mb-4">Unstake need 7 + 7 days</div>  
-          <div className="leading-6">According to Conflux PoS mechanism.</div>
-          <div className="leading-6">
-            When you staked your CFX, those CFX can unstake after 7 days.
+          <div className="text-center text-error text-base font-bold mt-2 mb-4">
+            {t('ConfirmModal.stake_1')}
           </div>
-          <div className="leading-6">
-            After submitting the Unstake transaction, you need to wait a 7-day
-            lock-up to claim your CFX.
-          </div>
+          <div className="leading-6">{t('ConfirmModal.stake_2')}</div>
+          <div className="leading-6">{t('ConfirmModal.stake_3')}</div>
+          <div className="leading-6">{t('ConfirmModal.stake_4')}</div>
         </div>
-      );
-      break;
-    case "unstake":
-        okText='unstake' 
+      )
+      break
+    case 'unstake':
+      okText = t('ConfirmModal.unstake')
       content = (
         <div>
-          <div>You need to wait a 7-day lock-up to claim your CFX.</div>
-          <div>No profit during 7-day lock-up.</div>
-          <div>The proformance fee will be charged.</div>
+          <div>{t('ConfirmModal.unstake_1')}</div>
+          <div>{t('ConfirmModal.unstake_2')}</div>
+          <div>{t('ConfirmModal.unstake_3')}</div>
         </div>
-      );
-      break;
+      )
+      break
     default:
-      break;
+      break
   }
   return (
     <Modal
@@ -39,10 +39,12 @@ function ConfirmModal({ type, visible, setVisible, onOk }) {
       visible={visible}
       onOk={onOk}
       okText={okText}
-      onCancel={()=>{setVisible(false)}}
+      onCancel={() => {
+        setVisible(false)
+      }}
     >
       {content}
     </Modal>
-  );
+  )
 }
-export default ConfirmModal;
+export default ConfirmModal
