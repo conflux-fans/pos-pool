@@ -479,9 +479,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // Used to bring account's retired votes back to work
   // reStake _poolSummary.available
-  function reStake(uint64 votePower) public onlyOwner {
-    _posRegisterIncreaseStake(votePower);
-  }
+  // function reStake(uint64 votePower) public onlyOwner {
+  //   _posRegisterIncreaseStake(votePower);
+  // }
 
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     uint256 votePower = userSummaries[_addr].available;
