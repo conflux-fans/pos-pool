@@ -177,7 +177,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // ======================== Init methods =========================
 
-  // call this method then depoly the 1967 proxy contract
+  // call this method when depoly the 1967 proxy contract
   function initialize() public initializer {
     RATIO_BASE = 10000;
     CFX_COUNT_OF_ONE_VOTE = 1000;
