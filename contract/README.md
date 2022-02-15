@@ -4,7 +4,7 @@ This is the contract code of PoS pool, which are developed by Solidity. Featured
 
 * Pool share ratio configuable
 * Upgradeable
-* Provide `PoolManager` to manage serveral PoS pool 
+* Provide `PoolManager` to manage serveral PoS pool
 
 ## Main contracts
 
@@ -30,9 +30,27 @@ If want to add more pool to PoolManager then walk through step `2-6`.
 1. `setPoolUserShareRatio` to set poolUserShareRatio, which's default value is 90%
 2. `setLockPeriod` to set pool stake&unstake lock period, which's default value is `7 day block number`(`2 * 3600 * 24 * 7`)
 
+## Bootstrap
+
+Clone the code, and install the dependencies with npm
+
+```sh
+$ git clone https://github.com/conflux-fans/pos-pool.git
+$ cd contract
+$ npm install
+```
+
+Then compile the contracts
+
+```sh
+$ npx hardhat compile
+```
+
 ## CLI
 
 There is a CLI in `bin`, which can used to deploy contract and setup them.
+
+First you need create a `.env` from it's template `.env.example` and set the `CFX_RPC_URL`, `CFX_NETWORK_ID`, `PRIVATE_KEY` and make sure the `PRIVATE_KEY`'s address have enough CFX.
 
 ```sh
 To gain a performance boost install @conflux-dev/conflux-address-rust
@@ -63,40 +81,46 @@ Commands:
   help [command]                     display help for command
 ```
 
-### Step 1 - Config env file
-
-First you need create a `.env` from it's template `.env.example` and set the `CFX_RPC_URL`, `CFX_NETWORK_ID`, `PRIVATE_KEY` and make sure the `PRIVATE_KEY`'s address have enough CFX.
-
-### Step 2 - Deploy contract
-
-Then you can deploy the `PoolManager`, `PoolProxy1967`, `Pool`
+### Step 1 - Deploy PoolManager
 
 ```sh
 $ bin/pool.js deploy PoolManager
 Deploy success: NET8888:TYPE.CONTRACT:ACC7ANC643M4W2VUHRNP5F0ZGZHUW8ZK6AENY2XB11
+```
 
+Config `POOL_MANAGER_ADDRESS` with new deployed `PoolManager` address in `.env`
+
+### Step 2 - Deploy PoSPool contract
+
+Then you can deploy the `PoSPool`
+
+```sh
 $ bin/pool.js deploy Pool
 Deploy success: NET8888:TYPE.CONTRACT:ACED7ZXFESKFFVR595J9KVS702C7D66SCUAMGHDPAA
+```
 
+### Step 3 - Deploy PoSPoolProxy1967 contract
+
+Then you can deploy the `PoSPoolProxy1967`
+
+```sh
 $ bin/pool.js deployProxy NET8888:TYPE.CONTRACT:ACED7ZXFESKFFVR595J9KVS702C7D66SCUAMGHDPAA
 Deploy success: NET8888:TYPE.CONTRACT:ACF0H9U3WYZ1EUSH5EW04MPK6GN43HA1A6FWG7ZB0W
 ```
 
-### Step 3 - Config contract address
-
-Config `POOL_MANAGER_ADDRESS`, `POOL_ADDRESS` with new deployed `PoolManager` and `PoolProxy1967` address in `.env`
+Config `POOL_ADDRESS` with new deployed `PoolProxy1967` address in `.env`
 
 **Note POOL_ADDRESS is configured to PoolProxy address**
 
-### Step 5 - Set poolName
+### Step 4 - Set poolName
 
 ```sh
 $ bin/pool.js setPoolName YourChoosePoolName
 ```
 
-### Step 6 - Regist pool
+### Step 5 - Regist pool
 
-Set your PoS node's register data and set `POS_REGIST_DATA` in `.env`
+Set your PoS node's register data and set `POS_REGIST_DATA` in `.env`.
 
 ```sh
 $ bin/pool.js registerPool
@@ -108,9 +132,9 @@ $ bin/pool.js registerPool
 $ bin/pool.js PoolManager addPool NET8888:TYPE.CONTRACT:ACF0H9U3WYZ1EUSH5EW04MPK6GN43HA1A6FWG7ZB0W
 ```
 
-## scripts/deployPool.js
+## Pool deploy and setup scripts
 
-There is a scripts can quickly deply a new PoS pool and regist it, also add it to PoolManager
+There is also a scripts can quickly deply a new PoS pool and regist it, also add it to PoolManager
 
 ```sh
 $ node scripts/deployPool.js THE-REGISTER-DATA

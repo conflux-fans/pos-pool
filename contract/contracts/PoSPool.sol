@@ -177,7 +177,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // ======================== Init methods =========================
 
-  // call this method then depoly the 1967 proxy contract
+  // call this method when depoly the 1967 proxy contract
   function initialize() public initializer {
     RATIO_BASE = 10000;
     CFX_COUNT_OF_ONE_VOTE = 1000;
@@ -479,9 +479,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // Used to bring account's retired votes back to work
   // reStake _poolSummary.available
-  function reStake(uint64 votePower) public onlyOwner {
-    _posRegisterIncreaseStake(votePower);
-  }
+  // function reStake(uint64 votePower) public onlyOwner {
+  //   _posRegisterIncreaseStake(votePower);
+  // }
 
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     uint256 votePower = userSummaries[_addr].available;

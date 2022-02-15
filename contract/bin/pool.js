@@ -117,70 +117,6 @@ program
   });
 
 program
-  .command('registerPool')
-  .action(async () => {
-    const _poolAddress = process.env.POOL_ADDRESS;
-    const receipt = await conflux.cfx.sendTransaction({
-      from: account.address,
-      value: Drip.fromCFX(1000),
-      to: _poolAddress,
-      data: process.env.POS_REGIST_DATA,
-    }).executed();
-    checkReceiptStatus(receipt, 'Register Pool');
-  });
-
-program
-  .command('setLockPeriod <number>')
-  .action(async (arg) => {
-    const contract = poolContract;
-    const receipt = await contract.setLockPeriod(parseInt(arg)).sendTransaction({
-      from: account.address,
-    }).executed();
-    checkReceiptStatus(receipt, 'setLockPeriod');
-  });
-
-program
-  .command('setPoolName <name>')
-  .action(async (arg, debug) => {
-    const contract = poolContract;
-    const receipt = await contract.setPoolName(arg).sendTransaction({
-      from: account.address,
-    }).executed();
-    checkReceiptStatus(receipt, 'setPoolName');
-  });
-
-program
-  .command('Pool <method> [arg] [value]')
-  .action(async (method, arg, value=0) => {
-    const contract = poolContract;
-    const receipt = await contract[method](arg).sendTransaction({
-      from: account.address,
-      value: Drip.fromCFX(parseInt(value)),
-    }).executed();
-    checkReceiptStatus(receipt, method);
-  });
-
-program
-  .command('restake <amount>')
-  .action(async (amount) => {
-    const contract = poolContract;
-    const receipt = await contract.reStake(parseInt(amount)).sendTransaction({
-      from: account.address,
-    }).executed();
-    checkReceiptStatus(receipt, 'restake');
-  });
-
-program
-  .command('retireUserStake <user> <endBlock>')
-  .action(async (user, endBlock) => {
-    const contract = poolContract;
-    const receipt = await contract._retireUserStake(user, parseInt(endBlock)).sendTransaction({
-      from: account.address,
-    }).executed();
-    checkReceiptStatus(receipt, 'retire');
-  });
-
-program
   .command('deploy')
   .argument('<ContractName>', 'Available Contracts: PoolManager, Pool')
   .action(async (ContractName) => {
@@ -212,18 +148,6 @@ program
   });
 
 program
-  .command('QueryProxy')
-  .action(async (logicAddress) => {
-    const contractInfo = getContractInfo('PoolProxy');
-    const contract = conflux.Contract({
-      abi: contractInfo.abi,
-      address: process.env.POOL_ADDRESS,
-    });
-    const impl = await contract.implementation();
-    console.log(impl);
-  });
-
-program
   .command('deployDebugPool')
   .action(async (arg) => {
     const contract = conflux.Contract({
@@ -237,6 +161,13 @@ program
   });
 
 program
+  .command('QueryProxyImpl')
+  .action(async () => {
+    const address = await poolProxyContract.implementation();
+    console.log(address);
+  });
+
+program
   .command('upgradePoolContract <address>')
   .action(async (address) => {
     const receipt = await poolProxyContract.upgradeTo(address).sendTransaction({
@@ -246,28 +177,52 @@ program
   });
 
 program
-  .command('QueryPoolProxy')
+  .command('Pool')
+  .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, _withdrawPoolProfit')
+  .argument('[arg]', 'Arguments for the method')
+  .argument('[value]', 'Transaction value')
+  .action(async (method, arg, value=0) => {
+    const contract = poolContract;
+    const receipt = await contract[method](arg).sendTransaction({
+      from: account.address,
+      value: Drip.fromCFX(parseInt(value)),
+    }).executed();
+    checkReceiptStatus(receipt, method);
+  });
+
+program
+  .command('registerPool')
   .action(async () => {
-    const address = await poolProxyContract.implementation();
-    console.log(address);
+    const _poolAddress = process.env.POOL_ADDRESS;
+    const receipt = await conflux.cfx.sendTransaction({
+      from: account.address,
+      value: Drip.fromCFX(1000),
+      to: _poolAddress,
+      data: process.env.POS_REGIST_DATA,
+    }).executed();
+    checkReceiptStatus(receipt, 'Register Pool');
+  });
+
+program
+  .command('retireUserStake <user> <endBlock>')
+  .action(async (user, endBlock) => {
+    const contract = poolContract;
+    const receipt = await contract._retireUserStake(user, parseInt(endBlock)).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, 'retire');
   });
 
 program
   .command('QueryPool')
   .argument('<method>', 'Available methods: poolSummary, userSummary, identifierToAddress, userInQueue, userOutQueue, userInterest, poolAPY, poolName, userInterest, posAddress')
   .argument('[arg]', 'Arguments for the method')
-  .action(async (method, arg) => {
+  .action(async (method, ...args) => {
     if (!poolContract[method]) {
       console.log('Invalid method');
       return;
     }
-    let result
-    if (arg) {
-      result = await poolContract[method](arg);
-    } else {
-      result = await poolContract[method]();
-    }
-    
+    const result = await poolContract[method](...args);
     console.log(result);
   });
 
