@@ -1,0 +1,58 @@
+{
+  "Header": {
+    "test_note": "Xin lưu ý: trang hiện tại đang ở trạng thái thử nghiệm!",
+    "pos_pool": "POS Pool",
+    "connect_portal": "Cổng kết nối",
+    "error:": "Lỗi:",
+    "unspport_network_switch_testnet": "Mạng không được hỗ trợ, vui lòng chuyển sang Conflux Testnet trong ví",
+    "unspport_network_switch_hydra": "Mạng không được hỗ trợ, vui lòng chuyển sang Conflux Hydra trong ví"
+  },
+  "Home": {
+    "status": "Trạng thái",
+    "pool": "Tên Pool",
+    "total_locked": "Tổng số bị khoá (CFX)",
+    "apy": "APY",
+    "performance_fee": "Phí thực hiện",
+    "total_revenue": "Tổng doanh thu",
+    "status_good": "Tốt",
+    "status_error": "Lỗi",
+    "status_loading": "Đang tải"
+  },
+  "ConfirmModal": {
+    "stake": "stake",
+    "stake_1": "Bỏ Stake cần 7 + 7 ngày",
+    "stake_2": "Dựa theo cơ chế PoS Conflux.",
+    "stake_3": "Khi bạn stake CFX của mình, số CFX đó có thể bỏ stake sau 7 ngày.",
+    "stake_4": "Sau khi gửi giao dịch bỏ stake, bạn cần chờ 7 ngày mở khoá để yêu cầu CFX của mình.",
+    "unstake": "bỏ stake",
+    "unstake_1": "Bạn cần chờ 7 ngày mở khoá để yêu cầu CFX của mình.",
+    "unstake_2": "Không có lợi nhuận trong vòng 7 ngày bị khoá.",
+    "unstake_3": "Sẽ tính phí thực hiện."
+  },
+  "Pool": {
+    "stake&unstake": "Stake & Bỏ stake",
+    "how_much_stake": "Bạn muốn stake bao nhiêu CFX?",
+    "enter_cfx_amount": "Nhập số lượng CFX",
+    "max": "Tối đa",
+    "wrong_amount": "Sai số lượng",
+    "balance": "Số dư:",
+    "stake": "Stake",
+    "how_much_unstake": "Bạn muốn bỏ stake bao nhiêu CFX? (Bội số của 1000 CFX)",
+    "unstakeable": "Có thể bỏ stake:",
+    "unstake": "Bỏ stake",
+    "my_pool": "Pool của tôi",
+    "my_staked": "Stake của tôi:",
+    "my_rewards": "Phần thưởng của tôi:",
+    "claim": "Yêu cầu",
+    "last_update_time": "Thời gian cập nhật gần nhất:",
+    "performance_fee": "Phí thực hiện:",
+    "withdrawable": "Có thể rút:",
+    "withdraw": "Rút",
+    "unstake_activity": "Hoạt động bỏ stake",
+    "can_withdraw_at": "Bạn có thể rút vào {{time}}"
+  },
+  "TxModal": {
+    "transaction_submitted": "Giao dịch đã gửi đi.",
+    "transaction_hash": "Hash giao dịch:"
+  }
+}
