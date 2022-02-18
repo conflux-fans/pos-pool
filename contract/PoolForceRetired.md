@@ -1,22 +1,33 @@
-# Pool force retired
+# Pool forceRetired
 
-## 如何检测节点是否被 retired
+## How to know a PoS pool is force retired?
 
-1. 通过 `pos_getAccount` 方法获取 pos 账户信息，如果 forceRetired 有值，说明被 retire 了。(此种方式检测有一定延后)
-2. 如果节点是委员会成员，可以判断节点是否对最新的 PoS block 进行了签名操作，如果没有进行可能意味着节点不正常
+This Pool's Dapp UI will show status of the Pool, if it is error then means your PoS node has been forceRetired.
+Actually it use the `pos_getAccount` RPC method to get the PoS node's info, if the `forceRetired` field is true, then the node is forceRetired
 
-## 节点 retired 带来的影响
+## The influence of node forceRetired?
 
-1. 如果节点被 retired，节点所有的 votes 会自动被 unlock，从而进入 unlocking 队列
-2. 新 lock 的所有票也会自动进入 unlock 队列，时间为 lock 时间 + unlock 时间，最长 14 天
-3. PoS 节点的 forceRetired 状态会持续七天
-4. unlocking 状态的票将不会有收益，意味着在主网环境，矿池用户将损失七天的收益
+1. All PoS node's votes will be automatically unlock, the unlocking votes will at most lock 14 day
+2. There will be no reward if the node is forceRetired
+3. The forceRetired status will last for 7 day
 
-## 节点 retire 之后需要做什么操作
+## What to do if a PoS pool's node is forceRetired?
 
-节点被 retired 之后，合约所记录的 staker 的 vote 的状态，跟节点的实际状态将不一致。
+If a PoS Pool's node is foreceRetired then it's votes will be automatic unlock, and the Pool contract's CFX state should also change to unlock to keep consistent with PoS node.
 
-处理方式有两种(推荐第一种)：
+The Pool contract provide a method `_retireUserStake` which can be used to do this. There also is a script `scripts/unLockUserVotes.js` which is wroten just for this.
+When a PoS Pool's node is forceRetired you can call it.
 
-1. 由管理员对所有用户的票进行 unlock 操作，待 unlock 结束后，用户需要手动提取所有票，不操作的话也不会有收益
-2. 在 unlocking 的票达到解锁状态之后，由 pool 的管理员将所有的票重新进行 lock 操作， 此种方式下如果用户想解锁，需要多等 7 天
+```sh
+$ node scripts/unLockUserVotes.js
+```
+
+Then all Pool contract's CFX will be in unlocking state.
+
+## How to prevent a node is forceRetired?
+
+To prevent forcible exit when your PoS voting node restarts, it is recommended to perform the following operations:
+
+1. If you run `./conflux RPC local PoS stop_election` on the PoS node, the node will return either NULL or a future PoS Block Number. After the command has been executed, the node will not apply to join the PoS committee for the next round.
+2. If the Block Number is returned, keep the node running. Run the same command again after the PoS block of the returned block number has been generated (est. several hours later). At this point, NULL should be returned. The node will no longer receive PoS rewards after this block.
+3. If NULL is returned, the node is safely stopped. The PoS voting process will resume to normal automatically after the node has been restarted (est. 2-3 hours to generate new PoS rewards).
