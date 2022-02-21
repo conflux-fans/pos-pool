@@ -20,7 +20,7 @@ async function main() {
         console.log('Check failed: ', err);
       }
     }
-  }, 1000 * 60);  // check every 1 minute
+  }, 1000 * 60 * 30);  // check every 30 minute
 }
 
 main().catch(console.log);
