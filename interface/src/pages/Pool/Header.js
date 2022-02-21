@@ -9,9 +9,12 @@ import {
 import { getPosPoolContract, Drip } from "../../utils/cfx";
 import { getCfxByVote, getApy,getPrecisionAmount } from "../../utils";
 import { StatusPosNode } from "../../constants";
+import {useTranslation} from 'react-i18next'
 
 
 function Header({ status }) {
+  const {t} = useTranslation()
+
   let { poolAddress } = useParams();
   const posPoolContract = getPosPoolContract(poolAddress);
   const [lockedCfx, setLockedCfx] = useState(0);
@@ -27,17 +30,17 @@ function Header({ status }) {
       case StatusPosNode.loading:
         icon=<SyncOutlined spin />
         color='default'
-        text='loading'
+        text=t("Home.status_loading")
         break;
       case StatusPosNode.success:
         icon=<CheckCircleOutlined />
         color='success'
-        text='good'
+        text=t("Home.status_good")
         break;
       case StatusPosNode.error:
         icon=<CloseCircleOutlined />
         color='error'
-        text='error'
+        text=t("Home.status_error")
         break;  
       default:break  
     }
@@ -78,7 +81,7 @@ function Header({ status }) {
     <div className="flex">
       <div className="flex-1 pr-4 ">
         <Card
-          title="Status"
+          title={t("Home.status")}
           bordered={false}
           style={cardStyle}
           headStyle={cardHeadStyle}
@@ -88,7 +91,7 @@ function Header({ status }) {
       </div>
       <div className="flex-1 pr-4">
         <Card
-          title="Pool Name"
+          title={t("Home.pool")}
           bordered={false}
           style={cardStyle}
           headStyle={cardHeadStyle}
@@ -98,7 +101,7 @@ function Header({ status }) {
       </div>
       <div className="flex-1 pr-4">
         <Card
-          title="Total Locked(CFX)"
+          title={t("Home.total_locked")}
           bordered={false}
           style={cardStyle}
           headStyle={cardHeadStyle}
@@ -107,12 +110,12 @@ function Header({ status }) {
         </Card>
       </div>
       <div className="flex-1 pr-4">
-        <Card title="Total Revenue" bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
+        <Card title={t("Home.total_revenue")} bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
           <div>{getPrecisionAmount(totalRevenue,5)}</div>
         </Card>
       </div>
       <div className="flex-1">
-        <Card title="APY" bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
+        <Card title={t("Home.apy")} bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
           <div>{apy + "%"}</div>
         </Card>
       </div>

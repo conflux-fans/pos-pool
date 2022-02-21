@@ -1,0 +1,58 @@
+{
+  "Header": {
+    "test_note": "Please note: the current page is a test environment!",
+    "pos_pool": "POS Pool",
+    "connect_portal": "Connect Portal",
+    "error:": "Error:",
+    "unspport_network_switch_testnet": "Unsupported network, please change it in the wallet: Conflux Testnet",
+    "unspport_network_switch_hydra": "Unsupported network, please change it in the wallet: Conflux Hydra"
+  },
+  "Home": {
+    "status": "Status",
+    "pool": "Pool Name",
+    "total_locked": "Total Locked(CFX)",
+    "apy": "APY",
+    "performance_fee": "Performance Fee",
+    "total_revenue": "Total Revenue",
+    "status_good": "Good",
+    "status_error": "Error",
+    "status_loading": "Loading"
+  },
+  "ConfirmModal": {
+    "stake": "stake",
+    "stake_1": "Unstake need 7 + 7 days",
+    "stake_2": "According to Conflux PoS mechanism.",
+    "stake_3": "When you staked your CFX, those CFX can unstake after 7 days.",
+    "stake_4": "After submitting the Unstake transaction, you need to wait a 7-day lock-up to claim your CFX.",
+    "unstake": "unstake",
+    "unstake_1": "You need to wait a 7-day lock-up to claim your CFX.",
+    "unstake_2": "No profit during 7-day lock-up.",
+    "unstake_3": "The proformance fee will be charged."
+  },
+  "Pool": {
+    "stake&unstake": "Stake & Unstake",
+    "how_much_stake": "How much CFX do you want to stake?",
+    "enter_cfx_amount": "Enter the CFX amount",
+    "max": "Max",
+    "wrong_amount": "Wrong Amount",
+    "balance": "Balance:",
+    "stake": "Stake",
+    "how_much_unstake": "How much do you want to unstake?(Multiples of 1,000 CFX)",
+    "unstakeable": "Unstakeable:",
+    "unstake": "UnStake",
+    "my_pool": "My Pool",
+    "my_staked": "My Staked:",
+    "my_rewards": "My Rewards:",
+    "claim": "Claim",
+    "last_update_time": "Last Update Time:",
+    "performance_fee": "Performance Fee:",
+    "withdrawable": "Withdrawable:",
+    "withdraw": "Withdraw",
+    "unstake_activity": "Unstake Activity",
+    "can_withdraw_at": "You can withdraw at {{time}}"
+  },
+  "TxModal": {
+    "transaction_submitted": "Transaction Submitted.",
+    "transaction_hash": "Transaction Hash:"
+  }
+}

@@ -8,6 +8,12 @@ This is the source code of Conflux PoS pool dapp, including Solidity and UI code
 
 To deploy PoS pool `running a Conflux archive/full node` is required
 
+## Setup 
+
+To build and deploy the PoS pool contract check this [guide](./contract/README.md).
+
+To setup the UI check this [guide](./interface/README.md)
+
 ## Disclaimer
 
 It's PoS pool runner's responsibility to keep the PoS pool node running correctly. Here is the [Conflux PoS node running notice](https://forum.conflux.fun/t/guideline-for-the-usage-of-conflux-governance-beta-conflux-v2-0-0-testnet/12591)

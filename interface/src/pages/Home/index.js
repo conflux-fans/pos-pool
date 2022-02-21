@@ -2,19 +2,22 @@ import React, { useState, useEffect } from "react";
 import { Table, Space, Tag, } from "antd";
 import { RightCircleOutlined } from "@ant-design/icons";
 import { useHistory } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 
 import { getCfxByVote, getApy, getFee } from "../../utils";
 import {
   posPoolManagerContract,
   getPosAccountByPowAddress,
 } from "../../utils/cfx";
-import { useConnect } from "../../hooks/usePortal";
+import {connect as tryActivate, useAccount} from '@cfxjs/use-wallet';
 
 function Home() {
+  const { t } = useTranslation();
+
   const [dataList, setDataList] = useState([]);
   const [loading,setLoading]=useState(false)
   const history = useHistory();
-  const { address: accountAddress, tryActivate } = useConnect();
+  const accountAddress = useAccount();
   const gotoPoolPage = (record) => {
     if (accountAddress) {
       history.push(`/pool/${record?.address}`);
@@ -24,7 +27,7 @@ function Home() {
   };
   const columns = [
     {
-      title: "Status",
+      title: t("Home.status"),
       key: "status",
       dataIndex: "status",
       width:100,
@@ -32,32 +35,32 @@ function Home() {
         <>
           {
             <Tag color={`${status ? "green" : "error"}`}>
-              {status ? "good" : "error"}
+              {status ? t("Home.status_good") : t("Home.status_error")}
             </Tag>
           }
         </>
       ),
     },
     {
-      title: "Pool",
+      title: t("Home.pool"),
       dataIndex: "name",
       key: "name",
       width:200
     },
     {
-      title: "Total Locked(CFX)",
+      title: t("Home.total_locked"),
       dataIndex: "totalAvailable",
       key: "totalAvailable",
       width:200
     },
     {
-      title: "APY",
+      title: t("Home.apy"),
       dataIndex: "apy",
       key: "apy",
       width:100,
     },
     {
-      title: "Performance Fee",
+      title: t("Home.performance_fee"),
       dataIndex: "fee",
       key: "fee",
       width:150

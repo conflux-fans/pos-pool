@@ -1,0 +1,58 @@
+{
+    "Header": {
+      "test_note": "Harap dicatat: halaman saat ini adalah lingkungan pengujian!",
+      "pos_pool": "POS Pool",
+      "connect_portal": "Portal untuk menghubungkan",
+      "error:": "Error:",
+      "unspport_network_switch_testnet": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: Conflux Testnet",
+      "unspport_network_switch_hydra": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: Conflux Hydra"
+    },
+    "Home": {
+      "status": "Status",
+      "pool": "Nama Pool",
+      "total_locked": "Total Terkunci (CFX)",
+      "apy": "APY",
+      "performance_fee": "Biaya Kinerja",
+      "total_revenue": "Total Pendapatan",
+      "status_good": "Bagus",
+      "status_error": "Error",
+      "status_loading": "Memuat"
+    },
+    "ConfirmModal": {
+      "stake": "stake",
+      "stake_1": "Unstake Membutuhkan 7 + 7 hari",
+      "stake_2": "Mengacu kepada Mekanisme POS Conflux.",
+      "stake_3": "Ketika kamu melakukan Stacking CFX kamu, Kamu dapat melakukan Unstake setelah 7 Hari.",
+      "stake_4": "Setelah mengirimkan transaksi Unstake, Anda harus menunggu 7 hari penguncian untuk mengklaim CFX Anda.",
+      "unstake": "unstake",
+      "unstake_1": "Anda harus menunggu 7 hari penguncian untuk mengklaim CFX Anda.",
+      "unstake_2": "Tidak ada Profit selama 7 Hari penguncian.",
+      "unstake_3": "Biaya kinerja akan dikenakan."
+    },
+    "Pool": {
+      "stake&unstake": "Stake & Unstake",
+      "how_much_stake": "Berapa banyak CFX yang ingin kamu stake ?",
+      "enter_cfx_amount": "Masukan Jumlah CFX",
+      "max": "Maximal",
+      "wrong_amount": "Jumlah Salah",
+      "balance": "Saldo:",
+      "stake": "Stake",
+      "how_much_unstake": "Berapa banyak yang ingin kamu UnStake ? ( berlaku kelipatan 1000 CFX )",
+      "unstakeable": "Tidak bisa di Unstake:",
+      "unstake": "UnStake",
+      "my_pool": "Pool Saya",
+      "my_staked": "Stake Saya:",
+      "my_rewards": "Reward Saya:",
+      "claim": "Mengklaim",
+      "last_update_time": "Waktu Terakhir Update:",
+      "performance_fee": "Biaya Kinerja:",
+      "withdrawable": "Bisa di Tarik:",
+      "withdraw": "Menarik",
+      "unstake_activity": "Aktifitas Unstake",
+      "can_withdraw_at": "Kamu bisa melakukan penarikan pada {{time}}"
+    },
+    "TxModal": {
+      "transaction_submitted": "Transaksi dikirim.",
+      "transaction_hash": "Hash Transaksi:"
+    }
+  }
