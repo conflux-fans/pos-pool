@@ -16,6 +16,7 @@
       "total_revenue": "총 수익",
       "status_good": "좋음",
       "status_error": "오류",
+      "status_warning": "Setup",
       "status_loading": "로딩중"
     },
     "ConfirmModal": {

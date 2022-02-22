@@ -16,6 +16,7 @@
       "total_revenue": "Total Pendapatan",
       "status_good": "Bagus",
       "status_error": "Error",
+      "status_warning": "Setup",
       "status_loading": "Memuat"
     },
     "ConfirmModal": {

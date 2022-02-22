@@ -16,6 +16,7 @@
     "total_revenue": "Tổng doanh thu",
     "status_good": "Tốt",
     "status_error": "Lỗi",
+    "status_warning": "Setup",
     "status_loading": "Đang tải"
   },
   "ConfirmModal": {
