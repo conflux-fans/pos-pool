@@ -42,6 +42,11 @@ function Header({ status }) {
         color='error'
         text=t("Home.status_error")
         break;  
+      case StatusPosNode.warning:
+        icon=<></>
+        color='warning'
+        text=t("Home.status_warning")
+        break;  
       default:break  
     }
     return <Tag color={color} icon={icon}>{text}</Tag>

@@ -17,5 +17,6 @@ export const RemainderAmount=1 // you must have 1 cfx in wallet to pay gas fee
 export const StatusPosNode={
     loading:'loading',
     error:'error',
-    success:'success'
+    success:'success',
+    warning:'warning'
 }
