@@ -1,4 +1,4 @@
-const TestServerUrl = 'http://main.confluxrpc.com'
+const TestServerUrl = 'http://test.confluxrpc.com'
 const ProxyConfig = {
   target: TestServerUrl,
   changeOrigin: true,
