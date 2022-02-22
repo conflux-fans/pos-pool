@@ -29,6 +29,9 @@ function HeaderComp() {
           <div className='flex items-center'>
             <Select style={{ marginRight: '20px'}} defaultValue={i18n.language}  onChange={lng => i18n.changeLanguage(lng)}>
               <Option value="en">English</Option>
+              <Option value="vn">Vietnamess</Option>
+              <Option value="id">Indonesian</Option>
+              <Option value="ko">Korean</Option>
               {/* <Option value="zh">中文</Option> */}
             </Select>
             {address&&<div>{address}</div>}

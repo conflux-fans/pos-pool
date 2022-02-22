@@ -2,6 +2,43 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Setup
+
+First we need to install the project dependencies.
+
+```sh
+$ cd interface
+$ yarn # install the npm packages
+```
+
+Second a config file `pool.config.js` is need to create
+
+```sh
+$ cp pool.config.sample.js pool.config.js
+```
+
+The config.sample file's content is like this:
+
+```js
+module.exports = {
+  defaultLang: 'en',
+  testnet: {
+    poolManagerAddress: 'cfxtest:xxxxxxxxxxxxxxxxxxxxxxxxxx',
+    RPC: 'https://test.confluxrpc.com',
+    networkId: 1
+  },
+  mainnet: {
+    poolManagerAddress: 'cfx:xxxxxxxxxxxxxxxxxxxxxx',
+    RPC: 'https://main.confluxrpc.com',
+    networkId: 1029
+  }
+}
+```
+
+**Note: The `poolManagerAddress` need to replace with your deployed PoolManagerContract address.**
+
+The dev mode (yarn start) will use the `testnet` config
+
 ## Available Scripts
 
 In the project directory, you can run:
@@ -14,7 +51,6 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits.\
 You will also see any lint errors in the console.
 
-
 ### `yarn build`
 
 Builds the app for production to the `build` folder.\
@@ -24,19 +60,6 @@ The build is minified and the filenames include the hashes.\
 Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### modify chain config
-
-In interface/src/utils/cfx.js, modify the value of cfxUrl to configure the address of the chain rpc after produce.
-In interface/craco.config.js, modify the value of TestServerUrl to configure the address of the chain rpc in dev.
-
-In interface/src/constants/index.js, modify the value of NETWORK_ID_MAINNET | NETWORK_ID_TESTNET to configure the chainId.
-
-
-### modify contract address
-
-In interface/src/utils/cfx.js, modify the value of posPoolManagerAddressTestnet | posPoolManagerAddressMainnet to configure the contract address.
-
 
 ### add i18n text
 

@@ -8,27 +8,18 @@ import { abi as posPoolAbi } from "./../../../contract/ABI/IPoSPool.json";
 import { abi as posManagerAbi } from "./../../../contract/ABI/PoolManager.json";
 import { isTestNetEnv } from "./index";
 import { NETWORK_ID_MAINNET, NETWORK_ID_TESTNET } from "../constants";
+import poolConfig from '../../pool.config';
 
 const networkId = isTestNetEnv() ? NETWORK_ID_TESTNET : NETWORK_ID_MAINNET;
-
-const cfxUrl = window.location.origin + "/rpc";
+const cfxUrl = isTestNetEnv() ? window.location.origin + "/rpc" : poolConfig.mainnet.RPC;
 
 const conflux = new Conflux({
   url: cfxUrl,
   networkId,
 });
 
-// const posPoolAddressTestnet =
-//   "NET8888:TYPE.CONTRACT:ACCHHA25SM4P7C0WXC778MMBTVNE99X53PXFWE26UN";
-// //TODO: modify mainnet address
-// const posPoolAddressMainnet = "";
-// const posPoolAddress = isTestNetEnv()
-//   ? posPoolAddressTestnet
-//   : posPoolAddressMainnet;
-const posPoolManagerAddressTestnet =
-  "cfxtest:acarejybbjfhs6uyaxdjcnex5rf8t1k2h6zw7kmw45";
-//TODO: modify mainnet address
-const posPoolManagerAddressMainnet = "";
+const posPoolManagerAddressTestnet = poolConfig.testnet.poolManagerAddress;
+const posPoolManagerAddressMainnet = poolConfig.mainnet.poolManagerAddress;
 const posPoolManagerAddress = isTestNetEnv()
   ? posPoolManagerAddressTestnet
   : posPoolManagerAddressMainnet;

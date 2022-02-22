@@ -46,28 +46,12 @@ contract PoSPoolDebug is PoSPool {
 
   receive() external payable {}
 
-  /* function _rewardSections() public view returns (RewardSection[] memory) {
-    return rewardSections;
-  }
-
-  function _votePowerSections(address _address) public view returns (VotePowerSection[] memory) {
-    return votePowerSections[_address];
-  }
-
-  function _lastRewardSection() public view returns (RewardSection memory) {
-    return rewardSections[rewardSections.length - 1];
-  }
-
-  function _lastVotePowerSection(address _address) public view returns (VotePowerSection memory) {
-    return votePowerSections[_address][votePowerSections[_address].length - 1];
-  }
-
   function _userShot(address _address) public view returns (UserShot memory) {
     return lastUserShots[_address];
   }
 
   function _poolShot() public view returns (PoolShot memory) {
     return lastPoolShot;
-  } */
+  }
 
 }
