@@ -113,12 +113,16 @@ function Pool() {
 
   useEffect(() => {
     async function fetchData(address) {
-      const posAccount = await getPosAccountByPowAddress(address)
+      try {
+        const posAccount = await getPosAccountByPowAddress(address)
       setStatus(
         posAccount.status?.forceRetired == null
           ? StatusPosNode.success
           : StatusPosNode.error,
       )
+      } catch (error) {
+        setStatus(StatusPosNode.warning)
+      }
     }
     fetchData(poolAddress)
   }, [poolAddress])

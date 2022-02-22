@@ -16,6 +16,7 @@
     "total_revenue": "Total Revenue",
     "status_good": "Good",
     "status_error": "Error",
+    "status_warning": "Setup",
     "status_loading": "Loading"
   },
   "ConfirmModal": {

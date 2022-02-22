@@ -34,9 +34,13 @@ function Home() {
       render: (status) => (
         <>
           {
-            <Tag color={`${status ? "green" : "error"}`}>
-              {status ? t("Home.status_good") : t("Home.status_error")}
-            </Tag>
+            status==="green"&&<Tag color="green">{t("Home.status_good")}</Tag>
+          }
+          {
+            status==="error"&&<Tag color="error">{t("Home.status_error")}</Tag>
+          }
+          {
+            status==="warning"&&<Tag color="warning">{t("Home.status_warning")}</Tag>
           }
         </>
       ),
@@ -119,7 +123,17 @@ function Home() {
       });
     });
     } catch (error) {
-      console.info('error',error)
+      list.forEach((item, index) => {
+        arr.push({
+          key: item[3],
+          address: item[3],
+          totalAvailable: getCfxByVote(item[2]),
+          name: item[4],
+          apy: getApy(item[0]) + "%",
+          fee: getFee(item[1]) + "%",
+          status: "warning",
+        });
+      });
     }
     
     return arr;
