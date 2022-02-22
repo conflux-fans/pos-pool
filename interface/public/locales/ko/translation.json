@@ -1,0 +1,58 @@
+{
+    "Header": {
+      "test_note": "참고: 현재 페이지는 테스트 환경입니다!",
+      "pos_pool": "POS 풀",
+      "connect_portal": "Portal 연결하기",
+      "error:": "오류:",
+      "unspport_network_switch_testnet": "지원하지 않는 네트워크입니다. 월랫에서 Conflux Testnet으로 변경하시기 바랍니다.",
+      "unspport_network_switch_hydra": "지원하지 않는 네트워크입니다. 월랫에서 Conflux Hydra로 변경하시기 바랍니다."
+    },
+    "Home": {
+      "status": "상태",
+      "pool": "풀 명칭",
+      "total_locked": "전체 예치량(CFX)",
+      "apy": "APY",
+      "performance_fee": "퍼포먼스 수수료",
+      "total_revenue": "총 수익",
+      "status_good": "좋음",
+      "status_error": "오류",
+      "status_loading": "로딩중"
+    },
+    "ConfirmModal": {
+      "stake": "스테이킹",
+      "stake_1": "스테이킹을 해지하기 위해서는 7 + 7 일이 소요됩니다.",
+      "stake_2": "Conflux PoS 메커니즘에 따라",
+      "stake_3": "CFX를 스테이킹 하신 경우, 해당 CFX는 7일 후 스테이킹을 해제할 수 있습니다.",
+      "stake_4": "스테이킹 해제 트랜젝션을 제출하신 후, CFX 청구를 위해 7일 간의 락업 대기 기간이 필요합니다.",
+      "unstake": "스테이킹 해제",
+      "unstake_1": "CFX를 청구하기 위해서는 7일간의 락업 기간 동안 대기해야합니다.",
+      "unstake_2": "7일 간의 락업 기간 동안은 수익이 발생하지 않습니다.",
+      "unstake_3": "퍼포먼스 수수료가 청구됩니다."
+    },
+    "Pool": {
+      "stake&unstake": "스테이킹 & 스테이킹 해제",
+      "how_much_stake": "스테이킹을 하고자 하는 CFX 수량이 어떻게 되시나요?",
+      "enter_cfx_amount": "CFX 수량 입력",
+      "max": "최대",
+      "wrong_amount": "잘못된 수량",
+      "balance": "보유랴:",
+      "stake": "스테이킹",
+      "how_much_unstake": "스테이킹을 해제하고자 하는 CFX 수량이 어떻게 되시나요?",
+      "unstakeable": "스테이킹 해제 가능 수량:",
+      "unstake": "스테이킹 해제",
+      "my_pool": "내 풀",
+      "my_staked": "나의 스테이킹:",
+      "my_rewards": "나의 보상:",
+      "claim": "청구",
+      "last_update_time": "최근 업데이트 시간:",
+      "performance_fee": "퍼포먼스 수수료:",
+      "withdrawable": "출금 가능 수량:",
+      "withdraw": "출금",
+      "unstake_activity": "스테이킹 해제 활동",
+      "can_withdraw_at": "출금 가능 시간: {{time}}"
+    },
+    "TxModal": {
+      "transaction_submitted": "트랜젝션이 제출되었습니다.",
+      "transaction_hash": "트랜젝션 해시:"
+    }
+  }

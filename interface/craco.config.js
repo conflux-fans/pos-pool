@@ -1,4 +1,5 @@
-const TestServerUrl = 'http://test.confluxrpc.com'
+const poolConfig = require('./pool.config');
+const TestServerUrl = poolConfig.testnet.RPC;
 const ProxyConfig = {
   target: TestServerUrl,
   changeOrigin: true,
