@@ -12,7 +12,7 @@
     "pool": "Tên Pool",
     "total_locked": "Tổng số bị khoá (CFX)",
     "apy": "APY",
-    "performance_fee": "Phí thực hiện",
+    "performance_fee": "Phí hoa hồng",
     "total_revenue": "Tổng doanh thu",
     "status_good": "Tốt",
     "status_error": "Lỗi",
@@ -28,7 +28,7 @@
     "unstake": "bỏ stake",
     "unstake_1": "Bạn cần chờ 7 ngày mở khoá để yêu cầu CFX của mình.",
     "unstake_2": "Không có lợi nhuận trong vòng 7 ngày bị khoá.",
-    "unstake_3": "Sẽ tính phí thực hiện."
+    "unstake_3": "Sẽ tính phí hoa hồng."
   },
   "Pool": {
     "stake&unstake": "Stake & Bỏ stake",
