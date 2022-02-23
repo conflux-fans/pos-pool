@@ -118,7 +118,7 @@ Config `POOL_ADDRESS` with new deployed `PoolProxy1967` address in `.env`
 ### Step 4 - Set poolName
 
 ```sh
-$ bin/pool.js setPoolName YourChoosePoolName
+$ bin/pool.js Pool setPoolName YourChoosePoolName
 ```
 
 ### Step 5 - Regist pool
