@@ -2,8 +2,8 @@
     "Header": {
       "test_note": "참고: 현재 페이지는 테스트 환경입니다!",
       "pos_pool": "POS 풀",
-      "connect_portal": "Portal 연결하기",
-      "error:": "오류:",
+      "connect_portal": "Fluent 연결하기",
+      "error": "오류:",
       "unspport_network_switch_testnet": "지원하지 않는 네트워크입니다. 월랫에서 Conflux Testnet으로 변경하시기 바랍니다.",
       "unspport_network_switch_hydra": "지원하지 않는 네트워크입니다. 월랫에서 Conflux Hydra로 변경하시기 바랍니다."
     },
