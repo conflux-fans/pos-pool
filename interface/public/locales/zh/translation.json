@@ -2,8 +2,8 @@
   "Header": {
     "test_note": "请注意: 这是测试环境！",
     "pos_pool": "POS Pool",
-    "connect_portal": "Connect Portal",
-    "error:": "Error:",
+    "connect_portal": "Connect Fluent",
+    "error": "Error:",
     "unspport_network_switch_testnet": "Unsupported network, please change it in the wallet: Conflux Testnet",
     "unspport_network_switch_hydra": "Unsupported network, please change it in the wallet: Conflux Hydra"
   },

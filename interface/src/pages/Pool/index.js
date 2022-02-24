@@ -253,7 +253,7 @@ function Pool() {
 
   const submit = async type => {
     if (!accountAddress) {
-      message.error('Please connect ConfluxPortal')
+      message.error('Please connect Fluent')
       return
     }
 
