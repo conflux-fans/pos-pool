@@ -11,7 +11,10 @@ import { NETWORK_ID_MAINNET, NETWORK_ID_TESTNET } from "../constants";
 import poolConfig from '../../pool.config';
 
 const networkId = isTestNetEnv() ? NETWORK_ID_TESTNET : NETWORK_ID_MAINNET;
-const cfxUrl = isTestNetEnv() ? window.location.origin + "/rpc" : poolConfig.mainnet.RPC;
+let cfxUrl = isTestNetEnv() ? poolConfig.testnet.RPC : poolConfig.mainnet.RPC;
+if (process.env.REACT_APP_TestNet === "true") {
+  cfxUrl = window.location.origin + "/rpc";
+}
 
 const conflux = new Conflux({
   url: cfxUrl,
