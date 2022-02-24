@@ -38,6 +38,8 @@ const posPoolManagerContract = conflux.Contract({
   address: posPoolManagerAddress,
 });
 
+console.log('Config: ', isTestNetEnv(), posPoolManagerAddress, cfxUrl, networkId);
+
 export const getPosAccountByPowAddress = async (address) => {
   const posPoolContract = await getPosPoolContract(address);
   const posAddress = format.hex(await posPoolContract.posAddress());
