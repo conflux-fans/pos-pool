@@ -126,7 +126,8 @@ program
       bytecode: contractInfo.bytecode,
     });
     const receipt = await contract.constructor().sendTransaction({
-      from: account.address
+      from: account.address,
+      gasPrice: Drip.fromGDrip(1),
     }).executed();
     checkDeployStatus(receipt, 'deploy' + ContractName);
   });
@@ -213,7 +214,7 @@ program
     checkReceiptStatus(receipt, 'retire');
   });
 
-/* program
+program
   .command('QueryPoolUserShareRatio')
   .argument('[from]', 'Query transaction from')
   .action(async (from, ...args) => {
@@ -221,7 +222,7 @@ program
       from,
     });
     console.log(result);
-  }); */
+  });
 
 program
   .command('QueryPool')
