@@ -180,7 +180,6 @@ function Pool() {
       const proArr = []
       proArr.push(posPoolContract.userSummary(accountAddress))
       proArr.push(posPoolContract.userInterest(accountAddress))
-      proArr.push(posPoolContract.poolUserShareRatio())
       proArr.push(posPoolContract.userOutQueue(accountAddress))
       const data = await Promise.all(proArr)
       const userSum = data[0]
@@ -198,10 +197,21 @@ function Pool() {
           5,
         ),
       )
-      setFee(getFee(data[2]))
-      setUnstakeList(transferQueue(data[3]))
+      setUnstakeList(transferQueue(data[2]))
+
+      // get user performance fee
+      let fee;
+      try {
+        fee = await posPoolContract.userShareRatio().call({from: accountAddress});
+      } catch(err) {
+        fee = await posPoolContract.poolUserShareRatio();
+      }
+      // console.log("User performance fee: ", fee);
+      setFee(getFee(fee))
+
       setIsLoading(false)
     } catch (error) {
+      console.log('fetchPoolData error: ', error);
       setIsLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
