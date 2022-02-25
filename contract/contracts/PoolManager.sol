@@ -18,7 +18,6 @@ contract PoolManager is Ownable {
     string name;
   }
 
-  // TODO pagination
   function getPools() public view returns (PoolInfo[] memory) {
     PoolInfo[] memory poolInfos = new PoolInfo[](pools.length());
 
@@ -30,7 +29,8 @@ contract PoolManager is Ownable {
         totalAvailable: poolInstance.poolSummary().available,
         name: poolInstance.poolName(),
         apy: poolInstance.poolAPY(),
-        fee: poolInstance.poolUserShareRatio()
+        // fee: poolInstance.poolUserShareRatio()
+        fee: poolInstance.userShareRatio()
       });
     }
     

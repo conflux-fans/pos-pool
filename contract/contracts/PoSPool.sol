@@ -89,6 +89,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // used to calculate latest seven days APY
   PoolAPY.ApyQueue private apyNodes;
 
+  // Free fee whitelist
+  EnumerableSet.AddressSet private feeFreeWhiteList;
+
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -97,12 +100,13 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // ======================== Helpers =========================
 
-  function _calUserShare(uint256 reward) private view returns (uint256) {
-    return reward.mul(poolUserShareRatio).div(RATIO_BASE);
+  function _userShareRatio(address _user) public view returns (uint256) {
+    if (feeFreeWhiteList.contains(_user)) return RATIO_BASE;
+    return poolUserShareRatio;
   }
 
-  function _calPoolShare(uint256 reward) private view returns (uint256) {
-    return reward.mul(RATIO_BASE - poolUserShareRatio).div(RATIO_BASE);
+  function _calUserShare(uint256 reward, address _stakerAddress) private view returns (uint256) {
+    return reward.mul(_userShareRatio(_stakerAddress)).div(RATIO_BASE);
   }
 
   // used to update lastPoolShot after _poolSummary.available changed 
@@ -123,16 +127,14 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // depend on: lastPoolShot.available and lastPoolShot.balance
   function _updateAccRewardPerCfx() private {
     uint256 reward = _selfBalance() - lastPoolShot.balance;
-
     if (reward == 0 || lastPoolShot.available == 0) return;
 
     // update global accRewardPerCfx
     uint256 cfxCount = lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE);
-    accRewardPerCfx = accRewardPerCfx.add(_calUserShare(reward).div(cfxCount));
+    accRewardPerCfx = accRewardPerCfx.add(reward.div(cfxCount));
 
     // update pool interest info
     _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
-    _poolSummary.interest = _poolSummary.interest.add(_calPoolShare(reward));
   }
 
   // depend on: accRewardPerCfx and lastUserShot
@@ -140,7 +142,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     UserShot memory uShot = lastUserShots[_user];
     if (uShot.available == 0) return;
     uint256 latestInterest = accRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
-    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(latestInterest);
+    uint256 _userInterest = _calUserShare(latestInterest, _user);
+    userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(_userInterest);
+    _poolSummary.interest = _poolSummary.interest.add(latestInterest.sub(_userInterest));
   }
 
   // depend on: lastPoolShot
@@ -317,7 +321,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
     UserShot memory uShot = lastUserShots[_address];
     if (_latestReward > 0 && uShot.available > 0) {
-      uint256 _deltaAcc = _calUserShare(_latestReward).div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
+      uint256 _deltaAcc = _calUserShare(_latestReward, _address).div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
       uint256 _latestAccRewardPerCfx = accRewardPerCfx.add(_deltaAcc);
       uint256 _latestInterest = _latestAccRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
       _interest = _interest.add(_latestInterest);
@@ -433,6 +437,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return stakers.at(i);
   }
 
+  function userShareRatio() public view returns (uint256) {
+    return _userShareRatio(msg.sender);
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -453,6 +461,14 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   ///
   function setLockPeriod(uint64 period) public onlyOwner {
     _poolLockPeriod = period;
+  }
+
+  function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
+    return feeFreeWhiteList.add(_freeAddress);
+  }
+
+  function removeFromFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
+    return feeFreeWhiteList.remove(_freeAddress);
   }
 
   /// 

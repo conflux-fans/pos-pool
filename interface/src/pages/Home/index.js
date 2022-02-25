@@ -90,7 +90,11 @@ function Home() {
     async function getData() {
       setLoading(true)
       try {
-        const list = await posPoolManagerContract.getPools();
+        const options = {};
+        if (accountAddress) {
+          options.from = accountAddress;
+        }
+        const list = await posPoolManagerContract.getPools().call(options);
         const data = await transferData(list);
         setDataList(data);
         setLoading(false)
@@ -111,17 +115,17 @@ function Home() {
     });
     try {
       const proRes = await Promise.all(proArr);
-    list.forEach((item, index) => {
-      arr.push({
-        key: item[3],
-        address: item[3],
-        totalAvailable: getCfxByVote(item[2]),
-        name: item[4],
-        apy: getApy(item[0]) + "%",
-        fee: getFee(item[1]) + "%",
-        status: proRes[index]?.status?.forceRetired == null,
+      list.forEach((item, index) => {
+        arr.push({
+          key: item[3],
+          address: item[3],
+          totalAvailable: getCfxByVote(item[2]),
+          name: item[4],
+          apy: getApy(item[0]) + "%",
+          fee: getFee(item[1]) + "%",
+          status: proRes[index]?.status?.forceRetired == null,
+        });
       });
-    });
     } catch (error) {
       list.forEach((item, index) => {
         arr.push({
