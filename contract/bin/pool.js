@@ -178,7 +178,7 @@ program
 
 program
   .command('Pool')
-  .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, _withdrawPoolProfit')
+  .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, _withdrawPoolProfit, addToFeeFreeWhiteList, removeFromFeeFreeWhiteList')
   .argument('[arg]', 'Arguments for the method')
   .argument('[value]', 'Transaction value')
   .action(async (method, arg, value=0) => {
@@ -212,6 +212,16 @@ program
     }).executed();
     checkReceiptStatus(receipt, 'retire');
   });
+
+/* program
+  .command('QueryPoolUserShareRatio')
+  .argument('[from]', 'Query transaction from')
+  .action(async (from, ...args) => {
+    const result = await poolContract.userShareRatio().call({
+      from,
+    });
+    console.log(result);
+  }); */
 
 program
   .command('QueryPool')

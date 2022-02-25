@@ -18,7 +18,6 @@ contract PoolManager is Ownable {
     string name;
   }
 
-  // TODO pagination
   function getPools() public view returns (PoolInfo[] memory) {
     PoolInfo[] memory poolInfos = new PoolInfo[](pools.length());
 
