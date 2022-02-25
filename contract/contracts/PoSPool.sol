@@ -463,11 +463,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolLockPeriod = period;
   }
 
-  function addFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
+  function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
     return feeFreeWhiteList.add(_freeAddress);
   }
 
-  function removeFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
+  function removeFromFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
     return feeFreeWhiteList.remove(_freeAddress);
   }
 
