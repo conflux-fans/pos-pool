@@ -317,14 +317,18 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function userInterest(address _address) public view returns (uint256) {
     uint256 _interest = userSummaries[_address].currentInterest;
 
+    uint256 _latestAccRewardPerCfx = accRewardPerCfx;
     // add latest profit
     uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
     UserShot memory uShot = lastUserShots[_address];
-    if (_latestReward > 0 && uShot.available > 0) {
-      uint256 _deltaAcc = _calUserShare(_latestReward, _address).div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
-      uint256 _latestAccRewardPerCfx = accRewardPerCfx.add(_deltaAcc);
+    if (_latestReward > 0) {
+      uint256 _deltaAcc = _latestReward.div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
+      _latestAccRewardPerCfx = _latestAccRewardPerCfx.add(_deltaAcc);
+    }
+
+    if (uShot.available > 0) {
       uint256 _latestInterest = _latestAccRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
-      _interest = _interest.add(_latestInterest);
+      _interest = _interest.add(_calUserShare(_latestInterest, _address));
     }
 
     return _interest;
