@@ -18,11 +18,11 @@ contract PoSPoolDebug is PoSPool {
     POS_REGISTER = IMockPoSRegister(_posRegisterAddress);
   }
 
-  function _stakingDeposit(uint256 _amount) public override {
+  function _stakingDeposit(uint256 _amount) internal override {
     STAKING.deposit{value: _amount}(_amount);
   }
 
-  function _stakingWithdraw(uint256 _amount) public override {
+  function _stakingWithdraw(uint256 _amount) internal override {
     STAKING.withdraw(_amount);
   }
 
@@ -32,15 +32,15 @@ contract PoSPoolDebug is PoSPool {
     bytes calldata blsPubKey,
     bytes calldata vrfPubKey,
     bytes[2] calldata blsPubKeyProof
-  ) public override {
+  ) internal override {
     POS_REGISTER.register(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
   }
 
-  function _posRegisterIncreaseStake(uint64 votePower) public override {
+  function _posRegisterIncreaseStake(uint64 votePower) internal override {
     POS_REGISTER.increaseStake(votePower);
   }
 
-  function _posRegisterRetire(uint64 votePower) public override {
+  function _posRegisterRetire(uint64 votePower) internal override {
     POS_REGISTER.retire(votePower);
   }
 
