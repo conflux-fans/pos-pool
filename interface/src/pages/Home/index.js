@@ -10,6 +10,7 @@ import {
   getPosAccountByPowAddress,
 } from "../../utils/cfx";
 import {connect as tryActivate, useAccount} from '@cfxjs/use-wallet';
+import {StatusPosNode} from '../../constants'
 
 function Home() {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ function Home() {
       render: (status) => (
         <>
           {
-            status==="green"&&<Tag color="green">{t("Home.status_good")}</Tag>
+            status==="success"&&<Tag color="green">{t("Home.status_good")}</Tag>
           }
           {
             status==="error"&&<Tag color="error">{t("Home.status_error")}</Tag>
@@ -123,7 +124,8 @@ function Home() {
           name: item[4],
           apy: getApy(item[0]) + "%",
           fee: getFee(item[1]) + "%",
-          status: proRes[index]?.status?.forceRetired == null,
+          status: proRes[index]?.status?.forceRetired == null? StatusPosNode.success
+          : StatusPosNode.error,
         });
       });
     } catch (error) {
