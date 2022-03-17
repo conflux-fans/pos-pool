@@ -268,7 +268,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
-    _posRegisterRetire(votePower);
+    
+    // If the PoS node is forceRetired, and all votes are unlocked, then totalPoSVotes() will be 0 
+    // In this case user won't need to do the actual withdraw operation
+    if (totalPoSVotes() > 0) {
+      _posRegisterRetire(votePower);
+    }
     emit DecreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
@@ -295,12 +300,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-
-    // If the PoS node is forceRetired, and all votes are unlocked, then totalPoSVotes() will be 0 
-    // In this case user won't need to do the actual withdraw operation
-    if (totalPoSVotes() > 0) {
-      _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
-    }
+    
+    _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
