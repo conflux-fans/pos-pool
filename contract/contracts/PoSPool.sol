@@ -270,7 +270,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
     
     // If the PoS node is forceRetired, and all votes are unlocked, then totalPoSVotes() will be 0 
-    // In this case user won't need to do the actual decreaseStake operation
+    // In this case user won't need to do the actual posRetire operation
     if (totalPoSVotes() > 0) {
       _posRegisterRetire(votePower);
     }
