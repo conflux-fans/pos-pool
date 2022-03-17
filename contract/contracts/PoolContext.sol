@@ -45,4 +45,8 @@ abstract contract PoolContext {
   function _posAddressToIdentifier(address _addr) internal view returns (bytes32) {
     return POS_REGISTER.addressToIdentifier(_addr);
   }
+
+  function _posGetVotes(bytes32 identifier) internal view returns (uint256, uint256) {
+    return POS_REGISTER.getVotes(identifier);
+  }
 }

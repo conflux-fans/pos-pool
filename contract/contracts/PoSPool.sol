@@ -295,7 +295,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
+
+    // If the PoS node is forceRetired, and all votes are unlocked, then totalPoSVotes() will be 0 
+    // In this case user won't need to do the actual withdraw operation
+    if (totalPoSVotes() > 0) {
+      _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
+    }
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
@@ -415,6 +420,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   ///
   function posAddress() public view onlyRegisted returns (bytes32) {
     return _posAddressToIdentifier(address(this));
+  }
+
+  function totalPoSVotes() public view onlyRegisted returns (uint256) {
+    (uint256 totalStaked, uint256 totalUnlocked) = _posGetVotes(posAddress());
+    return totalStaked - totalUnlocked;
   }
 
   function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
