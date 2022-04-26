@@ -429,7 +429,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     crossingVotes -= votePower;
   }
 
-  function handleWithdrawTask() public onlyBridge returns (uint256) {
+  function handleUnstakeTask() public onlyBridge returns (uint256) {
     UnstakeQueue.Node memory node = unstakeQueue.dequeue();
     return node.votes;
   }

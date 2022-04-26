@@ -56,7 +56,7 @@ contract CoreProxy is Ownable {
     if (unstakeLen == 0) return;
     IPoSPool posPool = IPoSPool(poolAddress);
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
-    uint256 available = userSummary.unlocked;
+    uint256 available = userSummary.locked;
     if (available == 0) return;
     for(uint256 i = 0; i < unstakeLen; i++) {
       bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("firstUnstakeVotes()"));
@@ -64,7 +64,7 @@ contract CoreProxy is Ownable {
       if (firstUnstakeVotes == 0) break;
       if (firstUnstakeVotes > available) break;
       posPool.decreaseStake(uint64(firstUnstakeVotes));
-      crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleWithdrawTask()"));
+      crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleUnstakeTask()"));
       available -= firstUnstakeVotes;
     }
   }
