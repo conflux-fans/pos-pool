@@ -25,12 +25,14 @@ contract ESpacePoSPool is Ownable, Initializable {
   
   // ======================== Pool config =========================
   // wheter this poolContract registed in PoS
-  bool public poolRegisted;
+  bool public birdgeAddrSetted;
   address private _bridgeAddress;
   // ratio shared by user: 1-10000
-  // uint256 public poolUserShareRatio = 9000; 
+  uint256 public poolUserShareRatio = RATIO_BASE;
   // lock period: 7 days + half hour
   uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 1800;
+  string public poolName = "";
+  uint256 private _poolAPY = 0;
 
   // ======================== Contract states =========================
   // global pool accumulative reward for each cfx
@@ -56,8 +58,8 @@ contract ESpacePoSPool is Ownable, Initializable {
   // ======================== Struct definitions =========================
   struct PoolSummary {
     uint256 available;
-    uint256 interest; // PoS pool interest share
-    uint256 totalInterest; // total interest of whole pools
+    uint256 interest; // PoS pool current interest
+    uint256 totalInterest; // total historical interest of whole pools
   }
 
   /// @title UserSummary
@@ -72,7 +74,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     uint256 available; // locking + locked
     uint256 locked;
     uint256 unlocked;
-    uint256 claimedInterest;
+    uint256 claimedInterest; // total historical claimed interest
     uint256 currentInterest;
   }
 
@@ -90,7 +92,7 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
-    require(poolRegisted, "Pool is not registed");
+    require(birdgeAddrSetted, "Pool is not setted");
     _;
   }
 
@@ -108,13 +110,12 @@ contract ESpacePoSPool is Ownable, Initializable {
     return block.number;
   }
 
-  function _userShareRatio(address _user) public view returns (uint256) {
+  function _userShareRatio() public pure returns (uint256) {
     return RATIO_BASE;
-    // return poolUserShareRatio;
   }
 
-  function _calUserShare(uint256 reward, address _stakerAddress) private view returns (uint256) {
-    return reward.mul(_userShareRatio(_stakerAddress)).div(RATIO_BASE);
+  function _calUserShare(uint256 reward, address _stakerAddress) private pure returns (uint256) {
+    return reward.mul(_userShareRatio()).div(RATIO_BASE);
   }
 
   // used to update lastPoolShot after _poolSummary.available changed 
@@ -342,8 +343,7 @@ contract ESpacePoSPool is Ownable, Initializable {
   }
 
   function poolAPY() public view returns (uint256) {
-    // TODO
-    return 1500;
+    return _poolAPY;
   }
 
   function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
@@ -411,12 +411,16 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   function setBridge(address bridgeAddress) public onlyOwner {
     _bridgeAddress = bridgeAddress;
-    poolRegisted = true;
+    birdgeAddrSetted = true;
   }
 
   // receive interest
   // function receiveInterest() public payable onlyBridge {}
   receive() external payable {}
+
+  function setPoolAPY(uint256 apy) public onlyBridge {
+    _poolAPY = apy;
+  }
 
   function handleUnlockedIncrease(uint256 votePower) public payable onlyBridge {
     require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
@@ -424,7 +428,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     _updatePoolShot();
   }
 
-  function handleCrossingVotes(uint256 votePower) public payable onlyBridge {
+  function handleCrossingVotes(uint256 votePower) public onlyBridge {
     require(crossingVotes >= votePower, "crossingVotes should be greater than votePower");
     crossingVotes -= votePower;
   }

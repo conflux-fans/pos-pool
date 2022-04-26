@@ -24,18 +24,24 @@ contract CoreProxy is Ownable {
     eSpacePoolAddress = _eSpacePoolAddress;
   }
 
-  function eSpacePoolAddressBytes20() public view returns (bytes20) {
+  function ePoolAddrB20() public view returns (bytes20) {
     return bytes20(eSpacePoolAddress);
   }
 
+  function syncAPY() public {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 apy = posPool.poolAPY();
+    crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("setPoolAPY(uint256)", apy));
+  }
+
   function crossStake() public onlyOwner {
-    bytes memory rawCrossingVotes = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("crossingVotes()"));
+    bytes memory rawCrossingVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
     uint256 crossingVotes = abi.decode(rawCrossingVotes, (uint256));
     uint256 mappedBalance = crossSpaceCall.mappedBalance(address(this));
     uint256 amount = crossingVotes * 1000 ether;
     if (crossingVotes > 0 && mappedBalance >= amount) {
       crossSpaceCall.withdrawFromMapped(amount);
-      crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleCrossingVotes(uint256)", crossingVotes));
+      crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleCrossingVotes(uint256)", crossingVotes));
       IPoSPool posPool = IPoSPool(poolAddress);
       posPool.increaseStake{value: amount}(uint64(crossingVotes));
     }
@@ -46,12 +52,12 @@ contract CoreProxy is Ownable {
     uint256 interest = posPool.userInterest(address(this));
     if (interest > 0) {
       posPool.claimInterest(interest);
-      crossSpaceCall.transferEVM(eSpacePoolAddressBytes20());
+      crossSpaceCall.transferEVM(ePoolAddrB20());
     }
   }
 
   function handleUnstake() public onlyOwner {
-    bytes memory rawUnstakeLen = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("unstakeLen()"));
+    bytes memory rawUnstakeLen = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
     uint256 unstakeLen = abi.decode(rawUnstakeLen, (uint256));
     if (unstakeLen == 0) return;
     IPoSPool posPool = IPoSPool(poolAddress);
@@ -59,12 +65,12 @@ contract CoreProxy is Ownable {
     uint256 available = userSummary.locked;
     if (available == 0) return;
     for(uint256 i = 0; i < unstakeLen; i++) {
-      bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("firstUnstakeVotes()"));
+      bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("firstUnstakeVotes()"));
       uint256 firstUnstakeVotes = abi.decode(rawFirstUnstakeVotes, (uint256));
       if (firstUnstakeVotes == 0) break;
       if (firstUnstakeVotes > available) break;
       posPool.decreaseStake(uint64(firstUnstakeVotes));
-      crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleUnstakeTask()"));
+      crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
       available -= firstUnstakeVotes;
     }
   }
@@ -76,7 +82,7 @@ contract CoreProxy is Ownable {
       posPool.withdrawStake(userSummary.unlocked);
       // transfer to eSpacePool and call method
       uint256 transferValue = userSummary.unlocked * 1000 ether;
-      crossSpaceCall.callEVM{value: transferValue}(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", userSummary.unlocked));
+      crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", userSummary.unlocked));
     }
   }
 }
