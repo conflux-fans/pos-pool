@@ -28,6 +28,33 @@ contract CoreProxy is Ownable {
     return bytes20(eSpacePoolAddress);
   }
 
+  function queryCrossingVotes() public returns (uint256) {
+    bytes memory rawCrossingVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
+    return abi.decode(rawCrossingVotes, (uint256));
+  }
+
+  function queryUnstakeLen() public returns (uint256) {
+    bytes memory rawUnstakeLen = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
+    return abi.decode(rawUnstakeLen, (uint256));
+  }
+
+  function queryInterest() public view returns (uint256) {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 interest = posPool.userInterest(address(this));
+    return interest;
+  }
+
+  function queryUserSummary() public view returns (IPoSPool.UserSummary memory) {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    return userSummary;
+  }
+
+  function syncAPYandClaimInterest() public onlyOwner {
+    syncAPY();
+    claimInterest();
+  }
+
   function syncAPY() public {
     IPoSPool posPool = IPoSPool(poolAddress);
     uint256 apy = posPool.poolAPY();
@@ -35,8 +62,7 @@ contract CoreProxy is Ownable {
   }
 
   function crossStake() public onlyOwner {
-    bytes memory rawCrossingVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
-    uint256 crossingVotes = abi.decode(rawCrossingVotes, (uint256));
+    uint256 crossingVotes = queryCrossingVotes();
     uint256 mappedBalance = crossSpaceCall.mappedBalance(address(this));
     uint256 amount = crossingVotes * 1000 ether;
     if (crossingVotes > 0 && mappedBalance >= amount) {
@@ -57,9 +83,9 @@ contract CoreProxy is Ownable {
   }
 
   function handleUnstake() public onlyOwner {
-    bytes memory rawUnstakeLen = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
-    uint256 unstakeLen = abi.decode(rawUnstakeLen, (uint256));
+    uint256 unstakeLen = queryUnstakeLen();
     if (unstakeLen == 0) return;
+    if (unstakeLen > 50) unstakeLen = 50; // max 50 unstakes per call
     IPoSPool posPool = IPoSPool(poolAddress);
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
     uint256 available = userSummary.locked;

@@ -33,6 +33,16 @@ module.exports = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    espaceTestnet: {
+      url: "http://evmtestnet.confluxrpc.com",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 71,
+    },
+    net8889: {
+      url: "http://net8889eth.confluxrpc.com",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 8889,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
