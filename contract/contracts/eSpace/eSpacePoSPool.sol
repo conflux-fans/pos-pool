@@ -19,19 +19,19 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   uint256 private constant RATIO_BASE = 10000;
   uint256 private constant ONE_DAY_BLOCK_COUNT = 3600 * 24;
-  // uint256 private constant ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
   uint256 private CFX_COUNT_OF_ONE_VOTE = 1000;
   uint256 private CFX_VALUE_OF_ONE_VOTE = 1000 ether;
+  
   
   // ======================== Pool config =========================
   // wheter this poolContract registed in PoS
   bool public birdgeAddrSetted;
   address private _bridgeAddress;
   // ratio shared by user: 1-10000
-  uint256 public poolUserShareRatio = RATIO_BASE;
+  uint256 public constant poolUserShareRatio = RATIO_BASE;
   // lock period: 7 days + half hour
   uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 1800;
-  string public poolName = "";
+  string public poolName;
   uint256 private _poolAPY = 0;
 
   // ======================== Contract states =========================
@@ -50,9 +50,9 @@ contract ESpacePoSPool is Ownable, Initializable {
   // Unstake votes queue
   UnstakeQueue.Queue private unstakeQueue;
 
-  // Withdrawable CFX
+  // Currently withdrawable CFX
   uint256 public withdrawableCfx;
-  // Votes crossing from eSpace to Core
+  // Votes need to cross from eSpace to Core
   uint256 public crossingVotes;
 
   // ======================== Struct definitions =========================
@@ -75,7 +75,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     uint256 locked;
     uint256 unlocked;
     uint256 claimedInterest; // total historical claimed interest
-    uint256 currentInterest;
+    uint256 currentInterest; // current claimable interest
   }
 
   struct PoolShot {
@@ -174,7 +174,6 @@ contract ESpacePoSPool is Ownable, Initializable {
   function initialize() public initializer {
     CFX_COUNT_OF_ONE_VOTE = 1000;
     CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-    // poolUserShareRatio = 9000;
     _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
   }
 
