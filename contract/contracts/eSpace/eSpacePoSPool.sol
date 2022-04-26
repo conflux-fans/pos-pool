@@ -58,8 +58,6 @@ contract ESpacePoSPool is Ownable, Initializable {
     uint256 available;
     uint256 interest; // PoS pool interest share
     uint256 totalInterest; // total interest of whole pools
-    uint256 totalStaked;
-    uint256 totalWithdraw;
   }
 
   /// @title UserSummary
@@ -208,7 +206,6 @@ contract ESpacePoSPool is Ownable, Initializable {
 
     //
     _poolSummary.available += votePower;
-    _poolSummary.totalStaked += votePower;
     _updatePoolShot();
 
     stakers.add(msg.sender);
@@ -252,7 +249,6 @@ contract ESpacePoSPool is Ownable, Initializable {
     require(withdrawableCfx >= _withdrawAmount, "Withdrawable CFX is not enough");
     // update amount of withdrawable CFX
     withdrawableCfx -= _withdrawAmount;
-    _poolSummary.totalWithdraw += votePower;
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
