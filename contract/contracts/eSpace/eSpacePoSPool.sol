@@ -378,6 +378,13 @@ contract ESpacePoSPool is Ownable, Initializable {
     return unstakeQueue.end - unstakeQueue.start;
   }
 
+  function firstUnstakeVotes() public view returns (uint256) {
+    if (unstakeQueue.end == unstakeQueue.start) {
+      return 0;
+    }
+    return unstakeQueue.items[unstakeQueue.start].votes;
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -412,7 +419,8 @@ contract ESpacePoSPool is Ownable, Initializable {
   }
 
   // receive interest
-  function receiveInterest() public payable onlyBridge {}
+  // function receiveInterest() public payable onlyBridge {}
+  receive() external payable {}
 
   function handleUnlockedIncrease(uint256 votePower) public payable onlyBridge {
     require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");

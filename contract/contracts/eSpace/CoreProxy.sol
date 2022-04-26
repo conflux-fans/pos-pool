@@ -1,0 +1,82 @@
+//SPDX-License-Identifier: Unlicense
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../ICrossSpaceCall.sol";
+import "../IPoSPool.sol";
+
+contract CoreProxy is Ownable {
+  // The CrossSpaceCall internal contract
+  CrossSpaceCall internal crossSpaceCall = CrossSpaceCall(0x0888000000000000000000000000000000000006);
+
+  address public poolAddress;
+  address public eSpacePoolAddress;
+
+  constructor (address _poolAddress) {
+    poolAddress = _poolAddress;
+  }
+
+  function setPoolAddress(address _poolAddress) public onlyOwner {
+    poolAddress = _poolAddress;
+  }
+
+  function setESpacePoolAddress(address _eSpacePoolAddress) public onlyOwner {
+    eSpacePoolAddress = _eSpacePoolAddress;
+  }
+
+  function eSpacePoolAddressBytes20() public view returns (bytes20) {
+    return bytes20(eSpacePoolAddress);
+  }
+
+  function crossStake() public onlyOwner {
+    bytes memory rawCrossingVotes = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("crossingVotes()"));
+    uint256 crossingVotes = abi.decode(rawCrossingVotes, (uint256));
+    uint256 mappedBalance = crossSpaceCall.mappedBalance(address(this));
+    uint256 amount = crossingVotes * 1000 ether;
+    if (crossingVotes > 0 && mappedBalance >= amount) {
+      crossSpaceCall.withdrawFromMapped(amount);
+      crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleCrossingVotes(uint256)", crossingVotes));
+      IPoSPool posPool = IPoSPool(poolAddress);
+      posPool.increaseStake{value: amount}(uint64(crossingVotes));
+    }
+  }
+
+  function claimInterest() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 interest = posPool.userInterest(address(this));
+    if (interest > 0) {
+      posPool.claimInterest(interest);
+      crossSpaceCall.transferEVM(eSpacePoolAddressBytes20());
+    }
+  }
+
+  function handleUnstake() public onlyOwner {
+    bytes memory rawUnstakeLen = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("unstakeLen()"));
+    uint256 unstakeLen = abi.decode(rawUnstakeLen, (uint256));
+    if (unstakeLen == 0) return;
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    uint256 available = userSummary.unlocked;
+    if (available == 0) return;
+    for(uint256 i = 0; i < unstakeLen; i++) {
+      bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("firstUnstakeVotes()"));
+      uint256 firstUnstakeVotes = abi.decode(rawFirstUnstakeVotes, (uint256));
+      if (firstUnstakeVotes == 0) break;
+      if (firstUnstakeVotes > available) break;
+      posPool.decreaseStake(uint64(firstUnstakeVotes));
+      crossSpaceCall.callEVM(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleWithdrawTask()"));
+      available -= firstUnstakeVotes;
+    }
+  }
+
+  function withdrawVotes() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    if (userSummary.unlocked > 0) {
+      posPool.withdrawStake(userSummary.unlocked);
+      // transfer to eSpacePool and call method
+      uint256 transferValue = userSummary.unlocked * 1000 ether;
+      crossSpaceCall.callEVM{value: transferValue}(eSpacePoolAddressBytes20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", userSummary.unlocked));
+    }
+  }
+}
