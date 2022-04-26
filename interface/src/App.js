@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Spin, Layout } from "antd";
 
 import "./App.css";
@@ -24,14 +24,17 @@ function App() {
             <Header />
             <Content style={{ padding: "50px 50px",backgroundColor:'#2d3344' }}>
               <div>
-                <Switch>
-                  <Route path="/" exact>
-                    <Home />
+                <Routes>
+                  <Route path="core" element={<Outlet />} >
+                    <Route element={<Home />} index />
+                    <Route path="pool/:poolAddress" element={<Pool />} />
                   </Route>
-                  <Route path="/pool/:poolAddress" exact>
-                    <Pool />
+                  <Route path="eSpace" element={<Outlet />} >
+                    <Route element={<Home />} index />
+                    <Route path="pool/:poolAddress" element={<Pool />} />
                   </Route>
-                </Switch>
+                  <Route path="*" element={<Navigate to="core"/>} />
+                </Routes>
               </div>
             </Content>
             {/* <Footer style={{ textAlign: 'center' }}>PoS Pool</Footer> */}

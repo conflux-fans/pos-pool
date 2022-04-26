@@ -4,13 +4,12 @@ import {useParams} from 'react-router-dom'
 import BigNumber from 'bignumber.js'
 import {format} from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
 import {useTranslation} from 'react-i18next'
-
+import useConflux from '../../hooks/useConflux'
 import {isTestNetEnv} from '../../utils'
 import {
-  getPosPoolContract,
-  conflux,
   Drip,
   getPosAccountByPowAddress,
+  coreConflux
 } from '../../utils/cfx'
 import {
   getCfxByVote,
@@ -24,26 +23,30 @@ import {
   useBalance,
   useAccount,
   useChainId,
-  sendTransaction,
+  useSendTransaction,
   Unit,
-} from '@cfxjs/use-wallet'
+} from '../../hooks/useWallet'
+import useCurrentSpace from '../../hooks/useCurrentSpace'
 import {CFX_BASE_PER_VOTE, StatusPosNode} from '../../constants'
 import Header from './Header'
 import ConfirmModal from './ConfirmModal'
 import TxModal from './TxModal'
+import usePoolContract from "../../hooks/usePoolContract";
 
 const isTest = isTestNetEnv()
 
 function Pool() {
   const {t} = useTranslation()
+  const currentSpace = useCurrentSpace()
   const chainId = useChainId()
   const accountAddress = useAccount()
+  const sendTransaction = useSendTransaction();
   const [form] = Form.useForm()
   const _balance = useBalance()
   const balance = _balance?.toDecimalStandardUnit(5)
   const cfxMaxCanStake = getMax(balance)
   let {poolAddress} = useParams()
-  const posPoolContract = getPosPoolContract(poolAddress)
+  const posPoolContract = usePoolContract();
   const [status, setStatus] = useState(StatusPosNode.loading)
   const [stakedCfx, setStakedCfx] = useState(0)
   const [rewards, setRewards] = useState(0)
@@ -68,12 +71,13 @@ function Pool() {
   const [unstakeBtnDisabled, setUnstakeBtnDisabled] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [waitStakeRes, setWaitStakeRes] = useState(false)
+  const conflux = useConflux();
 
   useEffect(() => {
     async function fetchData() {
       const proArr = []
-      proArr.push(conflux.provider.call('cfx_getStatus'))
-      proArr.push(conflux.provider.call('cfx_getPoSEconomics'))
+      proArr.push(coreConflux.provider.call('cfx_getStatus'))
+      proArr.push(coreConflux.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
       const currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
       const lastDistribute = new BigNumber(
@@ -81,7 +85,7 @@ function Pool() {
       ).toNumber()
       setCurrentBlockNumber(currentBlock)
       setLastDistributeTime(
-        getDateByBlockInterval(lastDistribute, currentBlock).toLocaleString(),
+        getDateByBlockInterval(lastDistribute, currentBlock, currentSpace).toLocaleString(),
       )
     }
     fetchData()
@@ -112,20 +116,20 @@ function Pool() {
   }, [unstakeErrorText, status])
 
   useEffect(() => {
-    async function fetchData(address) {
+    async function fetchData() {
       try {
-        const posAccount = await getPosAccountByPowAddress(address)
-      setStatus(
-        posAccount.status?.forceRetired == null
-          ? StatusPosNode.success
-          : StatusPosNode.error,
-      )
+        const posAccount = await getPosAccountByPowAddress({ conflux, posPoolContract })
+        setStatus(
+          posAccount.status?.forceRetired == null
+            ? StatusPosNode.success
+            : StatusPosNode.error,
+        )
       } catch (error) {
         setStatus(StatusPosNode.warning)
       }
     }
-    fetchData(poolAddress)
-  }, [poolAddress])
+    fetchData()
+  }, [conflux, posPoolContract])
 
   useEffect(() => {
     try {
@@ -182,6 +186,7 @@ function Pool() {
       proArr.push(posPoolContract.userInterest(accountAddress))
       proArr.push(posPoolContract.userOutQueue(accountAddress))
       const data = await Promise.all(proArr)
+
       const userSum = data[0]
       setUserSummary(userSum)
       setStakedCfx(
@@ -246,6 +251,7 @@ function Pool() {
           timeStr: getDateByBlockInterval(
             blockNumber,
             currentBlockNumber,
+            currentSpace
           ).toLocaleString(),
         })
       }

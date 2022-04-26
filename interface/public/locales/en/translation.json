@@ -2,7 +2,8 @@
   "Header": {
     "test_note": "Please note: the current page is a test environment!",
     "pos_pool": "POS Pool",
-    "connect_portal": "Connect Fluent",
+    "connect_fluent": "Connect Fluent",
+    "connect_metamask": "Connect MetaMask",
     "error": "Error:",
     "unspport_network_switch_testnet": "Unsupported network, please change it in the wallet: Conflux Testnet",
     "unspport_network_switch_hydra": "Unsupported network, please change it in the wallet: Conflux Hydra"

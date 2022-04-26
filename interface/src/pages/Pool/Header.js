@@ -6,17 +6,18 @@ import {
   CheckCircleOutlined,SyncOutlined,CloseCircleOutlined
 } from '@ant-design/icons';
 
-import { getPosPoolContract, Drip } from "../../utils/cfx";
+import { Drip } from "../../utils/cfx";
 import { getCfxByVote, getApy,getPrecisionAmount } from "../../utils";
 import { StatusPosNode } from "../../constants";
 import {useTranslation} from 'react-i18next'
+import usePosPoolContract from '../../hooks/usePoolContract'
 
 
 function Header({ status }) {
   const {t} = useTranslation()
 
   let { poolAddress } = useParams();
-  const posPoolContract = getPosPoolContract(poolAddress);
+  const posPoolContract = usePosPoolContract();
   const [lockedCfx, setLockedCfx] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [apy, setApy] = useState(0);

@@ -1,27 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { Table, Space, Tag, } from "antd";
 import { RightCircleOutlined } from "@ant-design/icons";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 
 import { getCfxByVote, getApy, getFee } from "../../utils";
 import {
-  posPoolManagerContract,
   getPosAccountByPowAddress,
 } from "../../utils/cfx";
-import {connect as tryActivate, useAccount} from '@cfxjs/use-wallet';
+import {useTryActivate, useAccount} from '../../hooks/useWallet';
 import {StatusPosNode} from '../../constants'
+import usePoolManagerContract from "../../hooks/usePoolManagerContract";
+import useConflux from "../../hooks/useConflux";
 
 function Home() {
   const { t } = useTranslation();
-
+  const conflux = useConflux();
+  const posPoolManagerContract = usePoolManagerContract();
   const [dataList, setDataList] = useState([]);
   const [loading,setLoading]=useState(false)
-  const history = useHistory();
+  const navigate = useNavigate();
   const accountAddress = useAccount();
+  const tryActivate = useTryActivate();
   const gotoPoolPage = (record) => {
     if (accountAddress) {
-      history.push(`/pool/${record?.address}`);
+      navigate(`pool/${record?.address}`);
     } else {
       tryActivate();
     }
@@ -100,19 +103,20 @@ function Home() {
         setDataList(data);
         setLoading(false)
       } catch (error) {
+        console.log('error', error);
         setDataList([]);
         setLoading(false)
       }
     }
     getData();
-  }, []);
+  }, [posPoolManagerContract, accountAddress]);
 
   const transferData = async (list) => {
     const arr = [];
     const proArr = [];
     list.forEach((item) => {
       const address = item[3];
-      proArr.push(getPosAccountByPowAddress(address));
+      proArr.push(getPosAccountByPowAddress({ conflux, address }));
     });
     try {
       const proRes = await Promise.all(proArr);
