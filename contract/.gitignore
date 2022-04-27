@@ -106,7 +106,6 @@ artifacts
 cache
 doc.md
 contracts/test-contracts
-docs
 
 tmp.md
 dev.md

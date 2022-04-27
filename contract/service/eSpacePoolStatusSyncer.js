@@ -4,7 +4,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable prettier/prettier */
 require('dotenv').config();
-const { Conflux, Drip } = require("js-conflux-sdk");
+const { Conflux } = require("js-conflux-sdk");
 const coreBridgeInfo = require("../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json");
 const debug = require('debug')('espacePoolStatusSyncer');
 
