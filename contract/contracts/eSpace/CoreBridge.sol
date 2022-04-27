@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "../ICrossSpaceCall.sol";
 import "../IPoSPool.sol";
 
-contract CoreProxy is Ownable {
+contract CoreBridge is Ownable {
   // The CrossSpaceCall internal contract
   CrossSpaceCall internal crossSpaceCall = CrossSpaceCall(0x0888000000000000000000000000000000000006);
 

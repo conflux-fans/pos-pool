@@ -8,6 +8,7 @@
     "@confluxfans/contracts": "^0.2.5",
     "@openzeppelin/contracts": "^4.3.2",
     "commander": "^8.3.0",
+    "debug": "^4.3.4",
     "ding-robot": "^1.0.0",
     "js-conflux-sdk": "^2.0.7"
   },
