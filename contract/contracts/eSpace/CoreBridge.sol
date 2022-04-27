@@ -122,4 +122,6 @@ contract CoreBridge is Ownable {
   }
 
   fallback() external payable {}
+
+  receive() external payable {}
 }
