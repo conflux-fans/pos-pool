@@ -2,12 +2,12 @@ import {createPortal} from 'react-dom'
 import {Link} from 'react-router-dom'
 import {Layout, Button, Select} from 'antd'
 import {useTranslation} from 'react-i18next'
-import cx from 'clsx'
 import {useTryActivate, useAccount, useChainId} from '../../../hooks/useWallet';
 import {isTestNetEnv} from '../../../utils'
 import NotAllow from '../../../images/not-allow.png'
 import i18n from '../../../../public/locales'
 import useCurrentSpace from '../../../hooks/useCurrentSpace'
+import useIsNetworkMatch from '../../../hooks/useIsNetworkMatch'
 
 const {Option} = Select
 const {Header} = Layout
@@ -18,10 +18,10 @@ function HeaderComp() {
   const address = useAccount()
   const chainId = useChainId()
   const tryActivate = useTryActivate();
-  const networkError =
-    (isTest && chainId === '1029') || (!isTest && chainId === '1')
+  const isNetworkMatch = useIsNetworkMatch();
+  const networkError = !isNetworkMatch;
   const currentSpace = useCurrentSpace();
-
+  
   return (
     <Header style={{width: '100%', height: 'fit-content', padding: 0}}>
       {isTest && (
@@ -32,26 +32,9 @@ function HeaderComp() {
       <div className="flex justify-between text-white bg-main-back bg-opacity-0 px-[50px]">
         <div>
           <Link
-            to="/core"
-            className={cx(
-              'transition-colors',
-              currentSpace === 'core'
-                ? 'border-b-[1px] border-[#1890ff] hover:text-[#1890ff] cursor-default'
-                : 'text-gray-300 hover:text-[#40a9ff]',
-            )}
+            to="/pool-manage"
           >
-            Core {t('Header.pos_pool')}
-          </Link>
-          <Link
-            to="/eSpace"
-            className={cx(
-              'ml-[24px] transition-colors',
-              currentSpace === 'eSpace'
-                ? 'border-b-[1px] border-[#1890ff] hover:text-[#1890ff] cursor-default'
-                : 'text-gray-500 hover:text-[#40a9ff]',
-            )}
-          >
-            eSpace {t('Header.pos_pool')}
+            {t('Header.pos_pool')}
           </Link>
         </div>
         <div className="flex items-center">
@@ -66,8 +49,8 @@ function HeaderComp() {
             <Option value="ko">Korean</Option>
             {/* <Option value="zh">中文</Option> */}
           </Select>
-          {address && <div>{address}</div>}
-          {!address && (
+          {currentSpace && address && <div>{address}</div>}
+          {currentSpace && !address && (
             <Button type="primary" onClick={tryActivate}>
               {t(currentSpace === 'core' ? 'Header.connect_fluent' : 'Header.connect_metamask')}
             </Button>

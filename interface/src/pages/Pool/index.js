@@ -1,19 +1,16 @@
 import React, {useState, useEffect, useCallback} from 'react'
 import {Input, Button, Divider, Form, List, message, Col, Row, Spin} from 'antd'
-import {useParams} from 'react-router-dom'
+import {useParams, useSearchParams} from 'react-router-dom'
 import BigNumber from 'bignumber.js'
 import {format} from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
 import {useTranslation} from 'react-i18next'
-import useConflux from '../../hooks/useConflux'
-import {isTestNetEnv} from '../../utils'
 import {
   Drip,
   getPosAccountByPowAddress,
-  coreConflux
+  conflux as confluxController,
 } from '../../utils/cfx'
 import {
   getCfxByVote,
-  calculateGasMargin,
   getFee,
   getDateByBlockInterval,
   getMax,
@@ -31,22 +28,24 @@ import {CFX_BASE_PER_VOTE, StatusPosNode} from '../../constants'
 import Header from './Header'
 import ConfirmModal from './ConfirmModal'
 import TxModal from './TxModal'
-import usePoolContract from "../../hooks/usePoolContract";
-
-const isTest = isTestNetEnv()
+import usePoolContract from '../../hooks/usePoolContract'
+import useIsNetworkMatch from '../../hooks/useIsNetworkMatch'
 
 function Pool() {
   const {t} = useTranslation()
   const currentSpace = useCurrentSpace()
   const chainId = useChainId()
   const accountAddress = useAccount()
-  const sendTransaction = useSendTransaction();
+  const sendTransaction = useSendTransaction()
   const [form] = Form.useForm()
   const _balance = useBalance()
   const balance = _balance?.toDecimalStandardUnit(5)
   const cfxMaxCanStake = getMax(balance)
-  let {poolAddress} = useParams()
-  const posPoolContract = usePoolContract();
+  const {poolAddress} = useParams()
+  const [searchParams] = useSearchParams()
+
+  const {contract: posPoolContract, interface: posPoolInterface} =
+    usePoolContract()
   const [status, setStatus] = useState(StatusPosNode.loading)
   const [stakedCfx, setStakedCfx] = useState(0)
   const [rewards, setRewards] = useState(0)
@@ -71,13 +70,13 @@ function Pool() {
   const [unstakeBtnDisabled, setUnstakeBtnDisabled] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [waitStakeRes, setWaitStakeRes] = useState(false)
-  const conflux = useConflux();
+  const isNetworkMatch = useIsNetworkMatch()
 
   useEffect(() => {
     async function fetchData() {
       const proArr = []
-      proArr.push(coreConflux.provider.call('cfx_getStatus'))
-      proArr.push(coreConflux.provider.call('cfx_getPoSEconomics'))
+      proArr.push(confluxController.provider.call('cfx_getStatus'))
+      proArr.push(confluxController.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
       const currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
       const lastDistribute = new BigNumber(
@@ -85,11 +84,15 @@ function Pool() {
       ).toNumber()
       setCurrentBlockNumber(currentBlock)
       setLastDistributeTime(
-        getDateByBlockInterval(lastDistribute, currentBlock, currentSpace).toLocaleString(),
+        getDateByBlockInterval(
+          lastDistribute,
+          currentBlock,
+          currentSpace,
+        ).toLocaleString(),
       )
     }
     fetchData()
-  }, [])
+  }, [currentSpace])
 
   useEffect(() => {
     if (status) {
@@ -116,20 +119,29 @@ function Pool() {
   }, [unstakeErrorText, status])
 
   useEffect(() => {
+    if (currentSpace === 'eSpace' && !searchParams.get('coreAddress')) {
+      setStatus(StatusPosNode.warning)
+      return
+    }
     async function fetchData() {
       try {
-        const posAccount = await getPosAccountByPowAddress({ conflux, posPoolContract })
+        const posAccount = await getPosAccountByPowAddress(
+          currentSpace === 'core'
+            ? poolAddress
+            : searchParams.get('coreAddress'),
+        )
         setStatus(
           posAccount.status?.forceRetired == null
             ? StatusPosNode.success
             : StatusPosNode.error,
         )
       } catch (error) {
+        console.log(error)
         setStatus(StatusPosNode.warning)
       }
     }
     fetchData()
-  }, [conflux, posPoolContract])
+  }, [currentSpace, searchParams, poolAddress])
 
   useEffect(() => {
     try {
@@ -179,48 +191,58 @@ function Pool() {
   }
 
   const fetchPoolData = useCallback(async () => {
+    if (isLoading || currentBlockNumber === 0) return
     setIsLoading(true)
     try {
       const proArr = []
       proArr.push(posPoolContract.userSummary(accountAddress))
       proArr.push(posPoolContract.userInterest(accountAddress))
-      proArr.push(posPoolContract.userOutQueue(accountAddress))
-      const data = await Promise.all(proArr)
+      proArr.push(
+        (
+          posPoolContract.userOutQueue ||
+          posPoolContract['userOutQueue(address)']
+        )(accountAddress),
+      )
 
+      const data = await Promise.all(proArr)
       const userSum = data[0]
       setUserSummary(userSum)
       setStakedCfx(
-        new BigNumber(userSum[1] || 0)
+        new BigNumber(userSum?.[1]?._hex || userSum[1] || 0)
           .multipliedBy(CFX_BASE_PER_VOTE)
           .toString(10),
       )
-      setCfxCanUnstate(getCfxByVote(userSum[2] || 0))
-      setCfxCanWithdraw(getCfxByVote(userSum[3] || 0))
+      setCfxCanUnstate(getCfxByVote(userSum?.[2]?._hex || userSum[2]))
+      setCfxCanWithdraw(getCfxByVote(userSum?.[3]?._hex || userSum[3]))
       setRewards(
         getPrecisionAmount(
-          new Drip(new BigNumber(data[1]).toString(10)).toCFX(),
+          new Drip(
+            new BigNumber(data[1]?._hex || data[1]).toString(10),
+          ).toCFX(),
           5,
         ),
       )
-      setUnstakeList(transferQueue(data[2]))
+      setUnstakeList(transferQueue(data[2]?._hex || data[2]))
 
       // get user performance fee
-      let fee;
+      let fee
       try {
-        fee = await posPoolContract.userShareRatio().call({from: accountAddress});
-      } catch(err) {
-        fee = await posPoolContract.poolUserShareRatio();
+        fee = await posPoolContract
+          .userShareRatio()
+          .call({from: accountAddress})
+      } catch (err) {
+        fee = await posPoolContract.poolUserShareRatio()
       }
       // console.log("User performance fee: ", fee);
-      setFee(getFee(fee))
+      setFee(getFee(fee?._hex || fee))
 
       setIsLoading(false)
     } catch (error) {
-      console.log('fetchPoolData error: ', error);
+      console.log('fetchPoolData error: ', error)
       setIsLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountAddress, currentBlockNumber])
+  }, [accountAddress, currentBlockNumber, isLoading])
 
   useEffect(() => {
     if (!waitStakeRes) return
@@ -251,7 +273,7 @@ function Pool() {
           timeStr: getDateByBlockInterval(
             blockNumber,
             currentBlockNumber,
-            currentSpace
+            currentSpace,
           ).toLocaleString(),
         })
       }
@@ -275,7 +297,6 @@ function Pool() {
 
     try {
       let data = ''
-      let estimateData = {}
       let value = 0
       switch (type) {
         case 'stake':
@@ -285,13 +306,13 @@ function Pool() {
           const stakeVote = new BigNumber(inputStakeCfx)
             .dividedBy(CFX_BASE_PER_VOTE)
             .toString(10)
-          estimateData = await posPoolContract
-            .increaseStake(stakeVote)
-            .estimateGasAndCollateral({
-              from: accountAddress,
-              value,
-            })
-          data = posPoolContract.increaseStake(stakeVote).data
+          if (currentSpace === 'core') {
+            data = posPoolContract.increaseStake(stakeVote).data
+          } else {
+            data = posPoolInterface.encodeFunctionData('increaseStake', [
+              stakeVote,
+            ])
+          }
           setWaitStakeRes(true)
           break
         case 'unstake':
@@ -299,45 +320,47 @@ function Pool() {
           const unstakeVote = new BigNumber(inputUnstakeCfx)
             .dividedBy(CFX_BASE_PER_VOTE)
             .toString(10)
-          estimateData = await posPoolContract
-            .decreaseStake(unstakeVote)
-            .estimateGasAndCollateral({
-              from: accountAddress,
-            })
-          data = posPoolContract.decreaseStake(unstakeVote).data
+          if (currentSpace === 'core') {
+            data = posPoolContract.decreaseStake(unstakeVote).data
+          } else {
+            data = posPoolInterface.encodeFunctionData('decreaseStake', [
+              unstakeVote,
+            ])
+          }
           break
         case 'claim':
           value = 0
-          estimateData = await posPoolContract
-            .claimAllInterest()
-            .estimateGasAndCollateral({
-              from: accountAddress,
-            })
-          data = posPoolContract.claimAllInterest().data
+          if (currentSpace === 'core') {
+            data = posPoolContract.claimAllInterest().data
+          } else {
+            data = posPoolInterface.encodeFunctionData('claimAllInterest', [])
+          }
           break
         case 'withdraw':
           value = 0
-          estimateData = await posPoolContract
-            .withdrawStake(new BigNumber(userSummary[3]).toString(10))
-            .estimateGasAndCollateral({
-              from: accountAddress,
-            })
-          data = posPoolContract.withdrawStake(
-            new BigNumber(userSummary[3]).toString(10),
-          ).data
+          if (currentSpace === 'core') {
+            data = posPoolContract.withdrawStake(
+              new BigNumber(userSummary?.[3]?._hex || userSummary[3]).toString(
+                10,
+              ),
+            ).data
+          } else {
+            data = posPoolInterface.encodeFunctionData('withdrawStake', [
+              new BigNumber(userSummary?.[3]?._hex || userSummary[3]).toString(
+                10,
+              ),
+            ])
+          }
           break
         default:
           break
       }
       const txParams = {
-        to: format.address(poolAddress, Number(chainId)),
+        to:
+          currentSpace === 'core'
+            ? format.address(poolAddress, Number(chainId))
+            : poolAddress,
         data,
-        gas: Unit.fromMinUnit(
-          calculateGasMargin(estimateData?.gasLimit || 0),
-        ).toHexMinUnit(),
-        storageLimit: Unit.fromMinUnit(
-          calculateGasMargin(String(estimateData?.storageCollateralized || 0)),
-        ).toHexMinUnit(),
         value: Unit.fromMinUnit(value).toHexMinUnit(),
       }
       if (stakeModalShown) {
@@ -355,7 +378,7 @@ function Pool() {
   }
 
   const checkNetwork = callback => {
-    if ((isTest && chainId === '1029') || (!isTest && chainId === '1')) {
+    if (!isNetworkMatch) {
       return
     }
 
@@ -363,196 +386,194 @@ function Pool() {
   }
 
   return (
-    <div className="w-full h-full flex">
-      {isLoading ? (
-        <div className="flex items-center justify-center w-full h-screen">
-          <Spin></Spin>
-        </div>
-      ) : (
-        <div className="container mx-auto">
-          <Header status={status} />
-          <div className="flex justify-center mt-6">
-            <div className="w-9/12">
-              <div className="flex">
-                <div className="flex-1 p-6 mr-4 -ml-2 border-gray-800 border-2 text-white box-border rounded bg-main-back">
-                  <Form
-                    layout="vertical"
-                    form={form}
-                    wrapperCol={{style: {color: 'white'}}}
-                    style={{color: 'white'}}
+    <div className="relative w-full h-full flex">
+      {isLoading &&
+          <Spin className='top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]' style={{ position: 'absolute'}}></Spin>
+      }
+      <div className="container mx-auto">
+        <Header status={status} />
+        <div className="flex justify-center mt-6">
+          <div className="w-9/12">
+            <div className="flex">
+              <div className="flex-1 p-6 mr-4 -ml-2 border-gray-800 border-2 text-white box-border rounded bg-main-back">
+                <Form
+                  layout="vertical"
+                  form={form}
+                  wrapperCol={{style: {color: 'white'}}}
+                  style={{color: 'white'}}
+                >
+                  <div className="font-bold my-4 text-xl text-center">
+                    {t('Pool.stake&unstake')}
+                  </div>
+                  <div className="my-2">{t('Pool.how_much_stake')}</div>
+                  <Form.Item
+                    required
+                    validateStatus={stakeInputStatus}
+                    help={stakeErrorText}
                   >
-                    <div className="font-bold my-4 text-xl text-center">
-                      {t('Pool.stake&unstake')}
-                    </div>
-                    <div className="my-2">{t('Pool.how_much_stake')}</div>
-                    <Form.Item
-                      required
-                      validateStatus={stakeInputStatus}
-                      help={stakeErrorText}
-                    >
-                      <Row>
-                        <Col span={21}>
-                          <Input
-                            placeholder={t('Pool.enter_cfx_amount')}
-                            //   addonAfter={<span>Max</span>}
-                            value={inputStakeCfx}
-                            onChange={onStakeChange}
-                          />
-                        </Col>
-                        <Col span={3}>
-                          <Button
-                            onClick={() => {
-                              setInputStakeCfx(cfxMaxCanStake)
-                            }}
-                          >
-                            {t('Pool.max')}
-                          </Button>
-                        </Col>
-                      </Row>
-                    </Form.Item>
-                    <div>
-                      <span>{t('Pool.balance')}</span>
-                      <span className="ml-2 font-bold">{balance}</span>
-                      <span> CFX</span>
-                    </div>
-                    <div className="flex mt-2">
-                      <Button
-                        type="primary"
-                        size="middle"
-                        onClick={() => {
-                          checkNetwork(() => setStakeModalShown(true))
-                        }}
-                        disabled={stakeBtnDisabled}
-                      >
-                        {t('Pool.stake')}
-                      </Button>
-                    </div>
-                    <Divider dashed style={{borderColor: 'white'}} />
-                    <div className="my-1">{t('Pool.how_much_unstake')}</div>
-                    <Form.Item
-                      required
-                      validateStatus={unstakeInputStatus}
-                      help={unstakeErrorText}
-                    >
-                      <Row>
-                        <Col span={21}>
-                          <Input
-                            placeholder={t('Pool.enter_cfx_amount')}
-                            value={inputUnstakeCfx}
-                            onChange={onUnstakeChange}
-                          />
-                        </Col>
-                        <Col span={3}>
-                          <Button
-                            onClick={() => {
-                              setInputUnstakeCfx(cfxCanUnstake)
-                            }}
-                          >
-                            {t('Pool.max')}
-                          </Button>
-                        </Col>
-                      </Row>
-                    </Form.Item>
-
-                    <div>
-                      <span>{t('Pool.unstakeable')}</span>
-                      <span className="ml-2 font-bold">{cfxCanUnstake}</span>
-                      <span> CFX</span>
-                    </div>
-                    <div className="flex mt-2">
-                      <Button
-                        type="primary"
-                        size="middle"
-                        onClick={() => {
-                          checkNetwork(() => setUnStakeModalShown(true))
-                        }}
-                        disabled={unstakeBtnDisabled}
-                      >
-                        {t('Pool.unstake')}
-                      </Button>
-                    </div>
-                  </Form>
-                </div>
-                <div className="flex-1 p-6 border-gray-800 border-2 box-border rounded bg-main-back text-white">
-                  <div className="font-bold my-4 text-xl text-center mb-4">
-                    {t('Pool.my_pool')}
-                  </div>
-                  <div className="mt-7">
-                    <span>{t('Pool.my_staked')}</span>
-                    <span className="ml-2 font-bold">{stakedCfx}</span>
+                    <Row>
+                      <Col span={21}>
+                        <Input
+                          placeholder={t('Pool.enter_cfx_amount')}
+                          //   addonAfter={<span>Max</span>}
+                          value={inputStakeCfx}
+                          onChange={onStakeChange}
+                        />
+                      </Col>
+                      <Col span={3}>
+                        <Button
+                          disabled={isLoading}
+                          onClick={() => {
+                            setInputStakeCfx(cfxMaxCanStake)
+                          }}
+                        >
+                          {t('Pool.max')}
+                        </Button>
+                      </Col>
+                    </Row>
+                  </Form.Item>
+                  <div>
+                    <span>{t('Pool.balance')}</span>
+                    <span className="ml-2 font-bold">{balance}</span>
                     <span> CFX</span>
                   </div>
-                  <div className="my-4">
-                    <span>{t('Pool.my_rewards')}</span>
-                    <span className="ml-2 font-bold">{rewards}</span>
-                    <span> CFX</span>
-                    <span className="ml-2">
-                      <Button
-                        type="primary"
-                        size="small"
-                        onClick={() => {
-                          checkNetwork(() => submit('claim'))
-                        }}
-                        disabled={new BigNumber(rewards).isEqualTo(0)}
-                      >
-                        {t('Pool.claim')}
-                      </Button>
-                    </span>
-                  </div>
-                  <div className="my-2 opacity-60">
-                    <span>{t('Pool.last_update_time')}</span>
-                    <span>{lastDistributeTime}</span>
-                  </div>
-                  <div className="my-4">
-                    <span>{t('Pool.performance_fee')}</span>
-                    <span className="ml-2 font-bold">{`${fee} %`}</span>
+                  <div className="flex mt-2">
+                    <Button
+                      type="primary"
+                      size="middle"
+                      onClick={() => {
+                        checkNetwork(() => setStakeModalShown(true))
+                      }}
+                      disabled={isLoading || stakeBtnDisabled}
+                    >
+                      {t('Pool.stake')}
+                    </Button>
                   </div>
                   <Divider dashed style={{borderColor: 'white'}} />
+                  <div className="my-1">{t('Pool.how_much_unstake')}</div>
+                  <Form.Item
+                    required
+                    validateStatus={unstakeInputStatus}
+                    help={unstakeErrorText}
+                  >
+                    <Row>
+                      <Col span={21}>
+                        <Input
+                          placeholder={t('Pool.enter_cfx_amount')}
+                          value={inputUnstakeCfx}
+                          onChange={onUnstakeChange}
+                        />
+                      </Col>
+                      <Col span={3}>
+                        <Button
+                          onClick={() => {
+                            setInputUnstakeCfx(cfxCanUnstake)
+                          }}
+                          disabled={isLoading}
+                        >
+                          {t('Pool.max')}
+                        </Button>
+                      </Col>
+                    </Row>
+                  </Form.Item>
+
                   <div>
-                    <span>{t('Pool.withdrawable')}</span>
-                    <span className="ml-2 font-bold">{cfxCanWithdraw}</span>
+                    <span>{t('Pool.unstakeable')}</span>
+                    <span className="ml-2 font-bold">{cfxCanUnstake}</span>
                     <span> CFX</span>
-                    <span className="ml-2">
-                      <Button
-                        type="primary"
-                        size="small"
-                        onClick={() => {
-                          checkNetwork(() => submit('withdraw'))
-                        }}
-                        disabled={!cfxCanWithdraw}
-                      >
-                        {t('Pool.withdraw')}
-                      </Button>
-                    </span>
                   </div>
+                  <div className="flex mt-2">
+                    <Button
+                      type="primary"
+                      size="middle"
+                      onClick={() => {
+                        checkNetwork(() => setUnStakeModalShown(true))
+                      }}
+                      disabled={isLoading || unstakeBtnDisabled}
+                    >
+                      {t('Pool.unstake')}
+                    </Button>
+                  </div>
+                </Form>
+              </div>
+              <div className="flex-1 p-6 border-gray-800 border-2 box-border rounded bg-main-back text-white">
+                <div className="font-bold my-4 text-xl text-center mb-4">
+                  {t('Pool.my_pool')}
+                </div>
+                <div className="mt-7">
+                  <span>{t('Pool.my_staked')}</span>
+                  <span className="ml-2 font-bold">{stakedCfx}</span>
+                  <span> CFX</span>
+                </div>
+                <div className="my-4">
+                  <span>{t('Pool.my_rewards')}</span>
+                  <span className="ml-2 font-bold">{rewards}</span>
+                  <span> CFX</span>
+                  <span className="ml-2">
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => {
+                        checkNetwork(() => submit('claim'))
+                      }}
+                      disabled={isLoading || new BigNumber(rewards).isEqualTo(0)}
+                    >
+                      {t('Pool.claim')}
+                    </Button>
+                  </span>
+                </div>
+                <div className="my-2 opacity-60">
+                  <span>{t('Pool.last_update_time')}</span>
+                  <span>{lastDistributeTime}</span>
+                </div>
+                <div className="my-4">
+                  <span>{t('Pool.performance_fee')}</span>
+                  <span className="ml-2 font-bold">{`${fee} %`}</span>
+                </div>
+                <Divider dashed style={{borderColor: 'white'}} />
+                <div>
+                  <span>{t('Pool.withdrawable')}</span>
+                  <span className="ml-2 font-bold">{cfxCanWithdraw}</span>
+                  <span> CFX</span>
+                  <span className="ml-2">
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => {
+                        checkNetwork(() => submit('withdraw'))
+                      }}
+                      disabled={isLoading || !cfxCanWithdraw}
+                    >
+                      {t('Pool.withdraw')}
+                    </Button>
+                  </span>
                 </div>
               </div>
-              <div className={`${unstakeList.length > 0 ? 'block' : 'hidden'}`}>
-                <Divider
-                  dashed
-                  orientation="left"
-                  style={{borderColor: 'white', color: 'white'}}
-                >
-                  {t('Pool.unstake_activity')}
-                </Divider>
-                <List
-                  bordered
-                  dataSource={unstakeList}
-                  renderItem={item => (
-                    <List.Item>
-                      <div className="text-white">{`${item.amount} CFX`}</div>
-                      <div className="text-white">
-                        {t('Pool.can_withdraw_at', {time: item.timeStr})}
-                      </div>
-                    </List.Item>
-                  )}
-                />
-              </div>
+            </div>
+            <div className={`${unstakeList.length > 0 ? 'block' : 'hidden'}`}>
+              <Divider
+                dashed
+                orientation="left"
+                style={{borderColor: 'white', color: 'white'}}
+              >
+                {t('Pool.unstake_activity')}
+              </Divider>
+              <List
+                bordered
+                dataSource={unstakeList}
+                renderItem={item => (
+                  <List.Item>
+                    <div className="text-white">{`${item.amount} CFX`}</div>
+                    <div className="text-white">
+                      {t('Pool.can_withdraw_at', {time: item.timeStr})}
+                    </div>
+                  </List.Item>
+                )}
+              />
             </div>
           </div>
         </div>
-      )}
-      )
+      </div>
       <ConfirmModal
         visible={stakeModalShown}
         setVisible={setStakeModalShown}

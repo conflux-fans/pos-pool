@@ -4,13 +4,13 @@ import useCurrentSpace from "./useCurrentSpace";
 import useCurrentNetwork from "./useCurrentNetwork";
 
 const useIsNetworkMatch = () => {
-    const currentSpace = useCurrentSpace();
-    const currentNetwork = useCurrentNetwork();
+    const currentSpace = useCurrentSpace()
+    const currentNetwork = useCurrentNetwork()
     const fluentChainId = useFluentChainId()
     const metaMaskChainId = useMetaMaskChainId()
+    if (!currentSpace) return true;
     const usedChainId = currentSpace === 'core' ? fluentChainId : metaMaskChainId
-
-    return currentNetwork.networkId === usedChainId;
+    return String(currentNetwork.networkId) === String(usedChainId);
 }
 
 export default useIsNetworkMatch;

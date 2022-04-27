@@ -4,14 +4,15 @@ import useCurrentNetwork from './useCurrentNetwork';
 import useCurrentSpace from './useCurrentSpace';
 import { ethers, Contract} from 'ethers';
 const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+const signer = provider.getSigner();
 
-const useConflux = () => {
+const useController = () => {
     const currentSpace = useCurrentSpace();
     const currentNetwork = useCurrentNetwork();
     return useMemo(() => {
         if (currentSpace === 'eSpace') {
             return {
-                Contract: ({ abi, address }) => new Contract(address, abi, provider),
+                Contract: ({ abi, address }) => new Contract(address, abi, signer),
                 provider
             }
         }
@@ -19,4 +20,4 @@ const useConflux = () => {
     }, [currentSpace, currentNetwork]);
 }
 
-export default useConflux;
+export default useController;

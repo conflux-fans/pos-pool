@@ -17,17 +17,26 @@ import {
 
 export const useAccount = () => {
   const currentSpace = useCurrentSpace()
-  return (currentSpace === 'core' ? useFluentAccount : useMetaMaskAccount)()
+  const fluentAccount = useFluentAccount()
+  const metaMaskAccount = useMetaMaskAccount();
+  if (!currentSpace) return undefined
+  return (currentSpace === 'core' ? fluentAccount : metaMaskAccount)
 }
 
 export const useChainId = () => {
   const currentSpace = useCurrentSpace()
-  return (currentSpace === 'core' ? useFluentChainId : useMetaMaskChainId)()
+  const fluentChainId = useFluentChainId()
+  const metaMaskChainId = useMetaMaskChainId()
+  if (!currentSpace) return undefined
+  return (currentSpace === 'core' ? fluentChainId : metaMaskChainId)
 }
 
 export const useBalance = () => {
   const currentSpace = useCurrentSpace()
-  return (currentSpace === 'core' ? useFluentBalance : useMetaMaskBalance)()
+  const fluentBalance = useFluentBalance()
+  const metaMaskBalance = useMetaMaskBalance()
+  if (!currentSpace) return undefined;
+  return (currentSpace === 'core' ? fluentBalance : metaMaskBalance)
 }
 
 export const useSendTransaction = () => {

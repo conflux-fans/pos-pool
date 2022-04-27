@@ -10,17 +10,17 @@ module.exports = {
     historyApiFallback: true,
     proxy: {
       '/core-rpc': {
-        target: poolConfig.core.testnet.RPC,
+        target: poolConfig.testnet.core.RPC,
         changeOrigin: true,
         pathRewrite: {
           '^/core-rpc': '',
         },
       },
       '/eSpace-rpc': {
-        target: poolConfig.eSpace.testnet.RPC,
+        target: poolConfig.testnet.core.RPC,
         changeOrigin: true,
         pathRewrite: {
-          '^/espace-rpc': '',
+          '^/eSpace-rpc': '',
         },
       }
     },

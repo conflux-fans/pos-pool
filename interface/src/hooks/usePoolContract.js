@@ -1,19 +1,23 @@
 import { useMemo } from 'react';
-import useConflux from './useConflux';
+import useController from './useController';
 import { abi as posPoolAbi } from "./../../../contract/ABI/IPoSPool.json";
 import { useParams } from "react-router-dom";
+import { utils } from 'ethers';
 
 const usePoolContract = () => {
     const { poolAddress } = useParams();
-    const conflux = useConflux();
+    const controller = useController();
 
     return useMemo(() => {
-        return conflux.Contract({
-            abi: posPoolAbi,
-            address: poolAddress,
-        })
+        return {
+            contract: controller.Contract({
+                abi: posPoolAbi,
+                address: poolAddress,
+            }),
+            interface: new utils.Interface(posPoolAbi)
+        }
     }
-    , [poolAddress, conflux]);
+    , [poolAddress, controller]);
 }
 
 export default usePoolContract;

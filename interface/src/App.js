@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Spin, Layout } from "antd";
 
 import "./App.css";
@@ -25,15 +25,10 @@ function App() {
             <Content style={{ padding: "50px 50px",backgroundColor:'#2d3344' }}>
               <div>
                 <Routes>
-                  <Route path="core" element={<Outlet />} >
-                    <Route element={<Home />} index />
-                    <Route path="pool/:poolAddress" element={<Pool />} />
-                  </Route>
-                  <Route path="eSpace" element={<Outlet />} >
-                    <Route element={<Home />} index />
-                    <Route path="pool/:poolAddress" element={<Pool />} />
-                  </Route>
-                  <Route path="*" element={<Navigate to="core"/>} />
+                  <Route path="pool-manage" element={<Home />} />
+                  <Route path="pool/core/:poolAddress" element={<Pool />} />
+                  <Route path="pool/e-space/:poolAddress" element={<Pool />} />
+                  <Route path="*" element={<Navigate to="pool-manage"/>} />
                 </Routes>
               </div>
             </Content>

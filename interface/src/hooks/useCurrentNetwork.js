@@ -7,21 +7,19 @@ import useCurrentSpace from './useCurrentSpace';
 const useCurrentNetwork = () => {
     const currentSpace = useCurrentSpace();
     const network = useMemo(() => {
+        if (!currentSpace) return null;
         const networkId = isTestNetEnv() ? 
             (currentSpace === 'core' ? NETWORK_ID_CORE_TESTNET : NETWORK_ID_ESPACE_TESTNET)
             : (currentSpace === 'core' ? NETWORK_ID_CORE_MAINNET : NETWORK_ID_ESPACE_MAINNET)
 
-        let url = poolConfig[currentSpace][isTestNetEnv() ? 'testnet' : 'mainnet'].RPC;
+        let url = poolConfig[isTestNetEnv() ? 'testnet' : 'mainnet'][currentSpace].RPC;
         if (process.env.REACT_APP_TestNet === "true") {
             url = window.location.origin + `/${currentSpace}-rpc`;
         }
 
-        const poolManagerAddress = poolConfig[currentSpace][isTestNetEnv() ? 'testnet' : 'mainnet'].poolManagerAddress;
-
         return ({
             url,
             networkId,
-            poolManagerAddress
         });
     }, [currentSpace]);
 

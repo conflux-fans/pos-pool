@@ -7,26 +7,24 @@ import { useTranslation } from 'react-i18next';
 import { getCfxByVote, getApy, getFee } from "../../utils";
 import {
   getPosAccountByPowAddress,
+  posPoolManagerContract,
 } from "../../utils/cfx";
-import {useTryActivate, useAccount} from '../../hooks/useWallet';
+// import {useAccount} from '../../hooks/useWallet';
 import {StatusPosNode} from '../../constants'
-import usePoolManagerContract from "../../hooks/usePoolManagerContract";
-import useConflux from "../../hooks/useConflux";
 
 function Home() {
   const { t } = useTranslation();
-  const conflux = useConflux();
-  const posPoolManagerContract = usePoolManagerContract();
-  const [dataList, setDataList] = useState([]);
+  const [dataList, setDataList] = useState([])
   const [loading,setLoading]=useState(false)
-  const navigate = useNavigate();
-  const accountAddress = useAccount();
-  const tryActivate = useTryActivate();
-  const gotoPoolPage = (record) => {
-    if (accountAddress) {
-      navigate(`pool/${record?.address}`);
-    } else {
-      tryActivate();
+  const navigate = useNavigate()
+  // const accountAddress = useAccount()
+  const gotoPoolPage = ({
+    address,
+    space,
+    coreAddress
+  }) => {
+    if (address && space) {
+      navigate(`/pool/${space}/${address}${space === 'e-space' ? `?coreAddress=${coreAddress}` : ''}`);
     }
   };
   const columns = [
@@ -74,16 +72,32 @@ function Home() {
       width:150
     },
     {
-      title: "",
-      key: "action",
-      width:60,
+      title: "Core",
+      key: "action1",
+      width: 60,
       render: (text, record) => {
         return (
           <Space size="middle">
-            <RightCircleOutlined
-              onClick={() => gotoPoolPage(record)}
-              style={{ fontSize: "28px", color: "#08c" }}
-            />
+              <RightCircleOutlined
+                onClick={() => gotoPoolPage({ address: record.coreAddress, space: 'core' })}
+                style={{ fontSize: "28px", color: "#08c" }}
+              />
+          </Space>
+        );
+      },
+    },
+    {
+      title: "eSpace",
+      key: "action2",
+      width:60,
+      render: (text, record) => {
+        if (!record.eSpaceAddress) return null;
+        return (
+          <Space size="middle">
+              <RightCircleOutlined
+                onClick={() => gotoPoolPage({ address: record.eSpaceAddress, space: 'e-space', coreAddress: record.coreAddress })}
+                style={{ fontSize: "28px", color: "#08c" }}
+              />
           </Space>
         );
       },
@@ -94,12 +108,16 @@ function Home() {
     async function getData() {
       setLoading(true)
       try {
-        const options = {};
-        if (accountAddress) {
-          options.from = accountAddress;
-        }
-        const list = await posPoolManagerContract.getPools().call(options);
-        const data = await transferData(list);
+        // const options = {};
+        // if (accountAddress) {
+        //   options.from = accountAddress;
+        // }
+        // const list = await posPoolManagerContract.getPools().call(options)
+
+        const list = await posPoolManagerContract.getPools()
+        const eSpaceAddresses = await Promise.allSettled(list.map(async pool => await posPoolManagerContract.eSpacePoolAddresses(pool[3])));
+
+        const data = await transferData(list, eSpaceAddresses);
         setDataList(data);
         setLoading(false)
       } catch (error) {
@@ -109,21 +127,23 @@ function Home() {
       }
     }
     getData();
-  }, [posPoolManagerContract, accountAddress]);
+  }, []);
 
-  const transferData = async (list) => {
+  const transferData = async (list, eSpaceAddresses) => {
     const arr = [];
     const proArr = [];
     list.forEach((item) => {
       const address = item[3];
-      proArr.push(getPosAccountByPowAddress({ conflux, address }));
+      proArr.push(getPosAccountByPowAddress(address));
     });
+
     try {
       const proRes = await Promise.all(proArr);
       list.forEach((item, index) => {
         arr.push({
           key: item[3],
-          address: item[3],
+          coreAddress: item[3],
+          eSpaceAddress: eSpaceAddresses?.[index]?.value && eSpaceAddresses?.[index]?.value !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
           totalAvailable: getCfxByVote(item[2]),
           name: item[4],
           apy: getApy(item[0]) + "%",
@@ -136,7 +156,8 @@ function Home() {
       list.forEach((item, index) => {
         arr.push({
           key: item[3],
-          address: item[3],
+          coreAddress: item[3],
+          eSpaceAddress: eSpaceAddresses?.[index]?.value && eSpaceAddresses?.[index]?.value !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
           totalAvailable: getCfxByVote(item[2]),
           name: item[4],
           apy: getApy(item[0]) + "%",
