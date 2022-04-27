@@ -414,8 +414,9 @@ contract ESpacePoSPool is Ownable, Initializable {
   }
 
   // receive interest
-  // function receiveInterest() public payable onlyBridge {}
-  receive() external payable {}
+  function receiveInterest() public payable onlyBridge {}
+
+  fallback() external payable {}
 
   function setPoolAPY(uint256 apy) public onlyBridge {
     _poolAPY = apy;

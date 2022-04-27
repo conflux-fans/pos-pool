@@ -82,6 +82,15 @@ contract CoreBridge is Ownable {
     }
   }
 
+  function claimAndCrossInterest() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 interest = posPool.userInterest(address(this));
+    if (interest > 0) {
+      posPool.claimInterest(interest);
+      crossSpaceCall.callEVM{value: interest}(ePoolAddrB20(), abi.encodeWithSignature("receiveInterest()"));
+    }
+  }
+
   function handleUnstake() public onlyOwner {
     uint256 unstakeLen = queryUnstakeLen();
     if (unstakeLen == 0) return;
@@ -111,4 +120,6 @@ contract CoreBridge is Ownable {
       crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", userSummary.unlocked));
     }
   }
+
+  fallback() external payable {}
 }
