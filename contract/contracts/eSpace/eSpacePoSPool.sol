@@ -413,10 +413,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     birdgeAddrSetted = true;
   }
 
-  // receive interest
-  function receiveInterest() public payable onlyBridge {}
-
-  fallback() external payable {}
+  // ======================== bridge methods =====================
 
   function setPoolAPY(uint256 apy) public onlyBridge {
     _poolAPY = apy;
@@ -437,5 +434,10 @@ contract ESpacePoSPool is Ownable, Initializable {
     UnstakeQueue.Node memory node = unstakeQueue.dequeue();
     return node.votes;
   }
+
+  // receive interest
+  function receiveInterest() public payable onlyBridge {}
+
+  fallback() external payable {}
 
 }

@@ -10,6 +10,9 @@ contract PoolManager is Ownable {
 
   EnumerableSet.AddressSet private pools;
 
+  // core pool address => espace pool address
+  mapping(address => address) public eSpacePoolAddresses;
+
   struct PoolInfo {
     uint32 apy; // 1000 / 1w  10%
     uint64 fee; // userShare fee   90%
@@ -47,5 +50,9 @@ contract PoolManager is Ownable {
 
   function removePool(address poolAddress) public onlyOwner {
     pools.remove(poolAddress);
+  }
+
+  function setEspacePool(address core, address espace) public onlyOwner {
+    eSpacePoolAddresses[core] = espace;
   }
 }

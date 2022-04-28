@@ -34,7 +34,7 @@ async function syncAPYandClaimInterest() {
       .syncAPYandClaimInterest()
       .sendTransaction(sendTxMeta)
       .executed();
-    debug(`syncAPYandClaimInterest finish: `, receipt.transactionHash, receipt.outcomeStatus);
+    debug(`syncAPYandClaimInterest finished: `, receipt.transactionHash, receipt.outcomeStatus);
   }, 1000 * 60 * 30);  // 30 minutes once
 }
 
@@ -47,7 +47,7 @@ async function syncVoteStatus() {
         .crossStake()
         .sendTransaction(sendTxMeta)
         .executed();
-      debug(`crossStake finish: `, receipt.transactionHash, receipt.outcomeStatus);
+      debug(`crossStake finished: `, receipt.transactionHash, receipt.outcomeStatus);
     }
     
     let userSummary = await coreBridge.queryUserSummary();
@@ -57,7 +57,7 @@ async function syncVoteStatus() {
         .withdrawVotes()
         .sendTransaction(sendTxMeta)
         .executed();
-      debug(`withdrawVotes finish: `, receipt.transactionHash, receipt.outcomeStatus);
+      debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
     }
 
     let unstakeLen = await coreBridge.queryUnstakeLen();
@@ -67,7 +67,7 @@ async function syncVoteStatus() {
         .handleUnstake()
         .sendTransaction(sendTxMeta)
         .executed();
-      debug(`handleUnstake finishe: `, receipt.transactionHash, receipt.outcomeStatus);
+      debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
     }
   }, 1000 * 60 * 5);
 }
@@ -81,7 +81,7 @@ async function handleUnstake() {
       .handleUnstake()
       .sendTransaction(sendTxMeta)
       .executed();
-    debug(`handleUnstake finishe: `, receipt.transactionHash, receipt.outcomeStatus);
+    debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
   }, 1000 * 60 * 5);
 }
 
