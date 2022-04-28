@@ -72,7 +72,7 @@ async function syncVoteStatus() {
   }, 1000 * 60 * 5);
 }
 
-async function handleUnstake() {
+/* async function handleUnstake() {
   setInterval(async () => {
     let unstakeLen = await coreBridge.queryUnstakeLen();
     debug('handleUnstake: ', unstakeLen);
@@ -83,12 +83,16 @@ async function handleUnstake() {
       .executed();
     debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
   }, 1000 * 60 * 5);
-}
+} */
 
 async function main() {
-  syncAPYandClaimInterest();
-  syncVoteStatus();
-  console.log('==== eSpacePool Crossing Tasks Started ====');
+  try {
+    syncAPYandClaimInterest();
+    syncVoteStatus();
+    console.log('==== eSpacePool Crossing Tasks Started ====');
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 main().catch(console.log);
