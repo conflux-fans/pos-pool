@@ -60,14 +60,18 @@ async function syncVoteStatus() {
       debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
     }
 
-    let unstakeLen = await coreBridge.queryUnstakeLen();
-    debug('handleUnstake: ', unstakeLen);
-    if (unstakeLen > 0) {
-      const receipt = await coreBridge
-        .handleUnstake()
-        .sendTransaction(sendTxMeta)
-        .executed();
-      debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+    try {
+      let unstakeLen = await coreBridge.queryUnstakeLen();
+      debug('handleUnstake: ', unstakeLen);
+      if (unstakeLen > 0) {
+        const receipt = await coreBridge
+          .handleUnstake()
+          .sendTransaction(sendTxMeta)
+          .executed();
+        debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+      }
+    } catch (e) {
+      console.log("unstake error: ", e);
     }
   }, 1000 * 60 * 5);
 }
