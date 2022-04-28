@@ -413,6 +413,39 @@ contract ESpacePoSPool is Ownable, Initializable {
     birdgeAddrSetted = true;
   }
 
+  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
+    uint256 votePower = userSummaries[_addr].available;
+    if (votePower == 0) return;
+
+    _updateUserInterest(_addr);
+    userSummaries[_addr].available = 0;
+    userSummaries[_addr].locked = 0;
+    // clear user inqueue
+    userInqueues[_addr].clear();
+    userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
+    _updateUserShot(_addr);
+
+    _poolSummary.available -= votePower;
+  }
+
+  // When pool node is force retired, use this method to make all user's available stake to unlocking
+  function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
+    uint256 len = stakers.length();
+    if (len == 0) return;
+
+    _updateAccRewardPerCfx();
+
+    uint256 end = offset + limit;
+    if (end > len) {
+      end = len;
+    }
+    for (uint256 i = offset; i < end; i++) {
+      _retireUserStake(stakers.at(i), endBlockNumber);
+    }
+
+    _updatePoolShot();
+  }
+
   // ======================== bridge methods =====================
 
   function setPoolAPY(uint256 apy) public onlyBridge {
