@@ -28,7 +28,7 @@ contract ESpacePoSPool is Ownable, Initializable {
   bool public birdgeAddrSetted;
   address private _bridgeAddress;
   // ratio shared by user: 1-10000
-  uint256 public constant poolUserShareRatio = RATIO_BASE;
+  uint256 public poolUserShareRatio = 9600;
   // lock period: 7 days + half hour
   uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 1800;
   string public poolName;
@@ -387,11 +387,11 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @dev The ratio base is 10000, only admin can do this
   /// @param ratio The interest user share ratio (1-10000), default is 9000
   ///
-  /* function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
+  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
-  } */
+  }
 
   /// 
   /// @notice Enable admin to set the lock and unlock period

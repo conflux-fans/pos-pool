@@ -271,6 +271,17 @@ program
     checkReceiptStatus(receipt, method);
   });
 
+program
+  .command('PoolManagerSetEspacePool')
+  .argument('<arg>', 'Pool address')
+  .argument('<arg>', 'Pool address')
+  .action(async (corePoolAddr, ePoolAddr) => {
+    const receipt = await poolManagerContract.setEspacePool(corePoolAddr, ePoolAddr).sendTransaction({
+      from: account.address
+    }).executed();
+    checkReceiptStatus(receipt, 'setEspacePool');
+  });
+
 program.parse(process.argv);
 
 function checkReceiptStatus(receipt, operate) {

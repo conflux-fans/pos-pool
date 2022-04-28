@@ -32,8 +32,7 @@ contract PoolManager is Ownable {
         totalAvailable: poolInstance.poolSummary().available,
         name: poolInstance.poolName(),
         apy: poolInstance.poolAPY(),
-        // fee: poolInstance.poolUserShareRatio()
-        fee: poolInstance.userShareRatio()
+        fee: poolInstance.poolUserShareRatio()
       });
     }
     
