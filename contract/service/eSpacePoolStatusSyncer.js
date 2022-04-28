@@ -50,14 +50,18 @@ async function syncVoteStatus() {
       debug(`crossStake finished: `, receipt.transactionHash, receipt.outcomeStatus);
     }
     
-    let userSummary = await coreBridge.queryUserSummary();
-    debug('withdrawVotes: ', userSummary.unlocked);
-    if (userSummary.unlocked > 0) {
-      const receipt = await coreBridge
-        .withdrawVotes()
-        .sendTransaction(sendTxMeta)
-        .executed();
-      debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
+    try {
+      let userSummary = await coreBridge.queryUserSummary();
+      debug('withdrawVotes: ', userSummary.unlocked);
+      if (userSummary.unlocked > 0) {
+        const receipt = await coreBridge
+          .withdrawVotes()
+          .sendTransaction(sendTxMeta)
+          .executed();
+        debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
+      }
+    }catch(e) {
+      console.log('withdrawVotes error: ', e);
     }
 
     try {
