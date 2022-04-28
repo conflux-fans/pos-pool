@@ -30,8 +30,13 @@ async function syncAPYandClaimInterest() {
     let interest = await coreBridge.queryInterest();
     debug('syncAPYandClaimInterest: ', interest);
     if (interest === 0n) return;
+    // const receipt = await coreBridge
+    //   .syncAPYandClaimInterest()
+    //   .sendTransaction(sendTxMeta)
+    //   .executed();
+
     const receipt = await coreBridge
-      .syncAPYandClaimInterest()
+      .claimAndCrossInterest()
       .sendTransaction(sendTxMeta)
       .executed();
     debug(`syncAPYandClaimInterest finished: `, receipt.transactionHash, receipt.outcomeStatus);
@@ -40,14 +45,18 @@ async function syncAPYandClaimInterest() {
 
 async function syncVoteStatus() {
   setInterval(async () => {
-    let crossingVotes = await coreBridge.queryCrossingVotes();
-    debug('crossStake: ', crossingVotes);
-    if (crossingVotes > 0) {
-      const receipt = await coreBridge
-        .crossStake()
-        .sendTransaction(sendTxMeta)
-        .executed();
-      debug(`crossStake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+    try {
+      let crossingVotes = await coreBridge.queryCrossingVotes();
+      debug('crossStake: ', crossingVotes);
+      if (crossingVotes > 0) {
+        const receipt = await coreBridge
+          .crossStake()
+          .sendTransaction(sendTxMeta)
+          .executed();
+        debug(`crossStake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+      }
+    } catch (e) {
+      console.log('crossingVotes error: ', e);
     }
     
     try {

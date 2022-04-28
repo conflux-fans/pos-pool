@@ -78,7 +78,7 @@ contract CoreBridge is Ownable {
     uint256 interest = posPool.userInterest(address(this));
     if (interest > 0) {
       posPool.claimInterest(interest);
-      crossSpaceCall.transferEVM(ePoolAddrB20());
+      crossSpaceCall.transferEVM{value: interest}(ePoolAddrB20());
     }
   }
 
