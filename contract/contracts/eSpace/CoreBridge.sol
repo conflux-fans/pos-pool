@@ -7,7 +7,7 @@ import "../IPoSPool.sol";
 
 contract CoreBridge is Ownable {
   // The CrossSpaceCall internal contract
-  CrossSpaceCall internal crossSpaceCall = CrossSpaceCall(0x0888000000000000000000000000000000000006);
+  CrossSpaceCall internal crossSpaceCall;
 
   address public poolAddress;
   address public eSpacePoolAddress;
@@ -22,11 +22,13 @@ contract CoreBridge is Ownable {
 
   event WithdrawCFX(uint256 votes);
 
-  constructor (address _poolAddress) {
-    poolAddress = _poolAddress;
+  constructor () {
+    initialize();
   }
 
-  function initialize() public {}
+  function initialize() public {
+    crossSpaceCall = CrossSpaceCall(0x0888000000000000000000000000000000000006);
+  }
 
   function setPoolAddress(address _poolAddress) public onlyOwner {
     poolAddress = _poolAddress;
@@ -137,7 +139,7 @@ contract CoreBridge is Ownable {
 
   receive() external payable {}
 
-  // ==== Because this contract cannot upgrade, prepare these methods to handle exceptional case  ====
+  // ==== For test need to be removed  ====
   function _withdrawCFX(uint256 amount) public onlyOwner {
     require(address(this).balance >= amount, "not enough balance");
     address payable receiver = payable(msg.sender);

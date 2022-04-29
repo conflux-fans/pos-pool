@@ -175,6 +175,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     CFX_COUNT_OF_ONE_VOTE = 1000;
     CFX_VALUE_OF_ONE_VOTE = 1000 ether;
     _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
+    poolUserShareRatio = 9600;
   }
 
   // ======================== Contract methods =========================
