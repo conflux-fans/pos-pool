@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 require("dotenv").config();
 
 require("@nomiclabs/hardhat-etherscan");
@@ -40,7 +41,10 @@ module.exports = {
     },
     net8889: {
       url: "http://net8889eth.confluxrpc.com",
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [
+        process.env.PRIVATE_KEY,
+        process.env.PRIVATE_KEY_2,
+      ],
       chainId: 8889,
     },
   },

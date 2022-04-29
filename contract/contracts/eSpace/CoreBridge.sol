@@ -16,6 +16,8 @@ contract CoreBridge is Ownable {
     poolAddress = _poolAddress;
   }
 
+  function initialize() public {}
+
   function setPoolAddress(address _poolAddress) public onlyOwner {
     poolAddress = _poolAddress;
   }
@@ -119,6 +121,21 @@ contract CoreBridge is Ownable {
       uint256 transferValue = userSummary.unlocked * 1000 ether;
       crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", userSummary.unlocked));
     }
+  }
+
+  // test methods
+  function withdrawVotesBack() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    if (userSummary.unlocked > 0) {
+      posPool.withdrawStake(userSummary.unlocked);
+    }
+  }
+
+  function crossBackVotes(uint256 votes) public onlyOwner {
+    // transfer to eSpacePool and call method
+    uint256 transferValue = votes * 1000 ether;
+    crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", votes));
   }
 
   fallback() external payable {}

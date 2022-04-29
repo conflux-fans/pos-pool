@@ -30,15 +30,15 @@ async function syncAPYandClaimInterest() {
     let interest = await coreBridge.queryInterest();
     debug('syncAPYandClaimInterest: ', interest);
     if (interest === 0n) return;
-    // const receipt = await coreBridge
-    //   .syncAPYandClaimInterest()
-    //   .sendTransaction(sendTxMeta)
-    //   .executed();
-
     const receipt = await coreBridge
-      .claimAndCrossInterest()
+      .syncAPYandClaimInterest()
       .sendTransaction(sendTxMeta)
       .executed();
+
+    // const receipt = await coreBridge
+    //   .claimAndCrossInterest()
+    //   .sendTransaction(sendTxMeta)
+    //   .executed();
     debug(`syncAPYandClaimInterest finished: `, receipt.transactionHash, receipt.outcomeStatus);
   }, 1000 * 60 * 30);  // 30 minutes once
 }
@@ -69,7 +69,7 @@ async function syncVoteStatus() {
           .executed();
         debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
       }
-    }catch(e) {
+    } catch(e) {
       console.log('withdrawVotes error: ', e);
     }
 
