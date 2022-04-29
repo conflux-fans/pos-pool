@@ -12,6 +12,16 @@ contract CoreBridge is Ownable {
   address public poolAddress;
   address public eSpacePoolAddress;
 
+  /* event CrossingVotes(uint256 votes);
+
+  event ClaimInterest(uint256 interest);
+
+  event UnstakeVotes(uint256 votes);
+
+  event WithdrawVotes(uint256 votes); */
+
+  event WithdrawCFX(uint256 votes);
+
   constructor (address _poolAddress) {
     poolAddress = _poolAddress;
   }
@@ -123,7 +133,47 @@ contract CoreBridge is Ownable {
     }
   }
 
-  // test methods
+  fallback() external payable {}
+
+  receive() external payable {}
+
+  // ==== Because this contract cannot upgrade, prepare these methods to handle exceptional case  ====
+  function _withdrawCFX(uint256 amount) public onlyOwner {
+    require(address(this).balance >= amount, "not enough balance");
+    address payable receiver = payable(msg.sender);
+    receiver.transfer(amount);
+    emit WithdrawCFX(amount);
+  }
+
+  function _claimInterest() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 interest = posPool.userInterest(address(this));
+    if (interest == 0) return;
+    posPool.claimInterest(interest);
+  }
+
+  function _decreaseStake() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    if (userSummary.locked == 0) return;
+    posPool.decreaseStake(userSummary.locked);
+  }
+
+  function _increaseStake(uint256 votes) public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 transferValue = votes * 1000 ether;
+    require(address(this).balance >= transferValue, "not enough balance");
+    posPool.increaseStake{value: transferValue}(uint64(votes));
+  }
+
+  function _withdrawStake() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    if (userSummary.unlocked == 0) return;
+    posPool.withdrawStake(userSummary.unlocked);
+  }
+
+  // TODO test methods, need to remove after test
   function withdrawVotesBack() public onlyOwner {
     IPoSPool posPool = IPoSPool(poolAddress);
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
@@ -133,12 +183,8 @@ contract CoreBridge is Ownable {
   }
 
   function crossBackVotes(uint256 votes) public onlyOwner {
-    // transfer to eSpacePool and call method
     uint256 transferValue = votes * 1000 ether;
     crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", votes));
   }
 
-  fallback() external payable {}
-
-  receive() external payable {}
 }
