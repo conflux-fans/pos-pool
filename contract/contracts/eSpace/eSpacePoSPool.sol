@@ -31,7 +31,7 @@ contract ESpacePoSPool is Ownable, Initializable {
   uint256 public poolUserShareRatio = 9600;
   // lock period: 7 days + half hour
   uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 1800;
-  string public poolName;
+  string public poolName = "eSpacePool";
   uint256 private _poolAPY = 0;
 
   // ======================== Contract states =========================
