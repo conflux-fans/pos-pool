@@ -17,7 +17,7 @@ module.exports = {
         },
       },
       '/eSpace-rpc': {
-        target: poolConfig.testnet.core.RPC,
+        target: poolConfig.testnet.eSpace.RPC,
         changeOrigin: true,
         pathRewrite: {
           '^/eSpace-rpc': '',

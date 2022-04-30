@@ -31,6 +31,7 @@ import Header from './Header'
 import ConfirmModal from './ConfirmModal'
 import TxModal from './TxModal'
 import usePoolContract from '../../hooks/usePoolContract'
+import useCurrentNetwork from '../../hooks/useCurrentNetwork'
 import useIsNetworkMatch from '../../hooks/useIsNetworkMatch'
 
 function Pool() {
@@ -45,6 +46,7 @@ function Pool() {
   const cfxMaxCanStake = getMax(balance)
   const {poolAddress} = useParams()
   const [searchParams] = useSearchParams()
+  const currentNetwork = useCurrentNetwork();
 
   const {contract: posPoolContract, interface: posPoolInterface} =
     usePoolContract()
@@ -77,9 +79,23 @@ function Pool() {
   useEffect(() => {
     async function fetchData() {
       const proArr = []
-      proArr.push(currentSpace === 'core' ? confluxController.provider.call('cfx_getStatus') : metaMaskProvider.request({ method: 'eth_blockNumber' }))
+      proArr.push(
+        currentSpace === 'core' ?
+        confluxController.provider.call('cfx_getStatus')
+        : fetch(currentNetwork.url, {
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_blockNumber',
+            params: [],
+            id: 83
+          }),
+          headers: {'content-type': 'application/json'},
+          method: 'POST',
+        }).then(response => response?.json()).then(res => res?.result)
+      )
       proArr.push(confluxController.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
+      
       let currentBlock;
       if (currentSpace === 'core') {
         currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
@@ -99,7 +115,7 @@ function Pool() {
       )
     }
     fetchData()
-  }, [currentSpace])
+  }, [currentSpace, currentNetwork?.url])
 
   useEffect(() => {
     if (status) {
