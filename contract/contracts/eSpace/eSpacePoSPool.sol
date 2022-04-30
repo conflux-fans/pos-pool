@@ -416,6 +416,10 @@ contract ESpacePoSPool is Ownable, Initializable {
     birdgeAddrSetted = true;
   }
 
+  function setPoolName(string memory name) public onlyOwner {
+    poolName = name;
+  }
+
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     uint256 votePower = userSummaries[_addr].available;
     if (votePower == 0) return;
