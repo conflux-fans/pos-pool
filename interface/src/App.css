@@ -1,5 +1,8 @@
 @import '~antd/dist/antd.css';
 
+body > iframe {
+  display: none;
+}
 .App {
   text-align: center;
 }

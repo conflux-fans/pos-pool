@@ -2,10 +2,10 @@
     "Header": {
       "test_note": "Harap dicatat: halaman saat ini adalah lingkungan pengujian!",
       "pos_pool": "POS Pool",
-      "connect_portal": "Fluent untuk menghubungkan",
+      "connect_fluent": "Fluent untuk menghubungkan",
+      "connect_metamask": "MetaMask untuk menghubungkan",
       "error": "Error:",
-      "unspport_network_switch_testnet": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: Conflux Testnet",
-      "unspport_network_switch_hydra": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: Conflux Hydra"
+      "unspport_network_switch": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: {{network}}"
     },
     "Home": {
       "status": "Status",
