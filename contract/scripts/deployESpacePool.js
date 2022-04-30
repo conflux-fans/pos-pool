@@ -80,7 +80,7 @@ async function main() {
   await eSpacePoolImpl.deployed();
   console.log('eSpacePool impl address: ', eSpacePoolImpl.address);
 
-  // await waitNS();
+  await waitNS();
 
   // let code = await provider.getCode(eSpacePoolImpl.address);
   // console.log(code);
@@ -95,9 +95,9 @@ async function main() {
   let tx = await eSpacePool.setBridge(coreBridgeMirrorAddress);
   await tx.wait();
 
-  // TODO: remove
-  tx = await eSpacePool.setLockPeriod(32400);
-  await tx.wait();
+  // testnet use 54000
+  // tx = await eSpacePool.setLockPeriod(54000);
+  // await tx.wait();
 
   console.log('Setting eSpacePool in CoreBridge');
   await coreBridge
@@ -114,6 +114,6 @@ main().catch(console.log);
 
 async function waitNS() {
   return new Promise(resolve => {
-    setTimeout(() => resolve(), 8000);
+    setTimeout(() => resolve(), 5000);
   });
 }
