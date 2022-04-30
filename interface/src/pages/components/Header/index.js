@@ -2,11 +2,12 @@ import {createPortal} from 'react-dom'
 import {Link} from 'react-router-dom'
 import {Layout, Button, Select} from 'antd'
 import {useTranslation} from 'react-i18next'
-import {useTryActivate, useAccount, useChainId} from '../../../hooks/useWallet';
+import {useTryActivate, useAccount} from '../../../hooks/useWallet';
 import {isTestNetEnv} from '../../../utils'
 import NotAllow from '../../../images/not-allow.png'
 import i18n from '../../../../public/locales'
 import useCurrentSpace from '../../../hooks/useCurrentSpace'
+import useCurrentNetwork from '../../../hooks/useCurrentNetwork'
 import useIsNetworkMatch from '../../../hooks/useIsNetworkMatch'
 
 const {Option} = Select
@@ -16,11 +17,11 @@ const isTest = isTestNetEnv()
 function HeaderComp() {
   const {t} = useTranslation()
   const address = useAccount()
-  const chainId = useChainId()
-  const tryActivate = useTryActivate();
-  const isNetworkMatch = useIsNetworkMatch();
-  const networkError = !isNetworkMatch;
-  const currentSpace = useCurrentSpace();
+  const tryActivate = useTryActivate()
+  const isNetworkMatch = useIsNetworkMatch()
+  const networkError = !isNetworkMatch
+  const currentSpace = useCurrentSpace()
+  const currentNetwork = useCurrentNetwork()
   
   return (
     <Header style={{width: '100%', height: 'fit-content', padding: 0}}>
@@ -71,9 +72,7 @@ function HeaderComp() {
                 {t('Header.error')}
               </p>
               <p className="text-[16px] leading-[24px] text-[#999] my-0 font-medium">
-                {isTest && chainId === '1029'
-                  ? t('Header.unspport_network_switch_testnet')
-                  : t('Header.unspport_network_switch_hydra')}
+                {t('Header.unspport_network_switch', { network: currentNetwork?.name || ''})}
               </p>
             </div>
           </div>,

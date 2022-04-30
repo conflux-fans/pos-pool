@@ -5,8 +5,7 @@
       "connect_fluent": "Fluent 연결하기",
       "connect_metamask": "MetaMask 연결하기",
       "error": "오류:",
-      "unspport_network_switch_testnet": "지원하지 않는 네트워크입니다. 월랫에서 Conflux Testnet으로 변경하시기 바랍니다.",
-      "unspport_network_switch_hydra": "지원하지 않는 네트워크입니다. 월랫에서 Conflux Hydra로 변경하시기 바랍니다."
+      "unspport_network_switch": "지원하지 않는 네트워크입니다. 월랫에서 {{network}}으로 변경하시기 바랍니다."
     },
     "Home": {
       "status": "상태",

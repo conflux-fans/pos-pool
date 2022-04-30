@@ -15,6 +15,7 @@ import {
   getDateByBlockInterval,
   getMax,
   getPrecisionAmount,
+  calculateGasMargin
 } from '../../utils'
 import {
   useBalance,
@@ -23,6 +24,7 @@ import {
   useSendTransaction,
   Unit,
 } from '../../hooks/useWallet'
+import { provider as metaMaskProvider } from '@cfxjs/use-wallet/dist/ethereum'
 import useCurrentSpace from '../../hooks/useCurrentSpace'
 import {CFX_BASE_PER_VOTE, StatusPosNode} from '../../constants'
 import Header from './Header'
@@ -75,10 +77,15 @@ function Pool() {
   useEffect(() => {
     async function fetchData() {
       const proArr = []
-      proArr.push(confluxController.provider.call('cfx_getStatus'))
+      proArr.push(currentSpace === 'core' ? confluxController.provider.call('cfx_getStatus') : metaMaskProvider.request({ method: 'eth_blockNumber' }))
       proArr.push(confluxController.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
-      const currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
+      let currentBlock;
+      if (currentSpace === 'core') {
+        currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
+      } else {
+        currentBlock = new BigNumber(data[0] || 0).toNumber()
+      }
       const lastDistribute = new BigNumber(
         data[1]?.lastDistributeBlock || 0,
       ).toNumber()
@@ -222,7 +229,7 @@ function Pool() {
           5,
         ),
       )
-      setUnstakeList(transferQueue(data[2]?._hex || data[2]))
+      setUnstakeList(transferQueue(data[2]))
 
       // get user performance fee
       let fee
@@ -263,13 +270,13 @@ function Pool() {
   }, [accountAddress, currentBlockNumber])
 
   const transferQueue = queueList => {
-    if (queueList.length === 0) return []
+    if (queueList?.length === 0) return []
     const arr = []
     queueList.forEach(item => {
-      const blockNumber = new BigNumber(item[1]).toNumber()
+      const blockNumber = new BigNumber(item[1]?._hex || item[1]).toNumber()
       if (blockNumber > currentBlockNumber) {
         arr.push({
-          amount: getCfxByVote(item[0]),
+          amount: getCfxByVote(item[0]?._hex || item[0]),
           timeStr: getDateByBlockInterval(
             blockNumber,
             currentBlockNumber,
@@ -297,6 +304,7 @@ function Pool() {
 
     try {
       let data = ''
+      let estimateData = {}
       let value = 0
       switch (type) {
         case 'stake':
@@ -308,10 +316,14 @@ function Pool() {
             .toString(10)
           if (currentSpace === 'core') {
             data = posPoolContract.increaseStake(stakeVote).data
+            estimateData = await posPoolContract
+              .increaseStake(stakeVote)
+              .estimateGasAndCollateral({
+                from: accountAddress,
+                value,
+              })
           } else {
-            data = posPoolInterface.encodeFunctionData('increaseStake', [
-              stakeVote,
-            ])
+            data = posPoolInterface.encodeFunctionData('increaseStake', [stakeVote])
           }
           setWaitStakeRes(true)
           break
@@ -322,6 +334,11 @@ function Pool() {
             .toString(10)
           if (currentSpace === 'core') {
             data = posPoolContract.decreaseStake(unstakeVote).data
+            estimateData = await posPoolContract
+              .decreaseStake(unstakeVote)
+              .estimateGasAndCollateral({
+                from: accountAddress,
+              })
           } else {
             data = posPoolInterface.encodeFunctionData('decreaseStake', [
               unstakeVote,
@@ -332,6 +349,11 @@ function Pool() {
           value = 0
           if (currentSpace === 'core') {
             data = posPoolContract.claimAllInterest().data
+            estimateData = await posPoolContract
+              .claimAllInterest()
+              .estimateGasAndCollateral({
+                from: accountAddress,
+              })
           } else {
             data = posPoolInterface.encodeFunctionData('claimAllInterest', [])
           }
@@ -344,6 +366,11 @@ function Pool() {
                 10,
               ),
             ).data
+            estimateData = await posPoolContract
+              .withdrawStake(new BigNumber(userSummary[3]).toString(10))
+              .estimateGasAndCollateral({
+                from: accountAddress,
+              })
           } else {
             data = posPoolInterface.encodeFunctionData('withdrawStake', [
               new BigNumber(userSummary?.[3]?._hex || userSummary[3]).toString(
@@ -361,8 +388,30 @@ function Pool() {
             ? format.address(poolAddress, Number(chainId))
             : poolAddress,
         data,
-        value: Unit.fromMinUnit(value).toHexMinUnit(),
+        value: Unit.fromMinUnit(value).toHexMinUnit()
       }
+      
+      if (currentSpace === 'eSpace') {
+        estimateData.gasLimit = await metaMaskProvider
+          .request({
+            method: 'eth_estimateGas',
+            params: [
+                {
+                    from: accountAddress,
+                    data,
+                    to: poolAddress,
+                    value: Unit.fromMinUnit(value).toHexMinUnit(),
+                },
+            ],
+        })
+      }
+      if (estimateData?.gasLimit) {
+        txParams.gas = Unit.fromMinUnit(calculateGasMargin(estimateData?.gasLimit || 0)).toHexMinUnit()
+      }
+      if (estimateData?.storageCollateralized) {
+        txParams.storageLimit = Unit.fromMinUnit(calculateGasMargin(String(estimateData?.storageCollateralized || 0))).toHexMinUnit()
+      }
+
       if (stakeModalShown) {
         setStakeModalShown(false)
       }

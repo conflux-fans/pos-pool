@@ -3,7 +3,7 @@ import { Table, Space, Tag, } from "antd";
 import { RightCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
-
+import { format } from 'js-conflux-sdk';
 import { getCfxByVote, getApy, getFee } from "../../utils";
 import {
   getPosAccountByPowAddress,
@@ -116,7 +116,6 @@ function Home() {
 
         const list = await posPoolManagerContract.getPools()
         const eSpaceAddresses = await Promise.allSettled(list.map(async pool => await posPoolManagerContract.eSpacePoolAddresses(pool[3])));
-
         const data = await transferData(list, eSpaceAddresses);
         setDataList(data);
         setLoading(false)
@@ -143,7 +142,7 @@ function Home() {
         arr.push({
           key: item[3],
           coreAddress: item[3],
-          eSpaceAddress: eSpaceAddresses?.[index]?.value && eSpaceAddresses?.[index]?.value !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
+          eSpaceAddress: eSpaceAddresses?.[index]?.value && format.hexAddress(eSpaceAddresses?.[index]?.value) !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
           totalAvailable: getCfxByVote(item[2]),
           name: item[4],
           apy: getApy(item[0]) + "%",
@@ -157,7 +156,7 @@ function Home() {
         arr.push({
           key: item[3],
           coreAddress: item[3],
-          eSpaceAddress: eSpaceAddresses?.[index]?.value && eSpaceAddresses?.[index]?.value !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
+          eSpaceAddress: eSpaceAddresses?.[index]?.value && format.hexAddress(eSpaceAddresses?.[index]?.value) !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
           totalAvailable: getCfxByVote(item[2]),
           name: item[4],
           apy: getApy(item[0]) + "%",

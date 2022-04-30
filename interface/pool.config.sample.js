@@ -1,28 +1,29 @@
-
 module.exports = {
   defaultLang: 'en',
-  core: {
-    testnet: {
-      poolManagerAddress: 'cfxtest:xxxxtestnet',
+  testnet: {
+    poolManagerAddress: 'cfxtest:xxxxtestnet',
+    core: {
+      name: "Conflux Testnet", 
       RPC: 'https://test.confluxrpc.com',
       networkId: 1
     },
-    mainnet: {
-      poolManagerAddress: 'cfx:xxxxmainnet',
-      RPC: 'https://main.confluxrpc.com',
-      networkId: 1029
+    eSpace: {
+      name: "Conflux eSpace (Testnet)", 
+      RPC: 'https://evmtestnet.confluxrpc.com',
+      networkId: 71
     }
   },
-  eSpace: {
-    testnet: {
-      poolManagerAddress: 'cfxtest:xxxxtestnet',
-      RPC: 'http://net8889eth.confluxrpc.com',
-      networkId: 8889
-    },
-    mainnet: {
-      poolManagerAddress: 'cfx:xxxxmainnet',
+  mainnet: {
+    poolManagerAddress: 'cfx:xxxxmainnet',
+    core: {
+      name: "Conflux Hydra", 
       RPC: 'https://main.confluxrpc.com',
       networkId: 1029
+    },
+    eSpace: {
+      name: "Conflux eSpace", 
+      RPC: 'https://evm.confluxrpc.com',
+      networkId: 1030
     }
   }
 }

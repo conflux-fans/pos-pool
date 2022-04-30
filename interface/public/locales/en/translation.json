@@ -5,8 +5,7 @@
     "connect_fluent": "Connect Fluent",
     "connect_metamask": "Connect MetaMask",
     "error": "Error:",
-    "unspport_network_switch_testnet": "Unsupported network, please change it in the wallet: Conflux Testnet",
-    "unspport_network_switch_hydra": "Unsupported network, please change it in the wallet: Conflux Hydra"
+    "unspport_network_switch": "Unsupported network, please change it in the wallet: {{network}}"
   },
   "Home": {
     "status": "Status",

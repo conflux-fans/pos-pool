@@ -20,6 +20,7 @@ const useCurrentNetwork = () => {
         return ({
             url,
             networkId,
+            name: poolConfig[isTestNetEnv() ? 'testnet' : 'mainnet'][currentSpace].name
         });
     }, [currentSpace]);
 

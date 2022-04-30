@@ -5,8 +5,7 @@
     "connect_fluent": "Fluent Kết nối ví",
     "connect_metamask": "MetaMask Kết nối ví",
     "error": "Lỗi:",
-    "unspport_network_switch_testnet": "Mạng không được hỗ trợ, vui lòng chuyển sang Conflux Testnet trong ví",
-    "unspport_network_switch_hydra": "Mạng không được hỗ trợ, vui lòng chuyển sang Conflux Hydra trong ví"
+    "unspport_network_switch": "Mạng không được hỗ trợ, vui lòng chuyển sang {{network}} trong ví"
   },
   "Home": {
     "status": "Trạng thái",

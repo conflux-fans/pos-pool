@@ -5,8 +5,7 @@
       "connect_fluent": "Fluent untuk menghubungkan",
       "connect_metamask": "MetaMask untuk menghubungkan",
       "error": "Error:",
-      "unspport_network_switch_testnet": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: Conflux Testnet",
-      "unspport_network_switch_hydra": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: Conflux Hydra"
+      "unspport_network_switch": "Jaringan tidak disupport, Silahkan mengganti di wallet anda: {{network}}"
     },
     "Home": {
       "status": "Status",
