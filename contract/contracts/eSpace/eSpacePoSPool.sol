@@ -258,6 +258,8 @@ contract ESpacePoSPool is Ownable, Initializable {
     receiver.transfer(_withdrawAmount);
     emit WithdrawStake(msg.sender, votePower);
 
+    _updatePoolShot();
+
     if (userSummaries[msg.sender].votes == 0) {
       stakers.remove(msg.sender);
     }

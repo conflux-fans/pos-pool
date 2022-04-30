@@ -135,12 +135,16 @@ contract CoreBridge is Ownable {
     }
   }
 
+  function callEVM(address addr, bytes calldata data) public onlyOwner {
+    crossSpaceCall.callEVM(bytes20(addr), data);
+  }
+
   fallback() external payable {}
 
   receive() external payable {}
 
   // ==== For test need to be removed  ====
-  function _withdrawCFX(uint256 amount) public onlyOwner {
+  /* function _withdrawCFX(uint256 amount) public onlyOwner {
     require(address(this).balance >= amount, "not enough balance");
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
@@ -187,6 +191,6 @@ contract CoreBridge is Ownable {
   function crossBackVotes(uint256 votes) public onlyOwner {
     uint256 transferValue = votes * 1000 ether;
     crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", votes));
-  }
+  } */
 
 }
