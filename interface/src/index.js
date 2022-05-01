@@ -4,9 +4,10 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {completeDetect} from '@cfxjs/use-wallet';
+import {completeDetect as completeDetectEthereum} from '@cfxjs/use-wallet/dist/ethereum';
 import '../public/locales';
 
-completeDetect().then(() => {
+Promise.all([completeDetect(), completeDetectEthereum()]).then(() => {
   ReactDOM.render(
     <React.StrictMode>
       <App />
@@ -14,7 +15,6 @@ completeDetect().then(() => {
     document.getElementById('root')
   );
 });
-
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

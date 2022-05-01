@@ -1,56 +1,39 @@
 import {
-  Conflux,
   format,
   Drip,
-} from "js-conflux-sdk/dist/js-conflux-sdk.umd.min.js";
+  Conflux,
+} from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
+import {abi as posPoolAbi} from './../../../contract/ABI/IPoSPool.json'
+import {abi as posManagerAbi} from './../../../contract/ABI/PoolManager.json'
+import poolConfig from '../../pool.config'
+import {isTestNetEnv} from './index'
+import {NETWORK_ID_CORE_MAINNET, NETWORK_ID_CORE_TESTNET} from '../constants'
 
-import { abi as posPoolAbi } from "./../../../contract/ABI/IPoSPool.json";
-import { abi as posManagerAbi } from "./../../../contract/ABI/PoolManager.json";
-import { isTestNetEnv } from "./index";
-import { NETWORK_ID_MAINNET, NETWORK_ID_TESTNET } from "../constants";
-import poolConfig from '../../pool.config';
-
-const networkId = isTestNetEnv() ? NETWORK_ID_TESTNET : NETWORK_ID_MAINNET;
-let cfxUrl = isTestNetEnv() ? poolConfig.testnet.RPC : poolConfig.mainnet.RPC;
-if (process.env.REACT_APP_TestNet === "true") {
-  cfxUrl = window.location.origin + "/rpc";
+let cfxUrl = poolConfig[isTestNetEnv() ? 'testnet' : 'mainnet'].core.RPC
+if (process.env.REACT_APP_TestNet === 'true') {
+  cfxUrl = window.location.origin + `/core-rpc`
 }
 
-const conflux = new Conflux({
+export const conflux = new Conflux({
   url: cfxUrl,
-  networkId,
-});
+  networkId: isTestNetEnv() ? NETWORK_ID_CORE_TESTNET : NETWORK_ID_CORE_MAINNET,
+})
 
-const posPoolManagerAddressTestnet = poolConfig.testnet.poolManagerAddress;
-const posPoolManagerAddressMainnet = poolConfig.mainnet.poolManagerAddress;
-const posPoolManagerAddress = isTestNetEnv()
-  ? posPoolManagerAddressTestnet
-  : posPoolManagerAddressMainnet;
+export const posPoolManagerContract = conflux.Contract({
+  abi: posManagerAbi,
+  address:
+    poolConfig[isTestNetEnv() ? 'testnet' : 'mainnet'].poolManagerAddress,
+})
 
-const getPosPoolContract = (address) =>
-  conflux.Contract({
+export const getPosAccountByPowAddress = async address => {
+  const posPoolContract = conflux.Contract({
     abi: posPoolAbi,
     address: address,
   });
 
-const posPoolManagerContract = conflux.Contract({
-  abi: posManagerAbi,
-  address: posPoolManagerAddress,
-});
+  const posAddress = format.hex(await posPoolContract.posAddress())
+  const posAccout = await conflux.provider.call('pos_getAccount', posAddress)
+  return posAccout
+}
 
-console.log('Config: ', isTestNetEnv(), posPoolManagerAddress, cfxUrl, networkId);
-
-export const getPosAccountByPowAddress = async (address) => {
-  const posPoolContract = await getPosPoolContract(address);
-  const posAddress = format.hex(await posPoolContract.posAddress());
-  const posAccout = await conflux.provider.call("pos_getAccount", posAddress);
-  return posAccout;
-};
-export {
-  conflux,
-  format,
-  Drip,
-  getPosPoolContract,
-  posPoolManagerContract,
-  posPoolManagerAddress,
-};
+export {format, Drip}

@@ -1,12 +1,4 @@
 const poolConfig = require('./pool.config');
-const TestServerUrl = poolConfig.testnet.RPC;
-const ProxyConfig = {
-  target: TestServerUrl,
-  changeOrigin: true,
-  pathRewrite: {
-    '^/rpc': '',
-  },
-}
 
 module.exports = {
   style: {
@@ -17,7 +9,20 @@ module.exports = {
   devServer: {
     historyApiFallback: true,
     proxy: {
-      '/rpc': ProxyConfig,
+      '/core-rpc': {
+        target: poolConfig.testnet.core.RPC,
+        changeOrigin: true,
+        pathRewrite: {
+          '^/core-rpc': '',
+        },
+      },
+      '/eSpace-rpc': {
+        target: poolConfig.testnet.eSpace.RPC,
+        changeOrigin: true,
+        pathRewrite: {
+          '^/eSpace-rpc': '',
+        },
+      }
     },
   },
   webpack: {

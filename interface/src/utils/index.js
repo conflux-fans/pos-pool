@@ -32,13 +32,13 @@ export function calculateGasMargin(value, margin = 0.1) {
     .toFixed(0);
 }
 
-export const getDateByBlockInterval = (minuend = 0, subtrahend = 0) => {
+export const getDateByBlockInterval = (minuend = 0, subtrahend = 0, space = 'core') => {
   const minuendBn = new BigNumber(minuend);
   const subtrahendBn = new BigNumber(subtrahend);
   const isGreater = minuendBn.isGreaterThan(subtrahendBn);
   const seconds = isGreater
-    ? minuendBn.minus(subtrahendBn).dividedBy(2).toNumber()
-    : subtrahendBn.minus(minuendBn).dividedBy(2).toNumber();
+    ? minuendBn.minus(subtrahendBn).dividedBy(space === 'core' ? 2 : 1).toNumber()
+    : subtrahendBn.minus(minuendBn).dividedBy(space === 'core' ? 2 : 1).toNumber();
   const futureDate = new Date(
     new BigNumber(Date.now()).plus(seconds * 1000).toNumber()
   );
