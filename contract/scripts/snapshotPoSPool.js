@@ -118,7 +118,7 @@ async function _getPoolStakers(poolAddress) {
     return stakerInfo;
   } catch(e) {
     // If this contract is not a standard pool contract, directly return empty array
-    // console.log(e);
+    console.log(e);
     return []; 
   }
 }
