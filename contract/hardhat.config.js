@@ -34,6 +34,11 @@ module.exports = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    espace: {
+      url: "https://evm.confluxrpc.com",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 1030,
+    },
     espaceTestnet: {
       url: "https://evmtestnet.confluxrpc.com",
       accounts: [process.env.PRIVATE_KEY],

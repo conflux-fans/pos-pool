@@ -1,6 +1,7 @@
 /* eslint-disable prefer-const */
 /* eslint-disable no-unused-vars */
 /* eslint-disable prettier/prettier */
+require('dotenv').config();
 const {
   conflux,
   account
@@ -10,11 +11,12 @@ const { ethers } = require("ethers");
 const coreBridgeInfo = require("../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json");
 const eSpacePoolInfo = require("../artifacts/contracts/eSpace/eSpacePoSPool.sol/ESpacePoSPool.json");
 const proxyInfo = require("../artifacts/contracts/eSpace/Proxy1967.sol/Proxy1967.json");
+const { loadPrivateKey } = require('../utils');
 
 const INITIALIZE_METHOD_DATA = '0x8129fc1c';
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
-const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const signer = new ethers.Wallet(loadPrivateKey(), provider);
 
 async function main() {
   let coreBridge = conflux.Contract({

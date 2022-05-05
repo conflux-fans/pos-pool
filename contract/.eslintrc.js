@@ -5,6 +5,9 @@ module.exports = {
     mocha: true,
     node: true,
   },
+  engines: {
+    "node": ">=12.0.0"
+  },
   extends: [
     "standard",
     "plugin:prettier/recommended",

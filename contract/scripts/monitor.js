@@ -2,9 +2,10 @@
 /* eslint-disable no-unneeded-ternary */
 // This is a monitor script used to check whether a PoS node is forceRetired.
 // If the node is forceRetired, this script will push Dingding message to notify the Manager.
+require('dotenv').config();
 const { conflux } = require("./conflux");
 const posNodeAddresses = require('./pos-node-addresses.json');
-const { dingAlert } = require('./dingAlert');
+const { dingAlert } = require('../utils/dingAlert');
 
 async function main() {
   setInterval(async () => {
