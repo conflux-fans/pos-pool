@@ -76,7 +76,8 @@ async function syncVoteStatus() {
     try {
       let unstakeLen = await coreBridge.queryUnstakeLen();
       debug('handleUnstake: ', unstakeLen);
-      if (unstakeLen > 0) {
+      let userSummary = await coreBridge.queryUserSummary();
+      if (unstakeLen > 0 && userSummary.locked > 0) {
         const receipt = await coreBridge
           .handleUnstake()
           .sendTransaction(sendTxMeta)

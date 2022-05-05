@@ -6,21 +6,10 @@ import "../ICrossSpaceCall.sol";
 import "../IPoSPool.sol";
 
 contract CoreBridge is Ownable {
-  // The CrossSpaceCall internal contract
   CrossSpaceCall internal crossSpaceCall;
 
   address public poolAddress;
   address public eSpacePoolAddress;
-
-  /* event CrossingVotes(uint256 votes);
-
-  event ClaimInterest(uint256 interest);
-
-  event UnstakeVotes(uint256 votes);
-
-  event WithdrawVotes(uint256 votes); */
-
-  event WithdrawCFX(uint256 votes);
 
   constructor () {
     initialize();
@@ -142,5 +131,4 @@ contract CoreBridge is Ownable {
   fallback() external payable {}
 
   receive() external payable {}
-
 }
