@@ -48,7 +48,6 @@ module.exports = {
       url: "http://net8889eth.confluxrpc.com",
       accounts: [
         process.env.PRIVATE_KEY,
-        process.env.PRIVATE_KEY_2,
       ],
       chainId: 8889,
     },
