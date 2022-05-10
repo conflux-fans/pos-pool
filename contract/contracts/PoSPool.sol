@@ -491,9 +491,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function _withdrawPoolProfit(uint256 amount) public onlyOwner {
     require(_poolSummary.interest > amount, "Not enough interest");
     require(_selfBalance() > amount, "Balance not enough");
+    _poolSummary.interest = _poolSummary.interest.sub(amount);
     address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
-    _poolSummary.interest = _poolSummary.interest.sub(amount);
     _updatePoolShot();
   }
 
