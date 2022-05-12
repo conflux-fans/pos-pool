@@ -13,34 +13,15 @@ const mockStakingInfo = require("../artifacts/contracts/mocks/Staking.sol/MockSt
 const mockPosRegisterInfo = require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
 const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
 
-function getContractInfo(name) {
-  switch (name) {
-    case "PoolDebug":
-      return poolDebugContractInfo;
-    case "Pool":
-      return poolContractInfo;
-    case "PoolManager":
-      return poolManagerInfo;
-    case "PoolProxy":
-      return poolProxyInfo;
-    case "MockStaking":
-      return mockStakingInfo;
-    case "MockPosRegister":
-      return mockPosRegisterInfo;
-    default:
-      throw new Error(`Unknown contract name: ${name}`);
-  }
-}
-
 const conflux = new Conflux({
   url: process.env.CFX_RPC_URL,
   networkId: parseInt(process.env.CFX_NETWORK_ID),
   // logger: console,
 });
 
-let account = conflux.wallet.addPrivateKey(loadPrivateKey());
+const account = conflux.wallet.addPrivateKey(loadPrivateKey());
 
-// const posRegisterContract = conflux.InternalContract('PoSRegister');
+const posRegisterContract = conflux.InternalContract('PoSRegister');
 
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,
@@ -158,7 +139,7 @@ program
   .command('QueryProxyImpl')
   .action(async () => {
     const address = await poolProxyContract.implementation();
-    console.log(address);
+    console.log('Implementation address: ', address);
   });
 
 program
@@ -185,6 +166,26 @@ program
   });
 
 program
+  .command('withdrawPoolProfit')
+  .argument('<receiver>', 'Reciver address')
+  .action(async (receiver) => {
+    const contract = poolContract;
+    const poolSummary = await contract.poolSummary();
+    const toClaim = poolSummary.interest - BigInt(Drip.fromGDrip(1));
+    console.log('Claiming pool profit: ', Drip(toClaim).toCFX());
+    const receipt = await contract._withdrawPoolProfit(toClaim).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, '_withdrawPoolProfit');
+    const transferReceipt = await conflux.cfx.sendTransaction({
+      from: account.address,
+      to: receiver,
+      value: toClaim
+    }).executed();
+    checkReceiptStatus(transferReceipt, 'send CFX');
+  });
+
+program
   .command('registerPool')
   .action(async () => {
     const _poolAddress = process.env.POOL_ADDRESS;
@@ -205,16 +206,6 @@ program
       from: account.address,
     }).executed();
     checkReceiptStatus(receipt, 'retire');
-  });
-
-program
-  .command('QueryPoolUserShareRatio')
-  .argument('[from]', 'Query transaction from')
-  .action(async (from) => {
-    const result = await poolContract.userShareRatio().call({
-      from,
-    });
-    console.log(result);
   });
 
 program
@@ -288,5 +279,24 @@ function checkDeployStatus(receipt, operate) {
   console.log(`${operate} ${receipt.outcomeStatus === 0 ? 'Success': 'Fail'}`);
   if (receipt.outcomeStatus === 0) {
     console.log('Deploy success: ', receipt.contractCreated);
+  }
+}
+
+function getContractInfo(name) {
+  switch (name) {
+    case "PoolDebug":
+      return poolDebugContractInfo;
+    case "Pool":
+      return poolContractInfo;
+    case "PoolManager":
+      return poolManagerInfo;
+    case "PoolProxy":
+      return poolProxyInfo;
+    case "MockStaking":
+      return mockStakingInfo;
+    case "MockPosRegister":
+      return mockPosRegisterInfo;
+    default:
+      throw new Error(`Unknown contract name: ${name}`);
   }
 }
