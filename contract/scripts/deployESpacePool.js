@@ -17,6 +17,7 @@ const INITIALIZE_METHOD_DATA = '0x8129fc1c';
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
 const signer = new ethers.Wallet(loadPrivateKey(), provider);
+console.log('eSpace singer address: ', signer.address);
 
 async function main() {
   let coreBridge = conflux.Contract({
