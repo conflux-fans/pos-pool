@@ -17,6 +17,7 @@ const INITIALIZE_METHOD_DATA = '0x8129fc1c';
 
 const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
 const signer = new ethers.Wallet(loadPrivateKey(), provider);
+console.log('eSpace singer address: ', signer.address);
 
 async function main() {
   let coreBridge = conflux.Contract({
@@ -79,14 +80,19 @@ async function main() {
 
   let eSpacePoolFactory = new ethers.ContractFactory(eSpacePoolInfo.abi, eSpacePoolInfo.bytecode, signer);
   let eSpacePoolImpl = await eSpacePoolFactory.deploy();
-  await eSpacePoolImpl.deployed();
+  let eSpacePoolImplDeployed = await eSpacePoolImpl.deployed();
+  let eSpacePoolImplDeployReceipt = await eSpacePoolImplDeployed.deployTransaction.wait();
   console.log('eSpacePool impl address: ', eSpacePoolImpl.address);
+  console.log('eSpacePool impl deploy receipt blockNumber: ', await eSpacePoolImplDeployReceipt.blockNumber);
 
-  await waitNS();
+  let code = await provider.getCode(eSpacePoolImpl.address);
+  if (code === '0x') {
+    console.log('eSpacePool impl deploy failed');
+    return;
+  }
 
-  // let code = await provider.getCode(eSpacePoolImpl.address);
-  // console.log(code);
-
+  let currentBlockNumber = await provider.getBlockNumber();
+  console.log('currentBlockNumber: ', currentBlockNumber);
   let proxyFactory = new ethers.ContractFactory(proxyInfo.abi, proxyInfo.bytecode, signer);
   let eSpacePool = await proxyFactory.deploy(eSpacePoolImpl.address, INITIALIZE_METHOD_DATA);
   await eSpacePool.deployed();
