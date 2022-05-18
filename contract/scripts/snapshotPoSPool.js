@@ -16,12 +16,15 @@
 // eslint-disable-next-line node/no-extraneous-require
 const superagent = require('superagent');
 const { Conflux, address } = require('js-conflux-sdk');
-const poolInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const fs = require('fs');
 const path = require('path');
 const { Parser } = require('json2csv');
 const eSpacePoolList = require('./eSpacePoolList.json');
 const eSpacePoolCoreBridges = eSpacePoolList.map(item => item.coreBridgeAddress);
+const { ehters } = require('ethers');
+const poolInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
+const ePoolInfo = require("../artifacts/contracts/eSpace/eSpacePoSPool.sol/eSpacePoSPool.json");
+const { ethers } = require('hardhat');
 
 const conflux = new Conflux({
   // url: "https://main.confluxrpc.com",
@@ -31,9 +34,12 @@ const conflux = new Conflux({
 
 const PoSRegister = conflux.InternalContract('PoSRegister');
 
+const espaceProvider = new ethers.providers.JsonRpcProvider('https://evm.confluxrpc.com');
+
 async function main() {
   await makeSnapshot();
   await convertToCSV();
+  await shotESpacePoolStakers();
   console.log('Finished');
 }
 
@@ -78,6 +84,32 @@ async function makeSnapshot() {
   nodes = nodes.filter(node => node.votes > 0);  // filter zero votes node
   await getPoolStakersInfo(nodes);
   fs.writeFileSync(path.join(__dirname, './PoSstakerSnapshot.json'), JSON.stringify(nodes, null, 2));
+}
+
+async function shotESpacePoolStakers() {
+  let stakers = [];
+
+  for(let pool of eSpacePoolList) {
+    const contract = new ethers.Contract(pool.eSpacePoolAddress, ePoolInfo.abi, espaceProvider);
+    let stakerNumber = await contract.stakerNumber();
+    for(let i = 0; i < stakerNumber; i++) {
+      let addr = await contract.stakerAddress(i);
+      let userInfo = await contract.userSummary(addr);
+      let unlockingAndUnlocked = userInfo.votes.sub(userInfo.available);
+      let unlocking = unlockingAndUnlocked.sub(userInfo.unlocked);
+      stakers.push({
+        address: addr,
+        votes: userInfo.available.add(unlocking).toString(),
+        available: userInfo.available.toString(),
+        pool: pool.eSpacePoolAddress,
+      });
+    }
+  }
+
+  const json2csvParser = new Parser();
+  const csv = json2csvParser.parse(stakers);
+  fs.writeFileSync(path.join(__dirname, './espacePoSstakerSnapshot.csv'), csv);
+  return stakers;
 }
 
 async function getPoSNodesFromScan() {

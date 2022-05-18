@@ -23,5 +23,10 @@
     "name": "PHX",
     "coreBridgeAddress": "cfx:acd5vy3w9869y79ubh9k1u3x0v50rru6gjukajwhhs",
     "eSpacePoolAddress": "0x3cbc6F7D406fe9701573FE6DdF28f4F17b5d46A3"
+  },
+  {
+    "name": "ABC",
+    "coreBridgeAddress": "cfx:acg6p471g28e3trdd0bsnwrj7ey1be36e2d3y69xdt",
+    "eSpacePoolAddress": "0xb6Eb7AA86f3886b6eDc0fC1C826221b1fb26e437"
   }
 ]
