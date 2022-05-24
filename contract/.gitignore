@@ -115,3 +115,5 @@ tmp
 keystores
 scripts/destroy.js
 scripts/PoSstakerSnapshot.json
+
+scripts/*.csv
