@@ -49,8 +49,11 @@ async function convertToCSV() {
   let data = require(path.join(__dirname, './PoSstakerSnapshot.json'));
   let stakers = [];
   for(let node of data) {
-    if (node.stakers.length > 0) {
+    if (node.stakers.length > 0) {  // If this node is pool
       for(let staker of node.stakers) {
+        // If this staker is a eSpace pool's coreBridge address directly skip it, will be handled in eSpace pool staker list
+        if (eSpacePoolCoreBridges.indexOf(staker.address) > -1) continue;
+        //
         stakers.push({
           address: staker.address,
           mirrorAddress: address.cfxMappedEVMSpaceAddress(staker.address),
@@ -58,10 +61,9 @@ async function convertToCSV() {
           available: staker.available,
           poolAddress: node.powAddress,
           isPoSNode: false,
-          isESpacePool: eSpacePoolCoreBridges.indexOf(staker.address) > -1,
         });
       }
-    } else {
+    } else {  // This is a independent PoS node
       stakers.push({
         address: node.powAddress,
         mirrorAddress: address.cfxMappedEVMSpaceAddress(node.powAddress),
@@ -69,7 +71,6 @@ async function convertToCSV() {
         available: node.available || 0,
         poolAddress: '',
         isPoSNode: true,
-        isESpacePool: false, // whether this address is a eSpace pool
       });
     }
   }
