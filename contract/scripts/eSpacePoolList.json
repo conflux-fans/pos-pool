@@ -28,5 +28,15 @@
     "name": "ABC",
     "coreBridgeAddress": "cfx:acg6p471g28e3trdd0bsnwrj7ey1be36e2d3y69xdt",
     "eSpacePoolAddress": "0xb6Eb7AA86f3886b6eDc0fC1C826221b1fb26e437"
+  },
+  {
+    "name": "Sanfeng",
+    "coreBridgeAddress": "cfx:acger8d6zha33ed9st05e6r7kc3gy6u48as6hznthc",
+    "eSpacePoolAddress": "0x219728C73196876E0C610A21433D8C1CdB4b79aA"
+  },
+  {
+    "name": "ABC",
+    "coreBridgeAddress": "cfx:acasw4gk80eat793gdbfck155nc8jn2v7ysxjegfza",
+    "eSpacePoolAddress": "'0x13cCf9788ADCf0478CFBA9b7D54134f2693f1C58"
   }
 ]
