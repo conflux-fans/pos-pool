@@ -81,7 +81,7 @@ async function syncVoteStatus() {
       if (unstakeLen > 0 && userSummary.locked > 0) {
         for(let i = 0; i < unstakeLen; i++) {
           const receipt = await coreBridge
-            .handleUnstake()
+            .handleOneUnstake()
             .sendTransaction(sendTxMeta)
             .executed();
             debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
