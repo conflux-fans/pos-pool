@@ -97,7 +97,7 @@ contract CoreBridge is Ownable {
   function handleUnstake() public onlyOwner {
     uint256 unstakeLen = queryUnstakeLen();
     if (unstakeLen == 0) return;
-    if (unstakeLen > 50) unstakeLen = 50; // max 50 unstakes per call
+    if (unstakeLen > 5) unstakeLen = 5; // max 5 unstakes per call
     IPoSPool posPool = IPoSPool(poolAddress);
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
     uint256 available = userSummary.locked;
@@ -111,6 +111,20 @@ contract CoreBridge is Ownable {
       crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
       available -= firstUnstakeVotes;
     }
+  }
+
+  function handleOneUnstake() public onlyOwner {
+    uint256 unstakeLen = queryUnstakeLen();
+    if (unstakeLen == 0) return;
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    uint256 available = userSummary.locked;
+    if (available == 0) return;
+    bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("firstUnstakeVotes()"));
+    uint256 firstUnstakeVotes = abi.decode(rawFirstUnstakeVotes, (uint256));
+    if (firstUnstakeVotes == 0 || firstUnstakeVotes > available) return;
+    posPool.decreaseStake(uint64(firstUnstakeVotes));
+    crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
   }
 
   function withdrawVotes() public onlyOwner {
