@@ -97,7 +97,7 @@ contract CoreBridge is Ownable {
   function handleUnstake() public onlyOwner {
     uint256 unstakeLen = queryUnstakeLen();
     if (unstakeLen == 0) return;
-    if (unstakeLen > 5) unstakeLen = 5; // max 10 unstakes per call
+    if (unstakeLen > 5) unstakeLen = 5; // max 5 unstakes per call
     IPoSPool posPool = IPoSPool(poolAddress);
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
     uint256 available = userSummary.locked;
