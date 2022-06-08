@@ -79,11 +79,13 @@ async function syncVoteStatus() {
       debug('handleUnstake: ', unstakeLen);
       let userSummary = await coreBridge.queryUserSummary();
       if (unstakeLen > 0 && userSummary.locked > 0) {
-        const receipt = await coreBridge
-          .handleUnstake()
-          .sendTransaction(sendTxMeta)
-          .executed();
-        debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+        for(let i = 0; i < unstakeLen; i++) {
+          const receipt = await coreBridge
+            .handleUnstake()
+            .sendTransaction(sendTxMeta)
+            .executed();
+            debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+        }
       }
     } catch (e) {
       console.log("unstake error: ", e);
