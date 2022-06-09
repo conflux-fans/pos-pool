@@ -93,7 +93,7 @@ program
 
 program
   .command('deploy')
-  .argument('<ContractName>', 'Available Contracts: PoolManager, Pool')
+  .argument('<ContractName>', 'Available Contracts: PoolManager, Pool, CoreBridge')
   .action(async (ContractName) => {
     const contractInfo = getContractInfo(ContractName);
     const contract = conflux.Contract({
@@ -325,6 +325,8 @@ function getContractInfo(name) {
       return mockStakingInfo;
     case "MockPosRegister":
       return mockPosRegisterInfo;
+    case "CoreBridge":
+      return coreBridgeInfo;
     default:
       throw new Error(`Unknown contract name: ${name}`);
   }
