@@ -12,6 +12,7 @@ const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolMana
 const mockStakingInfo = require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
 const mockPosRegisterInfo = require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
 const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
+const coreBridgeInfo = require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
 
 const conflux = new Conflux({
   url: process.env.CFX_RPC_URL,
@@ -152,6 +153,34 @@ program
   });
 
 program
+  .command('upgradeCoreBridge <address>')
+  .action(async (address) => {
+    let contract = conflux.Contract({
+      abi: poolProxyInfo.abi,
+      address: process.env.ESPACE_POOL_CORE_PROXY
+    });
+    const receipt = await contract.upgradeTo(address).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, "Upgrade");
+  });
+
+program
+  .command('CoreBridge')
+  .argument('<method>', 'Available methods: withdrawVotesByVotes, withdrawVotes')
+  .argument('[arg]', 'Arguments for the method')
+  .action(async (method, arg) => {
+    let contract = conflux.Contract({
+      abi: coreBridgeInfo.abi,
+      address: process.env.ESPACE_POOL_CORE_PROXY
+    });
+    const receipt = await contract[method](arg).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, method);
+  });
+
+  program
   .command('Pool')
   .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, _withdrawPoolProfit, addToFeeFreeWhiteList, removeFromFeeFreeWhiteList')
   .argument('[arg]', 'Arguments for the method')
