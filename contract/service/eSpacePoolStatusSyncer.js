@@ -63,12 +63,16 @@ async function syncVoteStatus() {
     try {
       let userSummary = await coreBridge.queryUserSummary();
       debug('withdrawVotes: ', userSummary.unlocked);
-      if (userSummary.unlocked > 0) {
+      let unlocked = userSummary.unlocked;
+      while(unlocked > 0) {
+        const thisTime = unlocked >= 2 ? 2 : 1;
         const receipt = await coreBridge
-          .withdrawVotes()
+          .withdrawVotesByVotes(thisTime)
           .sendTransaction(sendTxMeta)
           .executed();
         debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
+
+        unlocked -= thisTime;
       }
     } catch(e) {
       console.log('withdrawVotes error: ', e);
