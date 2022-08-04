@@ -9,8 +9,6 @@ const { loadPrivateKey } = require('../utils');
 const poolDebugContractInfo = require("../artifacts/contracts/PoSPoolDebug.sol/PoSPoolDebug.json");
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
-const mockStakingInfo = require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
-const mockPosRegisterInfo = require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
 const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
 const coreBridgeInfo = require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
 
@@ -22,7 +20,7 @@ const conflux = new Conflux({
 
 const account = conflux.wallet.addPrivateKey(loadPrivateKey());
 
-const posRegisterContract = conflux.InternalContract('PoSRegister');
+// const posRegisterContract = conflux.InternalContract('PoSRegister');
 
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,
@@ -105,6 +103,38 @@ program
       gasPrice: Drip.fromGDrip(1),
     }).executed();
     checkDeployStatus(receipt, 'deploy' + ContractName);
+  });
+
+program
+  .command('deployPoSPool')
+  .action(async () => {
+    // deploy pool implementation
+    const contract = conflux.Contract({
+      abi: poolContractInfo.abi,
+      bytecode: poolContractInfo.bytecode,
+    });
+    receipt = contract.constructor().sendTransaction({
+      from: account.address,
+      gasPrice: Drip.fromGDrip(1),
+    }).executed();
+    if (receipt.outcomeStatus !== 0) {
+      console.log('Implementation contract deploy failed: ', receipt.txExecErrorMsg);
+      return;
+    }
+    const implAddr = receipt.contractCreated;
+    // console.log('Pool implementation address: ', implAddr);
+
+    // deploy pool proxy
+    const proxyInfo = getContractInfo('PoolProxy');
+    const proxy = conflux.Contract({
+      abi: proxyInfo.abi,
+      bytecode: proxyInfo.bytecode,
+    });
+    const initializeAbiName = '0x8129fc1c';
+    receipt = await proxy.constructor(implAddr, initializeAbiName).sendTransaction({
+      from: account.address
+    }).executed();
+    checkDeployStatus(receipt, 'deploy PoSPool');
   });
 
 program
@@ -322,9 +352,9 @@ function getContractInfo(name) {
     case "PoolProxy":
       return poolProxyInfo;
     case "MockStaking":
-      return mockStakingInfo;
+      return require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
     case "MockPosRegister":
-      return mockPosRegisterInfo;
+      return require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
     case "CoreBridge":
       return coreBridgeInfo;
     default:
