@@ -32,11 +32,6 @@ To prevent forcible exit when your PoS voting node restarts, it is recommended t
 2. If the Block Number is returned, keep the node running. Run the same command again after the PoS block of the returned block number has been generated (est. several hours later). At this point, NULL should be returned. The node will no longer receive PoS rewards after this block.
 3. If NULL is returned, the node is safely stopped. The PoS voting process will resume to normal automatically after the node has been restarted (est. 2-3 hours to generate new PoS rewards).
 
-
-
-
-
-
 ## Check PoS node's status
 
 If one PoS node is force retired for some reason, all it's votes will be force retired. In this case the pool runner need **manually call PoS pool contract's `_retireUserStakes` method to unlock user's votes in contract**.
