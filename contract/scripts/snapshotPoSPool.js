@@ -23,7 +23,7 @@ const eSpacePoolList = require('./eSpacePoolList.json');
 const eSpacePoolCoreBridges = eSpacePoolList.map(item => item.coreBridgeAddress);
 const { ehters } = require('ethers');
 const poolInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
-const ePoolInfo = require("../artifacts/contracts/eSpace/eSpacePoSPool.sol/eSpacePoSPool.json");
+const ePoolInfo = require("../artifacts/contracts/eSpace/eSpacePoSPool.sol/ESpacePoSPool.json");
 const { ethers } = require('hardhat');
 
 const conflux = new Conflux({
