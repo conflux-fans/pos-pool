@@ -127,10 +127,10 @@ async function getPoSNodesFromScan() {
     if (body.code !== 0) {
       throw new Error(`API error skip=${skip} limit=${LIMIT}`);
     }
-    nodeList = nodeList.concat(body.list.map(item => ({
+    nodeList = nodeList.concat(body.data.list.map(item => ({
       posAddress: item.hex,
     })));
-    if (body.list.length < LIMIT) break;
+    if (body.data.list.length < LIMIT) break;
     skip += 50;
   }
   
