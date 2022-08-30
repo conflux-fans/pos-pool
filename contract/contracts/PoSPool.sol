@@ -34,7 +34,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // ratio shared by user: 1-10000
   uint256 public poolUserShareRatio = 9000; 
   // lock period: 7 days + half hour
-  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600; 
+  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600; 
 
   // ======================== Struct definitions =========================
 
@@ -91,6 +91,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // Free fee whitelist
   EnumerableSet.AddressSet private feeFreeWhiteList;
+
+  uint256 public _poolUnLockPeriod = ONE_DAY_BLOCK_COUNT;
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -190,6 +192,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
     poolUserShareRatio = 9000;
     _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
+    _poolUnLockPeriod = ONE_DAY_BLOCK_COUNT;
   }
   
   ///
@@ -277,7 +280,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     // update user interest
     _updateUserInterest(msg.sender);
     //
-    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnLockPeriod));
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
@@ -467,6 +470,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolLockPeriod = period;
   }
 
+  function setUnLockPeriod(uint64 period) public onlyOwner {
+    _poolUnLockPeriod = period;
+  }
+
   function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
     return feeFreeWhiteList.add(_freeAddress);
   }
@@ -537,7 +544,4 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updatePoolShot();
   }
   
-  // TODO REMOVE used for mocking reward
-  // receive() external payable {}
-
 }
