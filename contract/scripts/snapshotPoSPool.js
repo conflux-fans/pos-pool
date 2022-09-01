@@ -23,7 +23,7 @@ const eSpacePoolList = require('./eSpacePoolList.json');
 const eSpacePoolCoreBridges = eSpacePoolList.map(item => item.coreBridgeAddress);
 const { ehters } = require('ethers');
 const poolInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
-const ePoolInfo = require("../artifacts/contracts/eSpace/eSpacePoSPool.sol/eSpacePoSPool.json");
+const ePoolInfo = require("../artifacts/contracts/eSpace/eSpacePoSPool.sol/ESpacePoSPool.json");
 const { ethers } = require('hardhat');
 
 const conflux = new Conflux({
@@ -127,10 +127,10 @@ async function getPoSNodesFromScan() {
     if (body.code !== 0) {
       throw new Error(`API error skip=${skip} limit=${LIMIT}`);
     }
-    nodeList = nodeList.concat(body.list.map(item => ({
+    nodeList = nodeList.concat(body.data.list.map(item => ({
       posAddress: item.hex,
     })));
-    if (body.list.length < LIMIT) break;
+    if (body.data.list.length < LIMIT) break;
     skip += 50;
   }
   
