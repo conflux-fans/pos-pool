@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import "@confluxfans/contracts/InternalContracts/Staking.sol";
 import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
+import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 
 pragma solidity ^0.8.0;
 
@@ -15,6 +16,7 @@ abstract contract PoolContext {
 
   Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
   PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
+  ParamsControl private constant PARAMS_CONTROL = ParamsControl(0x0888000000000000000000000000000000000007);
   
   function _stakingDeposit(uint256 _amount) internal virtual {
     STAKING.deposit(_amount);
@@ -48,5 +50,13 @@ abstract contract PoolContext {
 
   function _posAddressToIdentifier(address _addr) internal view returns (bytes32) {
     return POS_REGISTER.addressToIdentifier(_addr);
+  }
+
+  function _daoVoteRound() internal view returns (uint64) {
+    return PARAMS_CONTROL.voteRound();
+  }
+
+  function _daoCastVote(ParamsControl.Vote[] memory votes) internal virtual {
+    PARAMS_CONTROL.castVote(_daoVoteRound(), votes);
   }
 }
