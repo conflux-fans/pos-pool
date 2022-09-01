@@ -92,7 +92,20 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // Free fee whitelist
   EnumerableSet.AddressSet private feeFreeWhiteList;
 
+  // Added from v2
+  uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200 * 24 * 60; // 60 days
+  uint256 DAO_VOTE_START_BLOCK_NUMBER = 112400000;  // cip94 hardfork block number
+
   uint256 public _poolUnLockPeriod = ONE_DAY_BLOCK_COUNT;
+
+  struct LockInfo {
+    uint256 amount;
+    uint256 unlockBlock;
+  }
+
+  mapping(address => LockInfo) public userLockInfos;
+
+  mapping(uint256 => uint256) public poolLockInfo;
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -298,6 +311,15 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
+
+    LockInfo memory _lockInfo = userLockInfos[msg.sender];
+    if (_lockInfo.unlockBlock > 0 && _lockInfo.unlockBlock < _blockNumber()) {
+      delete userLockInfos[msg.sender];
+    }
+
+    uint256 notLockAmount = userSummaries[msg.sender].votes * CFX_VALUE_OF_ONE_VOTE - userLockInfos[msg.sender].amount;
+    require(notLockAmount >= votePower * CFX_VALUE_OF_ONE_VOTE, "Votes is not enough");
+
     _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
     //    
     userSummaries[msg.sender].unlocked -= votePower;
@@ -448,6 +470,41 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return _userShareRatio(msg.sender);
   }
 
+  function lockPeriodBlockNumber(uint8 period) public view returns (uint256) {
+    require(period >= 0 && period <= 4, "Invalid period");
+    uint256 roundCount = (block.number - DAO_VOTE_START_BLOCK_NUMBER) / DAO_VOTE_ROUND_BLOCK_NUMBER;
+    return DAO_VOTE_START_BLOCK_NUMBER + (roundCount + 1 + period) * DAO_VOTE_ROUND_BLOCK_NUMBER;
+  }
+
+  function lockForVote(uint256 amount, uint8 peroid) public {
+    require(amount > 0, "Invalid amount");
+    require(peroid >= 0 && peroid <= 4, "Invalid period");
+    // check if user has enough staked CFX
+    uint256 _userStaked = userSummaries[msg.sender].votes * CFX_VALUE_OF_ONE_VOTE;
+    require(_userStaked >= amount, "Not enough staked CFX");
+    LockInfo memory _userCurrentLock = userLockInfos[msg.sender];
+    uint256 lockBlockNumber = lockPeriodBlockNumber(peroid);
+    require(amount > _userCurrentLock.amount || lockBlockNumber > _userCurrentLock.unlockBlock, "Already locked");
+
+    
+    if (lockBlockNumber == _userCurrentLock.unlockBlock) {
+      poolLockInfo[lockBlockNumber] = poolLockInfo[lockBlockNumber].add(amount.sub(_userCurrentLock.amount));
+      userLockInfos[msg.sender].amount = amount;
+    } else {
+      poolLockInfo[_userCurrentLock.unlockBlock] = poolLockInfo[_userCurrentLock.unlockBlock].sub(_userCurrentLock.amount);
+      poolLockInfo[lockBlockNumber] = poolLockInfo[lockBlockNumber].add(amount);
+    }
+
+    _stakingVoteLock(poolLockInfo[lockBlockNumber], lockBlockNumber);
+  }
+
+  function userLockPower() public view returns (uint256) {
+    LockInfo memory _lInfo = userLockInfos[msg.sender];
+    uint256 weight = (_lInfo.unlockBlock - _blockNumber()) / (ONE_DAY_BLOCK_COUNT * 90);
+    if (weight > 4) weight = 4;
+    return _lInfo.amount.div(4).mul(weight);
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -542,6 +599,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     }
 
     _updatePoolShot();
+  }
+
+  function _setDaoVoteStartBlockNumber(uint256 _number) public onlyOwner {
+    DAO_VOTE_START_BLOCK_NUMBER = _number;
   }
   
 }

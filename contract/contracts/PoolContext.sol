@@ -24,6 +24,10 @@ abstract contract PoolContext {
     STAKING.withdraw(_amount);
   }
 
+  function _stakingVoteLock(uint256 amount, uint256 unlockBlockNumber) internal virtual {
+    STAKING.voteLock(amount, unlockBlockNumber);
+  }
+
   function _posRegisterRegister(
     bytes32 indentifier,
     uint64 votePower,
