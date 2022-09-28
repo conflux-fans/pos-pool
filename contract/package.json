@@ -5,7 +5,7 @@
   "main": "index.js",
   "bin": "./bin/pool.js",
   "dependencies": {
-    "@confluxfans/contracts": "^0.3.0",
+    "@confluxfans/contracts": "^0.3.1",
     "@openzeppelin/contracts": "^4.3.2",
     "commander": "^8.3.0",
     "debug": "^4.3.4",

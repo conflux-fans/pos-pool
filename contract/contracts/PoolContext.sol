@@ -52,11 +52,11 @@ abstract contract PoolContext {
     return POS_REGISTER.addressToIdentifier(_addr);
   }
 
-  function _daoVoteRound() internal view returns (uint64) {
-    return PARAMS_CONTROL.voteRound();
+  function _daoCurrentRound() internal view returns (uint64) {
+    return PARAMS_CONTROL.currentRound();
   }
 
   function _daoCastVote(ParamsControl.Vote[] memory votes) internal virtual {
-    PARAMS_CONTROL.castVote(_daoVoteRound(), votes);
+    PARAMS_CONTROL.castVote(_daoCurrentRound(), votes);
   }
 }
