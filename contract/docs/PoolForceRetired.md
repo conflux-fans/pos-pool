@@ -28,7 +28,7 @@ Then all Pool contract's CFX will be in unlocking state.
 
 To prevent forcible exit when your PoS voting node restarts, it is recommended to perform the following operations:
 
-1. If you run `./conflux RPC local PoS stop_election` on the PoS node, the node will return either NULL or a future PoS Block Number. After the command has been executed, the node will not apply to join the PoS committee for the next round.
+1. If you run `./conflux rpc local pos stop_election` on the PoS node, the node will return either NULL or a future PoS Block Number. After the command has been executed, the node will not apply to join the PoS committee for the next round.
 2. If the Block Number is returned, keep the node running. Run the same command again after the PoS block of the returned block number has been generated (est. several hours later). At this point, NULL should be returned. The node will no longer receive PoS rewards after this block.
 3. If NULL is returned, the node is safely stopped. The PoS voting process will resume to normal automatically after the node has been restarted (est. 2-3 hours to generate new PoS rewards).
 
