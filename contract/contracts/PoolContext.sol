@@ -59,4 +59,8 @@ abstract contract PoolContext {
   function _daoCastVote(ParamsControl.Vote[] memory votes) internal virtual {
     PARAMS_CONTROL.castVote(_daoCurrentRound(), votes);
   }
+
+  function _daoReadVote(address addr) internal virtual returns (ParamsControl.Vote[] memory votes) {
+    return PARAMS_CONTROL.readVote(addr);
+  }
 }

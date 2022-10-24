@@ -5,6 +5,7 @@ require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
+require('hardhat-conflux');
 // require("hardhat-contract-sizer");
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -38,6 +39,11 @@ module.exports = {
       url: "https://evm.confluxrpc.com",
       accounts: [process.env.PRIVATE_KEY],
       chainId: 1030,
+    },
+    cfx8888: {
+        url: 'http://net8888cfx.confluxrpc.com',
+        accounts: [process.env.PRIVATE_KEY],
+        chainId: 8888,
     },
     espaceTestnet: {
       url: "https://evmtestnet.confluxrpc.com",

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 import "./PoolAPY.sol";
@@ -93,9 +94,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   EnumerableSet.AddressSet private feeFreeWhiteList;
 
   // Added from v2
-  uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200 * 24 * 60; // 60 days
-  uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200 * 24 * 90; // 90 days
+//   uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200 * 24 * 60; // 60 days
+//   uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200 * 24 * 90; // 90 days
   uint256 DAO_VOTE_START_BLOCK_NUMBER = 112400000;  // cip94 hardfork block number
+
+  uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200;
+  uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200;
 
   uint256 public _poolUnLockPeriod = ONE_DAY_BLOCK_COUNT;
 
@@ -104,10 +108,18 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint256 unlockBlock;
   }
 
+  struct VoteInfo {
+    uint64 round;
+    ParamsControl.Vote[] votes;
+  }
+
   mapping(address => LockInfo) public userLockInfos;
+  mapping(address => VoteInfo) public userVoteInfos;
 
   // unlockNumber => CFX amount
   mapping(uint256 => uint256) public poolLockInfo;
+  // round => Vote
+  mapping(uint64 => ParamsControl.Vote[]) public poolVoteInfo;
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -485,9 +497,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint256 _userStaked = userSummaries[msg.sender].votes * CFX_VALUE_OF_ONE_VOTE;
     require(_userStaked >= amount, "Not enough staked CFX");
 
+    if (userLockInfos[msg.sender].unlockBlock <= block.number) delete userLockInfos[msg.sender];
+
     uint256 lockBlockNumber = lockPeriodBlockNumber(peroid);
     LockInfo memory _userCurrentLock = userLockInfos[msg.sender];
-    require(amount > _userCurrentLock.amount || lockBlockNumber > _userCurrentLock.unlockBlock, "Already locked");
+    require(amount >= _userCurrentLock.amount && lockBlockNumber >= _userCurrentLock.unlockBlock, "Already locked");
     
     if (lockBlockNumber == _userCurrentLock.unlockBlock) {
       poolLockInfo[lockBlockNumber] = poolLockInfo[lockBlockNumber].add(amount.sub(_userCurrentLock.amount));
@@ -500,18 +514,72 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     }
 
     uint256 lockSum = 0;
-    for(uint256 i = peroid; i >= 1; i--) {
-        uint256 _unlockBlockNum = lockBlockNumber - (peroid - i) * DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER;
+    for(uint256 i = 4; i >= 1; i--) {
+        uint256 _unlockBlockNum = lockPeriodBlockNumber(uint8(i));
         lockSum = lockSum.add(poolLockInfo[_unlockBlockNum]);
         _stakingVoteLock(lockSum, _unlockBlockNum);
     }
   }
 
-  function userLockPower() public view returns (uint256) {
-    LockInfo memory _lInfo = userLockInfos[msg.sender];
+  function userLockPower(address _user) public view returns (uint256) {
+    LockInfo memory _lInfo = userLockInfos[_user];
+    if (_lInfo.unlockBlock <= block.number) return 0;
     uint256 weight = (_lInfo.unlockBlock - _blockNumber()) / DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER;
-    if (weight > 4) weight = 4;
+    if (weight == 3) weight = 2; // weight for 3rd period is actually 2
+    if (weight > 4) weight = 4; // max weight is 4
     return _lInfo.amount.div(4).mul(weight);
+  }
+
+  function _sumVote(ParamsControl.Vote calldata vote_data) internal pure returns (uint256) {
+    uint256 total = 0;
+    for (uint256 i = 0; i < vote_data.votes.length; i++) {
+      total = total.add(vote_data.votes[i]);
+    }
+    return total;
+  }
+
+  // NOTE: assume vote_data is sorted by topic_index
+  function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public {
+    // check vote power is enough for each Vote
+    uint256 userVotePower = userLockPower(msg.sender);
+    for(uint256 i = 0; i < vote_data.length; i++) {
+        uint256 totalVote = _sumVote(vote_data[i]);
+        require(totalVote <= userVotePower, 'Not enough vote power');
+    }
+    // clear user old round vote
+    if (userVoteInfos[msg.sender].round < _daoCurrentRound()) delete userVoteInfos[msg.sender];
+    
+    // read current pool vote
+    VoteInfo memory _voteInfo = userVoteInfos[msg.sender];
+    // sub user current round vote
+    if (_voteInfo.round == _daoCurrentRound()) {
+        for (uint256 i = 0; i < _voteInfo.votes.length; i++) {
+            poolVoteInfo[vote_round][i].votes[0] = poolVoteInfo[vote_round][i].votes[0].sub(_voteInfo.votes[i].votes[0]);
+            poolVoteInfo[vote_round][i].votes[1] = poolVoteInfo[vote_round][i].votes[1].sub(_voteInfo.votes[i].votes[1]);
+            poolVoteInfo[vote_round][i].votes[2] = poolVoteInfo[vote_round][i].votes[2].sub(_voteInfo.votes[i].votes[2]);
+        }
+    }
+
+    // save user vote data
+    userVoteInfos[msg.sender].round = vote_round;
+    delete userVoteInfos[msg.sender].votes;
+    for(uint256 i = 0; i < vote_data.length; i++) {
+        userVoteInfos[msg.sender].votes.push(vote_data[i]);
+    }
+    
+    // add user new round vote
+    if (poolVoteInfo[vote_round].length < vote_data.length) {
+        for (uint256 i = poolVoteInfo[vote_round].length; i < vote_data.length; i++) {
+            poolVoteInfo[vote_round].push(ParamsControl.Vote({topic_index: vote_data[i].topic_index, votes: [uint256(0), 0, 0]}));
+        }
+    }
+    for (uint256 i = 0; i < vote_data.length; i++) {
+        poolVoteInfo[vote_round][i].votes[0] = poolVoteInfo[vote_round][i].votes[0].add(vote_data[i].votes[0]);
+        poolVoteInfo[vote_round][i].votes[1] = poolVoteInfo[vote_round][i].votes[1].add(vote_data[i].votes[1]);
+        poolVoteInfo[vote_round][i].votes[2] = poolVoteInfo[vote_round][i].votes[2].add(vote_data[i].votes[2]);
+    }
+    // cast vote
+    _daoCastVote(poolVoteInfo[vote_round]);
   }
 
   // ======================== admin methods =====================
