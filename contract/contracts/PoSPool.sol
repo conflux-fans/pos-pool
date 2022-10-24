@@ -34,7 +34,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   bool public _poolRegisted;
   // ratio shared by user: 1-10000
   uint256 public poolUserShareRatio = 9000; 
-  // lock period: 7 days + half hour
+  // lock period: 13 days + half hour
   uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600; 
 
   // ======================== Struct definitions =========================
@@ -101,8 +101,6 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200;
   uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200;
 
-  uint256 public _poolUnLockPeriod = ONE_DAY_BLOCK_COUNT;
-
   struct LockInfo {
     uint256 amount;
     uint256 unlockBlock;
@@ -120,6 +118,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   mapping(uint256 => uint256) public poolLockInfo;
   // round => Vote
   mapping(uint64 => ParamsControl.Vote[]) public poolVoteInfo;
+
+  // unlock period: 1 days + half hour
+  uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
+
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -218,8 +220,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
     ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
     poolUserShareRatio = 9000;
-    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
-    _poolUnLockPeriod = ONE_DAY_BLOCK_COUNT;
+    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600;
+    _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 3600;
   }
   
   ///
@@ -307,7 +309,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     // update user interest
     _updateUserInterest(msg.sender);
     //
-    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnLockPeriod));
+    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnlockPeriod));
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
@@ -604,8 +606,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolLockPeriod = period;
   }
 
-  function setUnLockPeriod(uint64 period) public onlyOwner {
-    _poolUnLockPeriod = period;
+
+  function setUnlockPeriod(uint64 period) public onlyOwner {
+    _poolUnlockPeriod = period;
   }
 
   function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {

@@ -29,8 +29,8 @@ contract ESpacePoSPool is Ownable, Initializable {
   address private _bridgeAddress;
   // ratio shared by user: 1-10000
   uint256 public poolUserShareRatio = 9600;
-  // lock period: 7 days + half hour
-  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 1800;
+  // lock period: 13 days + half hour
+  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 1800;
   string public poolName; // = "eSpacePool";
   uint256 private _poolAPY = 0;
 
@@ -54,6 +54,8 @@ contract ESpacePoSPool is Ownable, Initializable {
   uint256 public withdrawableCfx;
   // Votes need to cross from eSpace to Core
   uint256 public crossingVotes;
+
+  uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 1800;
 
   // ======================== Struct definitions =========================
   struct PoolSummary {
@@ -174,7 +176,8 @@ contract ESpacePoSPool is Ownable, Initializable {
   function initialize() public initializer {
     CFX_COUNT_OF_ONE_VOTE = 1000;
     CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
+    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600;
+    _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 3600;
     poolUserShareRatio = 9600;
   }
 
@@ -228,7 +231,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     // update user interest
     _updateUserInterest(msg.sender);
     //
-    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnlockPeriod));
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
@@ -403,6 +406,10 @@ contract ESpacePoSPool is Ownable, Initializable {
   ///
   function setLockPeriod(uint64 period) public onlyOwner {
     _poolLockPeriod = period;
+  }
+
+  function setUnlockPeriod(uint64 period) public onlyOwner {
+    _poolUnlockPeriod = period;
   }
 
   /// @param count Vote cfx count, unit is cfx
