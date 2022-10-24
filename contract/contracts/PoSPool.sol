@@ -94,12 +94,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   EnumerableSet.AddressSet private feeFreeWhiteList;
 
   // Added from v2
+  uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200;
+  uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200;
 //   uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200 * 24 * 60; // 60 days
 //   uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200 * 24 * 90; // 90 days
   uint256 DAO_VOTE_START_BLOCK_NUMBER = 112400000;  // cip94 hardfork block number
-
-  uint256 constant DAO_VOTE_ROUND_BLOCK_NUMBER = 7200;
-  uint256 constant DAO_VOTE_LOCK_PERIOD_BLOCK_NUMBER = 7200;
 
   struct LockInfo {
     uint256 amount;
