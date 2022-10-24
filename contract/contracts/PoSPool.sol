@@ -33,8 +33,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   bool public _poolRegisted;
   // ratio shared by user: 1-10000
   uint256 public poolUserShareRatio = 9000; 
-  // lock period: 7 days + half hour
-  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600; 
+  // lock period: 13 days + half hour
+  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600; 
 
   // ======================== Struct definitions =========================
 
@@ -91,6 +91,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // Free fee whitelist
   EnumerableSet.AddressSet private feeFreeWhiteList;
+
+  // unlock period: 1 days + half hour
+  uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -189,7 +192,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
     ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
     poolUserShareRatio = 9000;
-    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 7 + 3600;
+    _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600;
+    _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 3600;
   }
   
   ///
@@ -277,7 +281,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     // update user interest
     _updateUserInterest(msg.sender);
     //
-    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userOutqueues[msg.sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnlockPeriod));
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     userSummaries[msg.sender].available -= votePower;
     userSummaries[msg.sender].locked -= votePower;
@@ -465,6 +469,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   ///
   function setLockPeriod(uint64 period) public onlyOwner {
     _poolLockPeriod = period;
+  }
+
+  function setUnlockPeriod(uint64 period) public onlyOwner {
+    _poolUnlockPeriod = period;
   }
 
   function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
