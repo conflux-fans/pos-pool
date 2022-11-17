@@ -95,6 +95,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
+  string public constant VERSION = "1.2.0";
+
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -551,17 +553,6 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updatePoolShot();
   }
 
-  /* function decreaseStakeBatch(uint256 offset, uint256 limit) public onlyOwner {
-    uint256 len = stakers.length();
-    if (len == 0) return;
-    uint256 end = offset + limit;
-    if (end > len) end = len;
-    for (uint256 i = offset; i < end; i++) {
-      UserSummary memory us = userSummary(stakers.at(i));
-      decreaseStakeByAdmin(stakers.at(i), uint64(us.available)); // NOTE: should wait all vote is locked
-    }
-  } */
-
   function decreaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
     userSummaries[sender].locked += userInqueues[sender].collectEndedVotes();
     require(userSummaries[sender].locked >= votePower, "Locked is not enough");
@@ -584,17 +575,6 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolSummary.available -= votePower;
     _updatePoolShot();
   }
-
-  /* function increaseStakeBatch(uint256 offset, uint256 limit) public onlyOwner {
-    uint256 len = stakers.length();
-    if (len == 0) return;
-    uint256 end = offset + limit;
-    if (end > len) end = len;
-    for (uint256 i = offset; i < end; i++) {
-      UserSummary memory us = userSummary(stakers.at(i));
-      increaseStakeByAdmin(stakers.at(i), uint64(us.unlocked)); // NOTE: should wait all vote is unlocked
-    }
-  } */
 
   // restake user unlocked votes
   function increaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {

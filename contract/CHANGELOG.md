@@ -1,6 +1,10 @@
 CHANGELOG
 ===
 
+## v1.2.0
+
+* Add methods to enable/disable pool operations
+
 ## v1.1.0
 
 * Adjust PoS unlock period to 1 day and lock period to 13 day for both Core Space and eSpace
