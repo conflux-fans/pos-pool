@@ -40,6 +40,9 @@ Note: 若有投票未完成锁定，该脚本会给出提示并退出。
 
 ## 3 使用新的 Register Data 重新注册
 
+需要等待所有票解锁完成之后，方可进行新的注册操作。可在 [Scan PoS 账户详情页 待处理票权 Tab](https://confluxscan.net/pos/accounts/0x947c684e270131a1aab8711d2e321fc0e909318d885cfe69d4fc0158aded22d0?tab=right-status) 查看此信息（需要替换自己 pos 节点的地址信息）。
+
+
 使用新的PoS 节点注册数据，执行注册操作，将注册数据配置到 env 文件中的 `POS_REGIST_DATA` 配置项.
 
 ```shell
