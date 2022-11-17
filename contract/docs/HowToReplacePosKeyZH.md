@@ -7,8 +7,6 @@
 3. 待所有票解锁完成之后，获取新的 PoS 节点注册数据，并执行注册操作，并打开矿池的操作功能
 4. 重新帮所有用户的票进行质押操作
 
-TODO 细化每步操作的文档
-
 ## Pre
 
 ### 升级合约代码
@@ -24,13 +22,13 @@ node bin/pool.js Pool setLockPeriod 2250000
 node bin/pool.js Pool setUnlockPeriod 176400
 ```
 
-## 关闭矿池操作功能
+## 1 关闭矿池操作功能
 
 ```shell
 node bin/pool.js Pool setPoolRegisted false
 ```
 
-## 解锁所有票
+## 2 解锁所有票
 
 待所有票完成锁定之后，由管理员将矿池的所有用户的票进行解锁操作
 
@@ -38,7 +36,9 @@ node bin/pool.js Pool setPoolRegisted false
 node scripts/replaceKey/unlockAllVotes.js
 ```
 
-## 使用新的 Register Data 重新注册
+Note: 若有投票未完成锁定，该脚本会给出提示并退出。
+
+## 3 使用新的 Register Data 重新注册
 
 使用新的PoS 节点注册数据，执行注册操作，将注册数据配置到 env 文件中的 `POS_REGIST_DATA` 配置项.
 
@@ -53,8 +53,12 @@ node bin/pool.js registerPool
 * 注册 data 的获取方法为 `./conflux rpc local pos register --power 1`
 * 管理员可将原来注册用的 `1 vote` 提取出来，重新用于注册
 
-## 重新将所有的票进行质押
+## 4 重新将所有的票进行质押
+
+待所有票完成解锁之后，由管理员将矿池的所有用户的票进行重新锁定操作
 
 ```shell
 node scripts/replaceKey/reLockAllVotes.js
 ```
+
+Note: 若有投票未完成锁定，该脚本会给出提示并退出。
