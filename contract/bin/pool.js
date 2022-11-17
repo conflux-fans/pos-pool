@@ -6,35 +6,32 @@ require('dotenv').config();
 const {Conflux, Drip, format} = require('js-conflux-sdk');
 const { program } = require("commander");
 const { loadPrivateKey } = require('../utils');
-const poolDebugContractInfo = require("../artifacts/contracts/PoSPoolDebug.sol/PoSPoolDebug.json");
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
-const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
-const coreBridgeInfo = require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
+
+const {
+    CFX_RPC_URL,
+    CFX_NETWORK_ID,
+    POOL_ADDRESS,
+    POOL_MANAGER_ADDRESS,
+} = process.env;
 
 const conflux = new Conflux({
-  url: process.env.CFX_RPC_URL,
-  networkId: parseInt(process.env.CFX_NETWORK_ID),
+  url: CFX_RPC_URL,
+  networkId: parseInt(CFX_NETWORK_ID),
   // logger: console,
 });
 
 const account = conflux.wallet.addPrivateKey(loadPrivateKey());
 
-// const posRegisterContract = conflux.InternalContract('PoSRegister');
-
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,
-  address: process.env.POOL_ADDRESS,
-});
-
-const poolProxyContract = conflux.Contract({
-  abi: poolProxyInfo.abi,
-  address: process.env.POOL_ADDRESS,
+  address: POOL_ADDRESS,
 });
 
 const poolManagerContract = conflux.Contract({
   abi: poolManagerInfo.abi,
-  address: process.env.POOL_MANAGER_ADDRESS,
+  address: POOL_MANAGER_ADDRESS,
 });
 
 program.version("0.0.1");
@@ -46,10 +43,10 @@ program
   .action(async (type) => {
     if (type === 'pos') {
       const status = await conflux.pos.getStatus();
-      console.log(status);
+      console.log('PoS Status:', status);
     } else {
       const status = await conflux.cfx.getStatus();
-      console.log(status);
+      console.log('PoW Status:', status);
     }
   });
 
@@ -91,14 +88,19 @@ program
 
 program
   .command('deploy')
-  .argument('<ContractName>', 'Available Contracts: PoolManager, Pool, CoreBridge')
-  .action(async (ContractName) => {
+  .argument('<ContractName>', 'Available Contracts: PoolManager, Pool, CoreBridge, PoolProxy')
+  .argument('[implAddr]', 'When deploy PoolProxy, need to specify the pool impl address')
+  .action(async (ContractName, implAddr) => {
+    if (ContractName === 'PoolProxy' && !implAddr) {
+        throw new Error('Need to specify the pool impl address');
+    }
     const contractInfo = getContractInfo(ContractName);
     const contract = conflux.Contract({
       abi: contractInfo.abi,
       bytecode: contractInfo.bytecode,
     });
-    const receipt = await contract.constructor().sendTransaction({
+    const pendingTx = ContractName === 'PoolProxy' ? contract.constructor(implAddr, '0x8129fc1c') : contract.constructor();
+    const receipt = await pendingTx.sendTransaction({
       from: account.address,
       gasPrice: Drip.fromGDrip(1),
     }).executed();
@@ -107,6 +109,7 @@ program
 
 program
   .command('deployPoSPool')
+  .description('Deploy PoSPool in proxy mode')
   .action(async () => {
     // deploy pool implementation
     const contract = conflux.Contract({
@@ -122,7 +125,7 @@ program
       return;
     }
     const implAddr = receipt.contractCreated;
-    // console.log('Pool implementation address: ', implAddr);
+    console.log('Pool implementation address: ', implAddr);
 
     // deploy pool proxy
     const proxyInfo = getContractInfo('PoolProxy');
@@ -138,37 +141,28 @@ program
   });
 
 program
-  .command('deployProxy')
-  .argument('<logicAddress>', 'Logic address')
-  .action(async (logicAddress) => {
-    const contractInfo = getContractInfo('PoolProxy');
-    const contract = conflux.Contract({
-      abi: contractInfo.abi,
-      bytecode: contractInfo.bytecode,
-    });
-    const initializeAbiName = '0x8129fc1c';
-    const receipt = await contract.constructor(logicAddress, initializeAbiName).sendTransaction({
-      from: account.address
-    }).executed();
-    checkDeployStatus(receipt, 'deploy proxy');
-  });
-
-program
   .command('deployDebugPool')
   .action(async (arg) => {
+    const meta = getContractInfo('PoolDebug');
     const contract = conflux.Contract({
-      abi: poolDebugContractInfo.abi,
-      bytecode: poolDebugContractInfo.bytecode,
+      abi: meta.abi,
+      bytecode: meta.bytecode,
     });
-    const receipt = await contract.constructor(process.env.MOCK_STAKE, process.env.MOCK_POS_REGISTER).sendTransaction({
+    const { MOCK_STAKE, MOCK_POS_REGISTER } = process.env;
+    const receipt = await contract.constructor(MOCK_STAKE, MOCK_POS_REGISTER).sendTransaction({
       from: account.address
     }).executed();
     checkDeployStatus(receipt, 'deploy debugPool');
   });
 
 program
-  .command('QueryProxyImpl')
+  .command('queryPoolImplAddr')
   .action(async () => {
+    const proxyInfo = getContractInfo('PoolProxy');
+    const poolProxyContract = conflux.Contract({
+        abi: proxyInfo.abi,
+        address: POOL_ADDRESS,
+    });
     const address = await poolProxyContract.implementation();
     console.log('Implementation address: ', address);
   });
@@ -176,6 +170,11 @@ program
 program
   .command('upgradePoolContract <address>')
   .action(async (address) => {
+    const proxyInfo = getContractInfo('PoolProxy');
+    const poolProxyContract = conflux.Contract({
+        abi: proxyInfo.abi,
+        address: POOL_ADDRESS,
+    });
     const receipt = await poolProxyContract.upgradeTo(address).sendTransaction({
       from: account.address,
     }).executed();
@@ -183,13 +182,14 @@ program
   });
 
 program
-  .command('upgradeCoreBridge <address>')
-  .action(async (address) => {
+  .command('upgradeProxy1967 <proxyAddr> <implAddr>')
+  .action(async (proxyAddr, implAddr) => {
+    let meta = getContractInfo('PoolProxy');
     let contract = conflux.Contract({
-      abi: poolProxyInfo.abi,
-      address: process.env.ESPACE_POOL_CORE_PROXY
+      abi: meta.abi,
+      address: proxyAddr
     });
-    const receipt = await contract.upgradeTo(address).sendTransaction({
+    const receipt = await contract.upgradeTo(implAddr).sendTransaction({
       from: account.address,
     }).executed();
     checkReceiptStatus(receipt, "Upgrade");
@@ -200,8 +200,9 @@ program
   .argument('<method>', 'Available methods: withdrawVotesByVotes, withdrawVotes')
   .argument('[arg]', 'Arguments for the method')
   .action(async (method, arg) => {
+    const meta = getContractInfo('CoreBridge');
     let contract = conflux.Contract({
-      abi: coreBridgeInfo.abi,
+      abi: meta.abi,
       address: process.env.ESPACE_POOL_CORE_PROXY
     });
     const receipt = await contract[method](arg).sendTransaction({
@@ -212,14 +213,21 @@ program
 
   program
   .command('Pool')
-  .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, _withdrawPoolProfit, addToFeeFreeWhiteList, removeFromFeeFreeWhiteList')
-  .argument('[arg]', 'Arguments for the method')
-  .argument('[value]', 'Transaction value')
-  .action(async (method, arg, value=0) => {
+  .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, setUnlockPeriod, _withdrawPoolProfit, addToFeeFreeWhiteList, removeFromFeeFreeWhiteList, setPoolRegisted')
+  .argument('[args...]', 'Arguments for the method')
+  .action(async (method, args) => {
+    // normalize boolean value
+    for(let i = 0; i < args.length; i++) {
+        if (args[i] === 'true') {
+            args[i] = true;
+        } else if (args[i] === 'false') {
+            args[i] = false;
+        }
+    }
+
     const contract = poolContract;
-    const receipt = await contract[method](arg).sendTransaction({
-      from: account.address,
-      value: Drip.fromCFX(parseInt(value)),
+    const receipt = await contract[method](...args).sendTransaction({
+        from: account.address,
     }).executed();
     checkReceiptStatus(receipt, method);
   });
@@ -247,11 +255,10 @@ program
 program
   .command('registerPool')
   .action(async () => {
-    const _poolAddress = process.env.POOL_ADDRESS;
     const receipt = await conflux.cfx.sendTransaction({
       from: account.address,
       value: Drip.fromCFX(1000),
-      to: _poolAddress,
+      to: POOL_ADDRESS,
       data: process.env.POS_REGIST_DATA,
     }).executed();
     checkReceiptStatus(receipt, 'Register Pool');
@@ -270,14 +277,9 @@ program
 program
   .command('QueryPool')
   .argument('<method>', 'Available methods: poolSummary, userSummary, identifierToAddress, userInQueue, userOutQueue, userInterest, poolAPY, poolName, userInterest, posAddress')
-  .argument('[arg]', 'Arguments for the method')
-  .action(async (method, arg) => {
-    if (!poolContract[method]) {
-      console.log('Invalid method');
-      return;
-    }
-    const args = [];
-    if (arg) args.push(arg);
+  .argument('[args...]', 'Arguments for the method')
+  .action(async (method, args) => {
+    if (!poolContract[method]) throw new Error ('Invalid method');
     const result = await poolContract[method](...args);
     console.log(result);
   });
@@ -286,10 +288,7 @@ program
   .command('QueryPoolManager')
   .argument('<method>', 'Available methods: getPools, getPoolAddresses')
   .action(async (method) => {
-    if (!poolManagerContract[method]) {
-      console.log('Invalid method');
-      return;
-    }
+    if (!poolManagerContract[method]) throw new Error ('Invalid method');
     const result = await poolManagerContract[method]();
     console.log(result);
   });
@@ -299,10 +298,7 @@ program
   .argument('<method>', 'Available methods: addPool, removePool')
   .argument('<arg>', 'Pool address')
   .action(async (method, arg) => {
-    if (!poolManagerContract[method]) {
-      console.log('Invalid method');
-      return;
-    }
+    if (!poolManagerContract[method]) throw new Error ('Invalid method');
     const receipt = await poolManagerContract[method](arg).sendTransaction({
       from: account.address
     }).executed();
@@ -311,8 +307,8 @@ program
 
 program
   .command('PoolManagerSetEspacePool')
-  .argument('<arg>', 'Pool address')
-  .argument('<arg>', 'Pool address')
+  .argument('<arg>', 'corePoolAddr')
+  .argument('<arg>', 'ePoolAddr')
   .action(async (corePoolAddr, ePoolAddr) => {
     const receipt = await poolManagerContract.setEspacePool(corePoolAddr, ePoolAddr).sendTransaction({
       from: account.address
@@ -322,10 +318,18 @@ program
 
 program
   .command('PoolManagerQueryEPool')
-  .argument('<arg>', 'Pool address')
+  .argument('<arg>', 'corePoolAddr')
   .action(async (corePoolAddr) => {
     const ePoolAddress = await poolManagerContract.eSpacePoolAddresses(corePoolAddr);
     console.log(format.hexAddress(ePoolAddress));
+  });
+
+program
+  .command('testCmd')
+  .argument('<method>', 'Required arg')
+  .argument('[arg...]', 'Arguments for the method')
+  .action(async (method, arg) => {
+    console.log(method, arg);
   });
 
 program.parse(process.argv);
@@ -344,19 +348,19 @@ function checkDeployStatus(receipt, operate) {
 function getContractInfo(name) {
   switch (name) {
     case "PoolDebug":
-      return poolDebugContractInfo;
+      return require("../artifacts/contracts/PoSPoolDebug.sol/PoSPoolDebug.json");
     case "Pool":
       return poolContractInfo;
     case "PoolManager":
       return poolManagerInfo;
     case "PoolProxy":
-      return poolProxyInfo;
+      return require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
     case "MockStaking":
       return require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
     case "MockPosRegister":
       return require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
     case "CoreBridge":
-      return coreBridgeInfo;
+      return require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
     default:
       throw new Error(`Unknown contract name: ${name}`);
   }

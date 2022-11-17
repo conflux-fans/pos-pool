@@ -1,6 +1,13 @@
 CHANGELOG
 ===
 
+## v1.2.0
+
+Note: There is a bug in conflux-rust version before `v2.2.0`, Which may lead some security issue for a PoS node. It's recommend every PoS pool update the contract and do the [`pos_key` replace operation](./docs/HowToReplacePosKeyZH.md).
+
+* Add methods to enable/disable pool operations
+* Add methods and scripts to enable pool operators to replace PoS key
+
 ## v1.1.0
 
 * Adjust PoS unlock period to 1 day and lock period to 13 day for both Core Space and eSpace
