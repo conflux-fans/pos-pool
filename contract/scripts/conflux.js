@@ -12,8 +12,14 @@ const conflux = new Conflux({
 let account = conflux.wallet.addPrivateKey(loadPrivateKey());
 console.log('Account address: ', account.address);
 
+function logReceipt (receipt, msg) {
+    console.log(`${msg} status: ${receipt.outcomeStatus === 0 ? 'success' : 'failed'}`);
+    console.log('TX hash: ', receipt.transactionHash);
+}
+
 module.exports = {
   conflux,
   Drip,
   account,
+  logReceipt,
 };

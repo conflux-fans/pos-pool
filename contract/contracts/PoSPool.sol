@@ -95,6 +95,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
+  string public constant VERSION = "1.2.0";
+
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -449,6 +451,14 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return _userShareRatio(msg.sender);
   }
 
+  function poolShot() public view returns (PoolShot memory) {
+    return lastPoolShot;
+  }
+
+  function userShot(address _user) public view returns (UserShot memory) {
+    return lastUserShots[_user];
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -535,16 +545,70 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updateAPY();
 
     uint256 end = offset + limit;
-    if (end > len) {
-      end = len;
-    }
+    if (end > len) end = len;
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
 
     _updatePoolShot();
   }
-  
+
+  function decreaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
+    userSummaries[sender].locked += userInqueues[sender].collectEndedVotes();
+    require(userSummaries[sender].locked >= votePower, "Locked is not enough");
+    _posRegisterRetire(votePower);
+    emit DecreasePoSStake(sender, votePower);
+
+    _updateAccRewardPerCfx();
+    _updateAPY();
+
+    // update user interest
+    _updateUserInterest(sender);
+    //
+    userOutqueues[sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnlockPeriod));
+    userSummaries[sender].unlocked += userOutqueues[sender].collectEndedVotes();
+    userSummaries[sender].available -= votePower;
+    userSummaries[sender].locked -= votePower;
+    _updateUserShot(sender);
+
+    //
+    _poolSummary.available -= votePower;
+    _updatePoolShot();
+  }
+
+  // restake user unlocked votes
+  function increaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
+    require(votePower > 0, "Minimal votePower is 1");
+    userSummaries[sender].unlocked += userOutqueues[sender].collectEndedVotes();
+    require(userSummaries[sender].unlocked >= votePower, "Unlocked is not enough");
+
+    userSummaries[sender].unlocked -= votePower;
+
+    _posRegisterIncreaseStake(votePower);
+    emit IncreasePoSStake(sender, votePower);
+
+    _updateAccRewardPerCfx();
+    _updateAPY();
+    
+    // update user interest
+    _updateUserInterest(sender);
+    // put stake info in queue
+    userInqueues[sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
+    userSummaries[sender].locked += userInqueues[sender].collectEndedVotes();
+    userSummaries[sender].available += votePower;
+    _updateUserShot(sender);
+
+    stakers.add(sender);
+
+    //
+    _poolSummary.available += votePower;
+    _updatePoolShot();
+  }
+
+  function setPoolRegisted(bool _registed) public onlyOwner {
+    _poolRegisted = _registed;
+  }
+
   // TODO REMOVE used for mocking reward
   // receive() external payable {}
 
