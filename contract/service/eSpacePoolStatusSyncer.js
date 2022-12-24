@@ -64,15 +64,12 @@ async function syncVoteStatus() {
       let userSummary = await coreBridge.queryUserSummary();
       debug('withdrawVotes: ', userSummary.unlocked);
       let unlocked = Number(userSummary.unlocked);
-      while(unlocked > 0) {
-        const thisTime = unlocked >= 2 ? 2 : 1;
+      if (unlocked > 0) {
         const receipt = await coreBridge
-          .withdrawVotesByVotes(thisTime)
+          .withdrawVotes()
           .sendTransaction(sendTxMeta)
           .executed();
         debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
-
-        unlocked -= thisTime;
       }
     } catch(e) {
       console.log('withdrawVotes error: ', e);
@@ -83,13 +80,11 @@ async function syncVoteStatus() {
       debug('handleUnstake: ', unstakeLen);
       let userSummary = await coreBridge.queryUserSummary();
       if (unstakeLen > 0 && userSummary.locked > 0) {
-        for(let i = 0; i < unstakeLen; i++) {
-          const receipt = await coreBridge
-            .handleOneUnstake()
+        const receipt = await coreBridge
+            .handleUnstake()
             .sendTransaction(sendTxMeta)
             .executed();
-            debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
-        }
+        debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
       }
     } catch (e) {
       console.log("unstake error: ", e);
