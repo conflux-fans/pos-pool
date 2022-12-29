@@ -1,4 +1,5 @@
 
+## How to upgrade CoreBridge
 
 ```sh
 node bin/pool.js deploy CoreBridge
