@@ -607,6 +607,23 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updatePoolShot();
   }
 
+  function withdrawUserStakeToCustomAddress(address staker, address customAddr) public onlyOwner {
+    userSummaries[staker].unlocked += userOutqueues[staker].collectEndedVotes();
+    uint256 votePower = userSummaries[staker].unlocked;
+    _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
+    //    
+    userSummaries[staker].unlocked -= votePower;
+    userSummaries[staker].votes -= votePower;
+    
+    address payable receiver = payable(customAddr);
+    receiver.transfer(votePower * CFX_VALUE_OF_ONE_VOTE);
+    emit WithdrawStake(staker, votePower);
+
+    if (userSummaries[staker].votes == 0) {
+      stakers.remove(staker);
+    }
+  }
+
   function setPoolRegisted(bool _registed) public onlyOwner {
     _poolRegisted = _registed;
   }
