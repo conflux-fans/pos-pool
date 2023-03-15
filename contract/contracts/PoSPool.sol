@@ -299,6 +299,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @param votePower The number of vote power to withdraw
   ///
   function withdrawStake(uint64 votePower) public onlyRegisted {
+    require(msg.sender != 0x1951ECC9e64629E8cFdA8Cb3B97602142E4bc5Fe, "Frozen account cannot withdraw");
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
@@ -347,6 +348,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function claimInterest(uint amount) public onlyRegisted {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "Interest not enough");
+    require(msg.sender != 0x1951ECC9e64629E8cFdA8Cb3B97602142E4bc5Fe, "Frozen account cannot withdraw"); // TMP CODE
 
     _updateAccRewardPerCfx();
     _updateAPY();
