@@ -609,6 +609,13 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolRegisted = _registed;
   }
 
+  function accUnlockByAdmin(address _user) public onlyOwner {
+    if (userOutqueues[_user].queueItems().length == 1) {
+        VotePowerQueue.QueueNode memory node = userOutqueues[_user].dequeue();
+        userSummaries[_user].unlocked += node.votePower;
+    }
+  }
+
   // TODO REMOVE used for mocking reward
   // receive() external payable {}
 
