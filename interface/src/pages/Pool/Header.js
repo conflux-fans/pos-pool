@@ -85,8 +85,8 @@ function Header({ status }) {
   };
   const cardHeadStyle = { color: "#fff", opacity: "0.6" };
   return (
-    <div className="flex">
-      <div className="flex-1 pr-4 ">
+    <div className="flex flex-col md:flex-row">
+      <div className="flex-1 mb-4 md:mb-0 md:pr-4 ">
         <Card
           title={t("Home.status")}
           bordered={false}
@@ -96,7 +96,7 @@ function Header({ status }) {
           {getStatusTag(status)}
         </Card>
       </div>
-      <div className="flex-1 pr-4">
+      <div className="flex-1 mb-4 md:mb-0 md:pr-4">
         <Card
           title={t("Home.pool")}
           bordered={false}
@@ -106,7 +106,7 @@ function Header({ status }) {
           <div>{name}</div>
         </Card>
       </div>
-      <div className="flex-1 pr-4">
+      <div className="flex-1 mb-4 md:mb-0 md:pr-4">
         <Card
           title={t("Home.total_locked")}
           bordered={false}
@@ -116,7 +116,7 @@ function Header({ status }) {
           <div>{lockedCfx}</div>
         </Card>
       </div>
-      <div className="flex-1 pr-4">
+      <div className="flex-1 mb-4 md:mb-0 md:pr-4">
         <Card title={t("Home.total_revenue")} bordered={false} style={cardStyle} headStyle={cardHeadStyle}>
           <div>{getPrecisionAmount(totalRevenue,5)}</div>
         </Card>

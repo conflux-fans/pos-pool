@@ -35,6 +35,7 @@ function ConfirmModal({type, visible, setVisible, onOk}) {
   }
   return (
     <Modal
+      width={300}
       title="Confirm"
       visible={visible}
       onOk={onOk}

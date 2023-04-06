@@ -79,6 +79,7 @@
     "autoprefixer": "^9",
     "cross-env": "^7.0.3",
     "postcss": "^8.2.10",
+    "postcss-px-to-viewport": "^1.1.1",
     "tailwindcss": "npm:@tailwindcss/postcss7-compat",
     "webpack-dev-server": "^4.4.0"
   }
