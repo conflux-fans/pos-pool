@@ -21,10 +21,10 @@
   },
   "ConfirmModal": {
     "stake": "stake",
-    "stake_1": "Bỏ Stake cần 7 + 7 ngày",
+    "stake_1": "Bỏ Stake cần 13 + 1 ngày",
     "stake_2": "Dựa theo cơ chế PoS Conflux.",
-    "stake_3": "Khi bạn stake CFX của mình, số CFX đó có thể bỏ stake sau 7 ngày.",
-    "stake_4": "Sau khi gửi giao dịch bỏ stake, bạn cần chờ 7 ngày mở khoá để yêu cầu CFX của mình.",
+    "stake_3": "Khi bạn stake CFX của mình, số CFX đó có thể bỏ stake sau 13 ngày.",
+    "stake_4": "Sau khi gửi giao dịch bỏ stake, bạn cần chờ 1 ngày mở khoá để yêu cầu CFX của mình.",
     "unstake": "bỏ stake",
     "unstake_1": "Bạn cần chờ 7 ngày mở khoá để yêu cầu CFX của mình.",
     "unstake_2": "Không có lợi nhuận trong vòng 7 ngày bị khoá.",

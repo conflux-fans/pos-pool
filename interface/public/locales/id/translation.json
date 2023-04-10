@@ -21,10 +21,10 @@
     },
     "ConfirmModal": {
       "stake": "stake",
-      "stake_1": "Unstake Membutuhkan 7 + 7 hari",
+      "stake_1": "Unstake Membutuhkan 13 + 1 hari",
       "stake_2": "Mengacu kepada Mekanisme POS Conflux.",
-      "stake_3": "Ketika kamu melakukan Stacking CFX kamu, Kamu dapat melakukan Unstake setelah 7 Hari.",
-      "stake_4": "Setelah mengirimkan transaksi Unstake, Anda harus menunggu 7 hari penguncian untuk mengklaim CFX Anda.",
+      "stake_3": "Ketika kamu melakukan Stacking CFX kamu, Kamu dapat melakukan Unstake setelah 13 Hari.",
+      "stake_4": "Setelah mengirimkan transaksi Unstake, Anda harus menunggu 1 hari penguncian untuk mengklaim CFX Anda.",
       "unstake": "unstake",
       "unstake_1": "Anda harus menunggu 7 hari penguncian untuk mengklaim CFX Anda.",
       "unstake_2": "Tidak ada Profit selama 7 Hari penguncian.",

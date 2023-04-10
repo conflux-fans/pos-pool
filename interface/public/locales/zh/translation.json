@@ -21,10 +21,10 @@
   },
   "ConfirmModal": {
     "stake": "stake",
-    "stake_1": "Unstake need 7 + 7 days",
+    "stake_1": "Unstake need 13 + 1 days",
     "stake_2": "According to Conflux PoS mechanism.",
-    "stake_3": "When you staked your CFX, those CFX can unstake after 7 days.",
-    "stake_4": "After submitting the Unstake transaction, you need to wait a 7-day lock-up to claim your CFX.",
+    "stake_3": "When you staked your CFX, those CFX can unstake after 13 days.",
+    "stake_4": "After submitting the Unstake transaction, you need to wait a 1-day lock-up to claim your CFX.",
     "unstake": "unstake",
     "unstake_1": "You need to wait a 7-day lock-up to claim your CFX.",
     "unstake_2": "No profit during 7-day lock-up.",

@@ -95,7 +95,7 @@ function Pool() {
       )
       proArr.push(confluxController.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
-      
+
       let currentBlock;
       if (currentSpace === 'core') {
         currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
@@ -406,7 +406,7 @@ function Pool() {
         data,
         value: Unit.fromMinUnit(value).toHexMinUnit()
       }
-      
+
       if (currentSpace === 'eSpace') {
         estimateData.gasLimit = await metaMaskProvider
           .request({
@@ -458,9 +458,9 @@ function Pool() {
       <div className="container mx-auto">
         <Header status={status} />
         <div className="flex justify-center mt-6">
-          <div className="w-9/12">
-            <div className="flex">
-              <div className="flex-1 p-6 mr-4 -ml-2 border-gray-800 border-2 text-white box-border rounded bg-main-back">
+          <div className="w-full md:w-9/12">
+            <div className="flex flex-col md:flex-row">
+              <div className="flex-1 p-6 md:mr-4 md:-ml-2 border-gray-800 border-2 text-white box-border rounded bg-main-back">
                 <Form
                   layout="vertical"
                   form={form}
@@ -477,7 +477,7 @@ function Pool() {
                     help={stakeErrorText}
                   >
                     <Row>
-                      <Col span={21}>
+                      <Col span={20}>
                         <Input
                           placeholder={t('Pool.enter_cfx_amount')}
                           //   addonAfter={<span>Max</span>}
@@ -522,7 +522,7 @@ function Pool() {
                     help={unstakeErrorText}
                   >
                     <Row>
-                      <Col span={21}>
+                      <Col span={20}>
                         <Input
                           placeholder={t('Pool.enter_cfx_amount')}
                           value={inputUnstakeCfx}
@@ -561,7 +561,7 @@ function Pool() {
                   </div>
                 </Form>
               </div>
-              <div className="flex-1 p-6 border-gray-800 border-2 box-border rounded bg-main-back text-white">
+              <div className="flex-1 p-6 mt-6 md:mt-0 border-gray-800 border-2 box-border rounded bg-main-back text-white">
                 <div className="font-bold my-4 text-xl text-center mb-4">
                   {t('Pool.my_pool')}
                 </div>
