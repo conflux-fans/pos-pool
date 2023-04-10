@@ -30,7 +30,7 @@ interface IPoSPool {
   function poolSummary() external view returns (PoolSummary memory);
   function poolAPY() external view returns (uint32);
   function poolUserShareRatio() external view returns (uint64); // will return pool general user share ratio
-  function userShareRatio() external view returns (uint64);  // will return user share ratio according feeFreeWhiteList
+  // function userShareRatio() external view returns (uint64);  // will return user share ratio according feeFreeWhiteList
   function poolName() external view returns (string memory);
   function _poolLockPeriod() external view returns (uint64);
 

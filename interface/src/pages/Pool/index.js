@@ -95,7 +95,7 @@ function Pool() {
       )
       proArr.push(confluxController.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
-      
+
       let currentBlock;
       if (currentSpace === 'core') {
         currentBlock = new BigNumber(data[0]?.blockNumber || 0).toNumber()
@@ -406,7 +406,7 @@ function Pool() {
         data,
         value: Unit.fromMinUnit(value).toHexMinUnit()
       }
-      
+
       if (currentSpace === 'eSpace') {
         estimateData.gasLimit = await metaMaskProvider
           .request({

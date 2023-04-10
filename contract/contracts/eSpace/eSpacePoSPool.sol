@@ -5,43 +5,63 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./PoolContext.sol";
-import "./VotePowerQueue.sol";
-import "./PoolAPY.sol";
+import "../VotePowerQueue.sol";
+import "./UnstakeQueue.sol";
 
 ///
-///  @title PoSPool
-///  @dev This is Conflux PoS pool contract
-///  @notice Users can use this contract to participate Conflux PoS without running a PoS node.
+///  @title eSpace PoSPool
 ///
-contract PoSPool is PoolContext, Ownable, Initializable {
+contract ESpacePoSPool is Ownable, Initializable {
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
   using VotePowerQueue for VotePowerQueue.InOutQueue;
-  using PoolAPY for PoolAPY.ApyQueue;
+  using UnstakeQueue for UnstakeQueue.Queue;
 
-  uint256 private RATIO_BASE = 10000;
+  uint256 private constant RATIO_BASE = 10000;
+  uint256 private constant ONE_DAY_BLOCK_COUNT = 3600 * 24;
   uint256 private CFX_COUNT_OF_ONE_VOTE = 1000;
   uint256 private CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-  uint256 private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
-  uint256 private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
+  
   
   // ======================== Pool config =========================
-
-  string public poolName;
   // wheter this poolContract registed in PoS
-  bool public _poolRegisted;
+  bool public birdgeAddrSetted;
+  address private _bridgeAddress;
   // ratio shared by user: 1-10000
-  uint256 public poolUserShareRatio = 9000; 
+  uint256 public poolUserShareRatio = 9600;
   // lock period: 13 days + half hour
-  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600; 
+  uint256 public _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 1800;
+  string public poolName; // = "eSpacePool";
+  uint256 private _poolAPY = 0;
+
+  // ======================== Contract states =========================
+  // global pool accumulative reward for each cfx
+  uint256 public accRewardPerCfx;  // start from 0
+
+  PoolSummary private _poolSummary;
+  mapping(address => UserSummary) private userSummaries;
+  mapping(address => VotePowerQueue.InOutQueue) private userInqueues;
+  mapping(address => VotePowerQueue.InOutQueue) private userOutqueues;
+
+  PoolShot internal lastPoolShot;
+  mapping(address => UserShot) internal lastUserShots;
+  
+  EnumerableSet.AddressSet private stakers;
+  // Unstake votes queue
+  UnstakeQueue.Queue private unstakeQueue;
+
+  // Currently withdrawable CFX
+  uint256 public withdrawableCfx;
+  // Votes need to cross from eSpace to Core
+  uint256 public crossingVotes;
+
+  uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 1800;
 
   // ======================== Struct definitions =========================
-
   struct PoolSummary {
     uint256 available;
-    uint256 interest; // PoS pool interest share
-    uint256 totalInterest; // total interest of whole pools
+    uint256 interest; // PoS pool current interest
+    uint256 totalInterest; // total historical interest of whole pools
   }
 
   /// @title UserSummary
@@ -56,8 +76,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint256 available; // locking + locked
     uint256 locked;
     uint256 unlocked;
-    uint256 claimedInterest;
-    uint256 currentInterest;
+    uint256 claimedInterest; // total historical claimed interest
+    uint256 currentInterest; // current claimable interest
   }
 
   struct PoolShot {
@@ -72,46 +92,32 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint256 blockNumber;
   }
 
-  // ======================== Contract states =========================
-
-  // global pool accumulative reward for each cfx
-  uint256 public accRewardPerCfx;  // start from 0
-
-  PoolSummary private _poolSummary;
-  mapping(address => UserSummary) private userSummaries;
-  mapping(address => VotePowerQueue.InOutQueue) private userInqueues;
-  mapping(address => VotePowerQueue.InOutQueue) private userOutqueues;
-
-  PoolShot internal lastPoolShot;
-  mapping(address => UserShot) internal lastUserShots;
-  
-  EnumerableSet.AddressSet private stakers;
-  // used to calculate latest seven days APY
-  PoolAPY.ApyQueue private apyNodes;
-
-  // Free fee whitelist
-  EnumerableSet.AddressSet private feeFreeWhiteList;
-
-  // unlock period: 1 days + half hour
-  uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
-
-  string public constant VERSION = "1.2.0";
-
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
-    require(_poolRegisted, "Pool is not registed");
+    require(birdgeAddrSetted, "Pool is not setted");
+    _;
+  }
+
+  modifier onlyBridge() {
+    require(msg.sender == _bridgeAddress, "Only bridge is allowed");
     _;
   }
 
   // ======================== Helpers =========================
-
-  function _userShareRatio(address _user) public view returns (uint256) {
-    if (feeFreeWhiteList.contains(_user)) return RATIO_BASE;
-    return poolUserShareRatio;
+  function _selfBalance() internal view virtual returns (uint256) {
+    return address(this).balance;
   }
 
-  function _calUserShare(uint256 reward, address _stakerAddress) private view returns (uint256) {
-    return reward.mul(_userShareRatio(_stakerAddress)).div(RATIO_BASE);
+  function _blockNumber() internal view virtual returns (uint256) {
+    return block.number;
+  }
+
+  function _userShareRatio() public pure returns (uint256) {
+    return RATIO_BASE;
+  }
+
+  function _calUserShare(uint256 reward, address _stakerAddress) private pure returns (uint256) {
+    return reward.mul(_userShareRatio()).div(RATIO_BASE);
   }
 
   // used to update lastPoolShot after _poolSummary.available changed 
@@ -152,24 +158,6 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolSummary.interest = _poolSummary.interest.add(latestInterest.sub(_userInterest));
   }
 
-  // depend on: lastPoolShot
-  function _updateAPY() private {
-    if (_blockNumber() == lastPoolShot.blockNumber)  return;
-    uint256 reward = _selfBalance() - lastPoolShot.balance;
-    PoolAPY.ApyNode memory node = PoolAPY.ApyNode({
-      startBlock: lastPoolShot.blockNumber,
-      endBlock: _blockNumber(),
-      reward: reward,
-      available: lastPoolShot.available
-    });
-
-    uint256 outdatedBlock = 0;
-    if (_blockNumber() > ONE_DAY_BLOCK_COUNT.mul(7)) {
-      outdatedBlock = _blockNumber().sub(ONE_DAY_BLOCK_COUNT.mul(7));
-    }
-    apyNodes.enqueueAndClearOutdated(node, outdatedBlock);
-  }
-
   // ======================== Events =========================
 
   event IncreasePoSStake(address indexed user, uint256 votePower);
@@ -182,56 +170,15 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   event RatioChanged(uint256 ratio);
 
-  // error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
-
   // ======================== Init methods =========================
 
   // call this method when depoly the 1967 proxy contract
   function initialize() public initializer {
-    RATIO_BASE = 10000;
     CFX_COUNT_OF_ONE_VOTE = 1000;
     CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-    ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
-    ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
-    poolUserShareRatio = 9000;
     _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600;
     _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 3600;
-  }
-  
-  ///
-  /// @notice Regist the pool contract in PoS internal contract 
-  /// @dev Only admin can do this
-  /// @param indentifier The identifier of PoS node
-  /// @param votePower The vote power when register
-  /// @param blsPubKey The bls public key of PoS node
-  /// @param vrfPubKey The vrf public key of PoS node
-  /// @param blsPubKeyProof The bls public key proof of PoS node
-  ///
-  function register(
-    bytes32 indentifier,
-    uint64 votePower,
-    bytes calldata blsPubKey,
-    bytes calldata vrfPubKey,
-    bytes[2] calldata blsPubKeyProof
-  ) public virtual payable onlyOwner {
-    require(!_poolRegisted, "Pool is already registed");
-    require(votePower == 1, "votePower should be 1");
-    require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be 1000 CFX");
-    _stakingDeposit(msg.value);
-    _posRegisterRegister(indentifier, votePower, blsPubKey, vrfPubKey, blsPubKeyProof);
-    _poolRegisted = true;
-
-    // update user info
-    userSummaries[msg.sender].votes += votePower;
-    userSummaries[msg.sender].available += votePower;
-    userSummaries[msg.sender].locked += votePower;  // directly add to admin's locked votes
-    _updateUserShot(msg.sender);
-    //
-    stakers.add(msg.sender);
-
-    // update pool info
-    _poolSummary.available += votePower;
-    _updatePoolShot();
+    poolUserShareRatio = 9600;
   }
 
   // ======================== Contract methods =========================
@@ -244,12 +191,13 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     require(votePower > 0, "Minimal votePower is 1");
     require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
     
-    _stakingDeposit(msg.value);
-    _posRegisterIncreaseStake(votePower);
+    // transfer to bridge address
+    address payable receiver = payable(_bridgeAddress);
+    receiver.transfer(msg.value);
+    crossingVotes += votePower;
     emit IncreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
-    _updateAPY();
     
     // update user interest
     _updateUserInterest(msg.sender);
@@ -260,11 +208,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     userSummaries[msg.sender].available += votePower;
     _updateUserShot(msg.sender);
 
-    stakers.add(msg.sender);
-
     //
     _poolSummary.available += votePower;
     _updatePoolShot();
+
+    stakers.add(msg.sender);
   }
 
   ///
@@ -274,11 +222,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
-    _posRegisterRetire(votePower);
+    // record the decrease request
+    unstakeQueue.enqueue(UnstakeQueue.Node(votePower));
     emit DecreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
-    _updateAPY();
 
     // update user interest
     _updateUserInterest(msg.sender);
@@ -301,14 +249,19 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function withdrawStake(uint64 votePower) public onlyRegisted {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
-    _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
+    uint256 _withdrawAmount = votePower * CFX_VALUE_OF_ONE_VOTE;
+    require(withdrawableCfx >= _withdrawAmount, "Withdrawable CFX is not enough");
+    // update amount of withdrawable CFX
+    withdrawableCfx -= _withdrawAmount;
     //    
     userSummaries[msg.sender].unlocked -= votePower;
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
-    receiver.transfer(votePower * CFX_VALUE_OF_ONE_VOTE);
+    receiver.transfer(_withdrawAmount);
     emit WithdrawStake(msg.sender, votePower);
+
+    _updatePoolShot();
 
     if (userSummaries[msg.sender].votes == 0) {
       stakers.remove(msg.sender);
@@ -349,7 +302,6 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     require(claimableInterest >= amount, "Interest not enough");
 
     _updateAccRewardPerCfx();
-    _updateAPY();
 
     _updateUserInterest(msg.sender);
     //
@@ -396,31 +348,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   }
 
   function poolAPY() public view returns (uint256) {
-    if(apyNodes.start == apyNodes.end) return 0;
-    
-    uint256 totalReward = 0;
-    uint256 totalWorkload = 0;
-    for(uint256 i = apyNodes.start; i < apyNodes.end; i++) {
-      PoolAPY.ApyNode memory node = apyNodes.items[i];
-      totalReward = totalReward.add(node.reward);
-      totalWorkload = totalWorkload.add(node.available.mul(CFX_VALUE_OF_ONE_VOTE).mul(node.endBlock - node.startBlock));
-    }
-
-    if (_blockNumber() > lastPoolShot.blockNumber) {
-      uint256 _latestReward = _selfBalance().sub(lastPoolShot.balance);
-      totalReward = totalReward.add(_latestReward);
-      totalWorkload = totalWorkload.add(lastPoolShot.available.mul(CFX_VALUE_OF_ONE_VOTE).mul(_blockNumber() - lastPoolShot.blockNumber));
-    }
-
-    return totalReward.mul(RATIO_BASE).mul(ONE_YEAR_BLOCK_COUNT).div(totalWorkload);
-  }
-
-  /// 
-  /// @notice Query pools contract address
-  /// @return Pool's PoS address
-  ///
-  function posAddress() public view onlyRegisted returns (bytes32) {
-    return _posAddressToIdentifier(address(this));
+    return _poolAPY;
   }
 
   function userInQueue(address account) public view returns (VotePowerQueue.QueueNode[] memory) {
@@ -447,16 +375,15 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return stakers.at(i);
   }
 
-  function userShareRatio() public view returns (uint256) {
-    return _userShareRatio(msg.sender);
+  function unstakeLen() public view returns (uint256) {
+    return unstakeQueue.end - unstakeQueue.start;
   }
 
-  function poolShot() public view returns (PoolShot memory) {
-    return lastPoolShot;
-  }
-
-  function userShot(address _user) public view returns (UserShot memory) {
-    return lastUserShots[_user];
+  function firstUnstakeVotes() public view returns (uint256) {
+    if (unstakeQueue.end == unstakeQueue.start) {
+      return 0;
+    }
+    return unstakeQueue.items[unstakeQueue.start].votes;
   }
 
   // ======================== admin methods =====================
@@ -485,41 +412,20 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolUnlockPeriod = period;
   }
 
-  function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
-    return feeFreeWhiteList.add(_freeAddress);
-  }
-
-  function removeFromFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
-    return feeFreeWhiteList.remove(_freeAddress);
-  }
-
-  /// 
-  /// @notice Enable admin to set the pool name
-  ///
-  function setPoolName(string memory name) public onlyOwner {
-    poolName = name;
-  }
-
   /// @param count Vote cfx count, unit is cfx
   function setCfxCountOfOneVote(uint256 count) public onlyOwner {
     CFX_COUNT_OF_ONE_VOTE = count;
     CFX_VALUE_OF_ONE_VOTE = count * 1 ether;
   }
 
-  function _withdrawPoolProfit(uint256 amount) public onlyOwner {
-    require(_poolSummary.interest > amount, "Not enough interest");
-    require(_selfBalance() > amount, "Balance not enough");
-    _poolSummary.interest = _poolSummary.interest.sub(amount);
-    address payable receiver = payable(msg.sender);
-    receiver.transfer(amount);
-    _updatePoolShot();
+  function setBridge(address bridgeAddress) public onlyOwner {
+    _bridgeAddress = bridgeAddress;
+    birdgeAddrSetted = true;
   }
 
-  // Used to bring account's retired votes back to work
-  // reStake _poolSummary.available
-  // function reStake(uint64 votePower) public onlyOwner {
-  //   _posRegisterIncreaseStake(votePower);
-  // }
+  function setPoolName(string memory name) public onlyOwner {
+    poolName = name;
+  }
 
   function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
     uint256 votePower = userSummaries[_addr].available;
@@ -540,12 +446,13 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
     uint256 len = stakers.length();
     if (len == 0) return;
-    
+
     _updateAccRewardPerCfx();
-    _updateAPY();
 
     uint256 end = offset + limit;
-    if (end > len) end = len;
+    if (end > len) {
+      end = len;
+    }
     for (uint256 i = offset; i < end; i++) {
       _retireUserStake(stakers.at(i), endBlockNumber);
     }
@@ -553,63 +460,31 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updatePoolShot();
   }
 
-  function decreaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
-    userSummaries[sender].locked += userInqueues[sender].collectEndedVotes();
-    require(userSummaries[sender].locked >= votePower, "Locked is not enough");
-    _posRegisterRetire(votePower);
-    emit DecreasePoSStake(sender, votePower);
+  // ======================== bridge methods =====================
 
-    _updateAccRewardPerCfx();
-    _updateAPY();
+  function setPoolAPY(uint256 apy) public onlyBridge {
+    _poolAPY = apy;
+  }
 
-    // update user interest
-    _updateUserInterest(sender);
-    //
-    userOutqueues[sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolUnlockPeriod));
-    userSummaries[sender].unlocked += userOutqueues[sender].collectEndedVotes();
-    userSummaries[sender].available -= votePower;
-    userSummaries[sender].locked -= votePower;
-    _updateUserShot(sender);
-
-    //
-    _poolSummary.available -= votePower;
+  function handleUnlockedIncrease(uint256 votePower) public payable onlyBridge {
+    require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
+    withdrawableCfx += msg.value;
     _updatePoolShot();
   }
 
-  // restake user unlocked votes
-  function increaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
-    require(votePower > 0, "Minimal votePower is 1");
-    userSummaries[sender].unlocked += userOutqueues[sender].collectEndedVotes();
-    require(userSummaries[sender].unlocked >= votePower, "Unlocked is not enough");
-
-    userSummaries[sender].unlocked -= votePower;
-
-    _posRegisterIncreaseStake(votePower);
-    emit IncreasePoSStake(sender, votePower);
-
-    _updateAccRewardPerCfx();
-    _updateAPY();
-    
-    // update user interest
-    _updateUserInterest(sender);
-    // put stake info in queue
-    userInqueues[sender].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
-    userSummaries[sender].locked += userInqueues[sender].collectEndedVotes();
-    userSummaries[sender].available += votePower;
-    _updateUserShot(sender);
-
-    stakers.add(sender);
-
-    //
-    _poolSummary.available += votePower;
-    _updatePoolShot();
+  function handleCrossingVotes(uint256 votePower) public onlyBridge {
+    require(crossingVotes >= votePower, "crossingVotes should be greater than votePower");
+    crossingVotes -= votePower;
   }
 
-  function setPoolRegisted(bool _registed) public onlyOwner {
-    _poolRegisted = _registed;
+  function handleUnstakeTask() public onlyBridge returns (uint256) {
+    UnstakeQueue.Node memory node = unstakeQueue.dequeue();
+    return node.votes;
   }
 
-  // TODO REMOVE used for mocking reward
-  // receive() external payable {}
+  // receive interest
+  function receiveInterest() public payable onlyBridge {}
+
+  fallback() external payable {}
 
 }

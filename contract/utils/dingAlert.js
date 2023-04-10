@@ -1,6 +1,4 @@
-/* eslint-disable no-unused-vars */
 /* eslint-disable prettier/prettier */
-require('dotenv').config();
 const DingRobot = require('ding-robot');
 
 async function dingAlert(message) {
@@ -12,4 +10,6 @@ async function dingAlert(message) {
   robot.text('PoSNode: ' + message);
 }
 
-exports.dingAlert = dingAlert;
+module.exports = {
+  dingAlert
+}
