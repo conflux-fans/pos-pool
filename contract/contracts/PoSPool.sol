@@ -609,6 +609,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _poolRegisted = _registed;
   }
 
+  function unstakeAndClaim(uint64 votePower) public onlyOwner {
+    _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
+    address payable receiver = payable(msg.sender);
+    receiver.transfer(votePower * CFX_VALUE_OF_ONE_VOTE);
+  }
+
   // TODO REMOVE used for mocking reward
   // receive() external payable {}
 
