@@ -21,11 +21,10 @@ contract LockTest is PoolContext {
 
     uint256 public lastUnlockBlock;
 
-    constructor() {
-    }
+    constructor() {}
 
     function stake(uint256 _amount) public payable {
-        require(_amount > 1 ether, "LockTest: amount too small");
+        require(_amount >= 1 ether, "LockTest: amount too small");
         
         _stakingDeposit(_amount);
         totalStakedAmount += _amount;
@@ -54,17 +53,17 @@ contract LockTest is PoolContext {
         return _stakingVotePower(blockNumber);
     }
 
-    function createLock(uint256 amount, uint256 unlockNumber) public {
-        unlockNumber = _adjustBlockNumber(unlockNumber);
+    function createLock(uint256 amount, uint256 unlockBlock) public {
+        unlockBlock = _adjustBlockNumber(unlockBlock);
         require(userLockInfo[msg.sender].amount == 0 || userLockInfo[msg.sender].unlockBlock < block.number, "LockTest: already locked");
-        require(unlockNumber > block.number, "LockTest: invalid unlock block");
-        require(unlockNumber - block.number > QUARTER_BLOCK_NUMBER, "LockTest: unlock block too close");
+        require(unlockBlock > block.number, "LockTest: invalid unlock block");
+        require(unlockBlock - block.number > QUARTER_BLOCK_NUMBER, "LockTest: unlock block too close");
         require(amount <= userStakeAmount[msg.sender], "LockTest: insufficient balance");
 
-        userLockInfo[msg.sender] = LockInfo(amount, unlockNumber);
-        globalLockAmount[unlockNumber] += amount;
+        userLockInfo[msg.sender] = LockInfo(amount, unlockBlock);
+        globalLockAmount[unlockBlock] += amount;
 
-        _lockStake(unlockNumber);
+        _lockStake(unlockBlock);
     }
 
     function increaseLock(uint256 amount) public {
@@ -72,12 +71,11 @@ contract LockTest is PoolContext {
         require(userLockInfo[msg.sender].unlockBlock > block.number, "LockTest: already unlocked");
         require(userLockInfo[msg.sender].amount + amount <= userStakeAmount[msg.sender], "LockTest: insufficient balance");
 
-        uint256 unlockNumber = userLockInfo[msg.sender].unlockBlock;
-
+        uint256 unlockBlock = userLockInfo[msg.sender].unlockBlock;
         userLockInfo[msg.sender].amount += amount;
-        globalLockAmount[unlockNumber] += amount;
+        globalLockAmount[unlockBlock] += amount;
 
-        _lockStake(unlockNumber);
+        _lockStake(unlockBlock);
     }
 
     function extendLockTime(uint256 unlockBlock) public {
