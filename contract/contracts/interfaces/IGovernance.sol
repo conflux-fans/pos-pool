@@ -7,7 +7,7 @@ interface IGovernance {
         uint256 unlockBlock;
     }
 
-    function userStakeAmount(address _user) external view returns (uint256);
+    function userStakeAmount(address user) external view returns (uint256);
 
     function createLock(uint256 amount, uint256 unlockBlock) external;
     function increaseLock(uint256 amount) external;
