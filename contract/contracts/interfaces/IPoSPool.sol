@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./VotePowerQueue.sol";
+import "../VotePowerQueue.sol";
 import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 
 interface IPoSPool {

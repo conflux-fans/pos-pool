@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./interfaces/IGovernance.sol";
-import "./IPoSPool.sol";
+import "./interfaces/IPoSPool.sol";
 
 contract Governance is IGovernance, Ownable, Initializable {
     ParamsControl public constant paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
