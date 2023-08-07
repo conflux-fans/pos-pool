@@ -28,32 +28,7 @@ contract Governance is IGovernance, Ownable, Initializable {
     function initialize() public initializer {
     }
 
-    function setPosPool(address _posPool) public onlyOwner {
-        posPool = IPoSPool(_posPool);
-    }
-
-    function _adjustBlockNumber(uint256 blockNumber) internal pure returns (uint256) {
-        return (blockNumber / QUARTER_BLOCK_NUMBER + 1) * QUARTER_BLOCK_NUMBER;
-    }
-
-    function _lockStake(uint256 unlockBlock) internal {
-        if (unlockBlock > lastUnlockBlock) {
-            lastUnlockBlock = unlockBlock;
-        }
-
-        uint256 accAmount = 0;
-        uint256 blockNumber = lastUnlockBlock;
-
-        while (blockNumber >= block.number) {
-            accAmount += globalLockAmount[blockNumber];
-            
-            posPool.lockForVotePower(accAmount, blockNumber);
-            emit VoteLock(accAmount, blockNumber);
-
-            blockNumber -= QUARTER_BLOCK_NUMBER;
-        }
-    }
-
+    // available staked amount
     function userStakeAmount(address user) public override view returns (uint256) {
         return posPool.userSummary(user).available * CFX_VALUE_OF_ONE_VOTE;
     }
@@ -143,9 +118,37 @@ contract Governance is IGovernance, Ownable, Initializable {
 
         // do the vote cast
         ParamsControl.Vote[] memory structVotes = new ParamsControl.Vote[](1);
-        structVotes[0] = ParamsControl.Vote(topic_index, votes);
+        structVotes[0] = ParamsControl.Vote(topic_index, poolVoteInfo[vote_round][topic_index]);
         posPool.castVote(vote_round, structVotes);
 
         emit CastVote(msg.sender, vote_round, topic_index, votes);
+    }
+
+    // admin functions
+    function setPosPool(address _posPool) public onlyOwner {
+        posPool = IPoSPool(_posPool);
+    }
+
+    // internal functions
+    function _adjustBlockNumber(uint256 blockNumber) internal pure returns (uint256) {
+        return (blockNumber / QUARTER_BLOCK_NUMBER + 1) * QUARTER_BLOCK_NUMBER;
+    }
+
+    function _lockStake(uint256 unlockBlock) internal {
+        if (unlockBlock > lastUnlockBlock) {
+            lastUnlockBlock = unlockBlock;
+        }
+
+        uint256 accAmount = 0;
+        uint256 blockNumber = lastUnlockBlock;
+
+        while (blockNumber >= block.number) {
+            accAmount += globalLockAmount[blockNumber];
+            
+            posPool.lockForVotePower(accAmount, blockNumber);
+            emit VoteLock(accAmount, blockNumber);
+
+            blockNumber -= QUARTER_BLOCK_NUMBER;
+        }
     }
 }
