@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./VotePowerQueue.sol";
+import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 
 interface IPoSPool {
   struct PoolSummary {
@@ -47,4 +48,7 @@ interface IPoSPool {
   function userOutQueue(address account) external view returns (VotePowerQueue.QueueNode[] memory);
   function userInQueue(address account, uint64 offset, uint64 limit) external view returns (VotePowerQueue.QueueNode[] memory);
   function userOutQueue(address account, uint64 offset, uint64 limit) external view returns (VotePowerQueue.QueueNode[] memory);
+
+  function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) external;
+  function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) external;
 }
