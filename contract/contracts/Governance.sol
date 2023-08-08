@@ -7,7 +7,7 @@ import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./interfaces/IGovernance.sol";
 import "./interfaces/IPoSPool.sol";
 
-contract Governance is IGovernance, Ownable, Initializable {
+contract Governance is Ownable, Initializable, IGovernance {
     ParamsControl public constant paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
     uint256 public constant QUARTER_BLOCK_NUMBER = 2 * 3600 * 24 * 365 / 4; // 3 months
     uint256 public constant CFX_VALUE_OF_ONE_VOTE = 1000 ether;

@@ -483,6 +483,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     paramsControl.castVote(vote_round, vote_data);
   }
 
+  function userVotePower(address user) public view returns (uint256) {
+    return IGovernance(governance).userVotePower(user);
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -532,6 +536,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   function setGovernance(address _governance) public onlyOwner {
     governance = _governance;
+  }
+
+  function setParamsControl() public onlyOwner {
+    paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
   }
 
   function _withdrawPoolProfit(uint256 amount) public onlyOwner {

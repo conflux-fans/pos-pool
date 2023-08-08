@@ -51,4 +51,5 @@ interface IPoSPool {
 
   function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) external;
   function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) external;
+  function userVotePower(address user) external view returns (uint256);
 }
