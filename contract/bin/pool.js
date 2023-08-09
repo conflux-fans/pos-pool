@@ -8,6 +8,7 @@ const { program } = require("commander");
 const { loadPrivateKey } = require('../utils');
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
+const governanceContractInfo = require("../artifacts/contracts/Governance.sol/Governance.json");
 
 const {
     CFX_RPC_URL,
@@ -102,7 +103,6 @@ program
     const pendingTx = ContractName === 'PoolProxy' ? contract.constructor(implAddr, '0x8129fc1c') : contract.constructor();
     const receipt = await pendingTx.sendTransaction({
       from: account.address,
-      gasPrice: Drip.fromGDrip(1),
     }).executed();
     checkDeployStatus(receipt, 'deploy' + ContractName);
   });
@@ -138,6 +138,49 @@ program
       from: account.address
     }).executed();
     checkDeployStatus(receipt, 'deploy PoSPool');
+  });
+
+program
+  .command('deployGovernance')
+  .description('Deploy Governance in proxy mode')
+  .action(async () => {
+    const contract = conflux.Contract({
+      abi: governanceContractInfo.abi,
+      bytecode: governanceContractInfo.bytecode,
+    });
+    receipt = await contract.constructor().sendTransaction({
+      from: account.address,
+    }).executed();
+    if (receipt.outcomeStatus !== 0) {
+      console.log('Implementation contract deploy failed: ', receipt.txExecErrorMsg);
+      return;
+    }
+    const implAddr = receipt.contractCreated;
+    // console.log('Implementation address: ', implAddr);
+
+    // deploy pool proxy
+    const proxyInfo = getContractInfo('PoolProxy');
+    const proxy = conflux.Contract({
+      abi: proxyInfo.abi,
+      bytecode: proxyInfo.bytecode,
+    });
+    const initializeAbiName = '0x8129fc1c';
+    receipt = await proxy.constructor(implAddr, initializeAbiName).sendTransaction({
+      from: account.address
+    }).executed();
+    checkDeployStatus(receipt, 'Deploy Governance');
+
+    // set posPool address
+    const governance = conflux.Contract({
+        abi: governanceContractInfo.abi,
+        address: receipt.contractCreated,
+    });
+
+    await governance.setPosPool(POOL_ADDRESS).sendTransaction({
+        from: account.address
+    }).executed();
+
+    console.log('Finished');
   });
 
 program
@@ -361,6 +404,8 @@ function getContractInfo(name) {
       return require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
     case "CoreBridge":
       return require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
+    case "Governance":
+      return governanceContractInfo;
     default:
       throw new Error(`Unknown contract name: ${name}`);
   }

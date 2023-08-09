@@ -102,7 +102,7 @@ contract Governance is Ownable, Initializable, IGovernance {
     }
 
     function castVote(uint64 vote_round, uint16 topic_index, uint256[3] memory votes) public override {
-        require(vote_round == paramsControl.voteRound(), "Governance: invalid vote round");
+        require(vote_round == paramsControl.currentRound(), "Governance: invalid vote round");
         uint256 totalVotes = 0;
         for (uint16 i = 0; i < votes.length; i++) {
             totalVotes += votes[i];
