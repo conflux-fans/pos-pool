@@ -8,7 +8,7 @@ const { program } = require("commander");
 const { loadPrivateKey } = require('../utils');
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
-const governanceContractInfo = require("../artifacts/contracts/Governance.sol/Governance.json");
+const votingEscrowContractInfo = require("../artifacts/contracts/VotingEscrow.sol/VotingEscrow.json");
 
 const {
     CFX_RPC_URL,
@@ -141,12 +141,12 @@ program
   });
 
 program
-  .command('deployGovernance')
-  .description('Deploy Governance in proxy mode')
+  .command('deployVotingEscrow')
+  .description('Deploy VotingEscrow in proxy mode')
   .action(async () => {
     const contract = conflux.Contract({
-      abi: governanceContractInfo.abi,
-      bytecode: governanceContractInfo.bytecode,
+      abi: votingEscrowContractInfo.abi,
+      bytecode: votingEscrowContractInfo.bytecode,
     });
     receipt = await contract.constructor().sendTransaction({
       from: account.address,
@@ -168,15 +168,15 @@ program
     receipt = await proxy.constructor(implAddr, initializeAbiName).sendTransaction({
       from: account.address
     }).executed();
-    checkDeployStatus(receipt, 'Deploy Governance');
+    checkDeployStatus(receipt, 'Deploy VotingEscrow');
 
     // set posPool address
-    const governance = conflux.Contract({
-        abi: governanceContractInfo.abi,
+    const votingEscrow = conflux.Contract({
+        abi: votingEscrowContractInfo.abi,
         address: receipt.contractCreated,
     });
 
-    await governance.setPosPool(POOL_ADDRESS).sendTransaction({
+    await votingEscrow.setPosPool(POOL_ADDRESS).sendTransaction({
         from: account.address
     }).executed();
 
@@ -404,8 +404,8 @@ function getContractInfo(name) {
       return require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
     case "CoreBridge":
       return require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
-    case "Governance":
-      return governanceContractInfo;
+    case "VotingEscrow":
+      return votingEscrowContractInfo;
     default:
       throw new Error(`Unknown contract name: ${name}`);
   }
