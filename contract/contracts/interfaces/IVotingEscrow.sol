@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-interface IGovernance {
+interface IVotingEscrow {
     struct LockInfo {
         uint256 amount;
         uint256 unlockBlock;

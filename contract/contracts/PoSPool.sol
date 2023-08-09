@@ -9,7 +9,7 @@ import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 import "./PoolAPY.sol";
-import "./interfaces/IGovernance.sol";
+import "./interfaces/IVotingEscrow.sol";
 
 ///
 ///  @title PoSPool
@@ -101,7 +101,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
 
-  address public governance;
+  address public votingEscrow;
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -109,8 +109,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _;
   }
 
-  modifier onlyGovernance() {
-    require(msg.sender == governance, "Only governance can call this function");
+  modifier onlyVotingEscrow() {
+    require(msg.sender == votingEscrow, "Only votingEscrow can call this function");
     _;
   }
 
@@ -287,7 +287,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
     
     // if user has locked cfx for vote power, the rest amount should bigger than that
-    IGovernance.LockInfo memory lockInfo = IGovernance(governance).userLockInfo(msg.sender);
+    IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
     require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE > lockInfo.amount, "Locked is not enough");
 
     _posRegisterRetire(votePower);
@@ -475,16 +475,16 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return lastUserShots[_user];
   }
 
-  function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) public onlyGovernance {
+  function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) public onlyVotingEscrow {
     _stakingVoteLock(amount, unlockBlockNumber);
   }
 
-  function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public onlyGovernance {
+  function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public onlyVotingEscrow {
     paramsControl.castVote(vote_round, vote_data);
   }
 
-  function userVotePower(address user) public view returns (uint256) {
-    return IGovernance(governance).userVotePower(user);
+  function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
+    return IVotingEscrow(votingEscrow).userLockInfo(user);
   }
 
   // ======================== admin methods =====================
@@ -534,8 +534,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     CFX_VALUE_OF_ONE_VOTE = count * 1 ether;
   }
 
-  function setGovernance(address _governance) public onlyOwner {
-    governance = _governance;
+  function setVotingEscrow(address _votingEscrow) public onlyOwner {
+    votingEscrow = _votingEscrow;
   }
 
   function setParamsControl() public onlyOwner {

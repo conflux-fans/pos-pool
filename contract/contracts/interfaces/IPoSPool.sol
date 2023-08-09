@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "../VotePowerQueue.sol";
+import "./IVotingEscrow.sol";
 
 interface IPoSPool {
   struct PoolSummary {
@@ -51,5 +52,6 @@ interface IPoSPool {
 
   function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) external;
   function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) external;
-  function userVotePower(address user) external view returns (uint256);
+  function userLockInfo(address user) external view returns (IVotingEscrow.LockInfo memory);
+  function votingEscrow() external view returns (address);
 }
