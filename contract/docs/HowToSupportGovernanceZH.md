@@ -105,4 +105,20 @@ interface IVotingEscrow {
 }
 ```
 
+锁定相关接口:
+
+1. createLock: 创建锁定，获取投票权
+2. increaseLock: 增加锁定数量
+3. extendLockTime: 延长锁定时间
+
+查询接口:
+
+1. userStakeAmount: 查询用户当前在矿池中可用于锁定的 stake 数量
+2. userLockInfo
+3. userVotePower
+
+链上参数投票接口:
+
+1. castVote
+
 ## FAQs
