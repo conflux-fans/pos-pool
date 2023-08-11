@@ -33,14 +33,35 @@ VotingEscrow 合约是新引入的用于管理锁定状态的合约。其提供�
 
 部署方式如下：
 
-1. 部署合约
-2. setPosPool
+```sh
+node bin/pool.js deployVotingEscrow
+```
 
 ### 升级 PoSPool 并设置
 
 1. 升级 PoSPool 合约
+
+```sh
+# 部署新的 PoSPool 实现合约
+node bin/pool.js deploy Pool
+# 升级合约
+node bin/pool.js upgradePoolContract <new pool contract address>
+```
+
 2. setVotingEscrow
+
+```sh
+
+# 设置 VotingEscrow 合约地址
+node bin/pool.js Pool setVotingEscrow <voting escrow contract address>
+```
+
 3. setParamsControl
+
+```sh
+# 设置参数控制合约地址
+node bin/pool.js Pool setParamsControl
+```
 
 ## 合约接口
 
@@ -52,7 +73,7 @@ VotingEscrow 合约是新引入的用于管理锁定状态的合约。其提供�
 // 查询本矿池的 votingEscrow 合约地址
 function votingEscrow() external view returns (address);
 // 查询用户当前的锁定信息: 锁定数量, 锁定区块数
-function userLockInfo(address user) external view returns (IGovernance.LockInfo memory);
+function userLockInfo(address user) external view returns (IVotingEscrow.LockInfo memory);
 ```
 
 ### VotingEscrow
@@ -83,3 +104,5 @@ interface IVotingEscrow {
     function castVote(uint64 vote_round, uint16 topic_index, uint256[3] memory votes) external;
 }
 ```
+
+## FAQs
