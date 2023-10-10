@@ -97,6 +97,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         LockInfo memory info = _userLockInfo[user];
         if (info.unlockBlock < block.number) {
             info.amount = 0;
+            info.unlockBlock = 0;
         }
         return info;
     }
