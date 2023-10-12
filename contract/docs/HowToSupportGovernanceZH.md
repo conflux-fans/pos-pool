@@ -98,10 +98,16 @@ interface IVotingEscrow {
     function extendLockTime(uint256 unlockBlock) external;
     // 查询用户当前的锁定信息
     function userLockInfo(address user) external view returns (LockInfo memory);
+    // 查询用户指定block的锁定信息
+    function userLockInfo(address user, uint256 blockNumber) external view returns (LockInfo memory);
     // 查询用户当前的投票权
     function userVotePower(address user) external view returns (uint256);
+    // 查询用户指定的投票权
+    function userVotePower(address user, uint256 blockNumber) external view returns (uint256);
     // 进行链上参数投票: 投票轮次，投票主题索引，各选项投票数量
     function castVote(uint64 vote_round, uint16 topic_index, uint256[3] memory votes) external;
+    // 查询链上参数投票信息
+    function readVote(address addr, uint16 topicIndex) external view returns (ParamsControl.Vote memory);
 }
 ```
 
