@@ -36,7 +36,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     // round => user => topic => meta
     mapping(uint64 => mapping(address => mapping(uint16 => VoteMeta))) private userVoteMeta;
     // round => topic => users
-    mapping(uint64 => mapping(uint16 => EnumerableSet.AddressSet)) private topicSpecialVoters; // voters who's vote power maybe will change and round end block
+    mapping(uint64 => mapping(uint16 => EnumerableSet.AddressSet)) private topicSpecialVoters; // voters who's vote power maybe will change at round end block
 
     constructor() {}
 
@@ -208,7 +208,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         }
     }
 
-    function _currentRoundEndBlock() public view returns (uint256) {
+    function _currentRoundEndBlock() internal view returns (uint256) {
         // not sure 8888 network one round period is how long
         return _onChainDaoStartBlock() + paramsControl.currentRound() * ONE_DAY_BLOCK_NUMBER * 60;
     }
@@ -262,6 +262,6 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
                 return i;
             }
         }
-        return votes.length;
+        return votes.length; // no index found
     }
 }
