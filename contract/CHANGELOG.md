@@ -1,5 +1,10 @@
-CHANGELOG
-===
+# CHANGELOG
+
+## v1.3.0
+
+This update introduces the function of locking CFX to obtain voting rights for PoS Pools. After obtaining voting rights, you can participate in Conflux on-chain parameters voting and community governance voting. The user can also obtain PoS staking rewards while locking CFX.
+
+Check this doc for more details: [v1.3](./docs/v1.3.md)
 
 ## v1.2.0
 

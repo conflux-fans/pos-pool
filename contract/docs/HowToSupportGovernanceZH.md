@@ -18,51 +18,6 @@ Lock 的数量随意不做限制，锁定的时间点（区块数）只能为一
 
 锁定之后的 CFX 在锁定期内不可提取，锁定期结束后可以提取。
 
-## 如何升级
-
-升级操作整体分为两步：
-
-### 部署 VotingEscrow 合约
-
-VotingEscrow 合约是新引入的用于管理锁定状态的合约。其提供的功能包括：
-
-1. 锁定信息查询
-2. 创建，增加，延长锁定
-3. 链上参数投票
-4. 链上参数投票数据查询
-
-部署方式如下：
-
-```sh
-node bin/pool.js deployVotingEscrow
-```
-
-### 升级 PoSPool 并设置
-
-1. 升级 PoSPool 合约
-
-```sh
-# 部署新的 PoSPool 实现合约
-node bin/pool.js deploy Pool
-# 升级合约
-node bin/pool.js upgradePoolContract <new pool contract address>
-```
-
-2. setVotingEscrow
-
-```sh
-
-# 设置 VotingEscrow 合约地址
-node bin/pool.js Pool setVotingEscrow <voting escrow contract address>
-```
-
-3. setParamsControl
-
-```sh
-# 设置参数控制合约地址
-node bin/pool.js Pool setParamsControl
-```
-
 ## 合约接口
 
 ### PoSPool
