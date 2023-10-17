@@ -30,7 +30,7 @@ contract PoSPoolBatchCall is Ownable {
         uint256 votePower;
     }
 
-    address[] public posPools;
+    address[] private posPools;
 
     function getStakeInfos(address[] memory pools, address user) public view returns (StakeInfo[] memory) {
         StakeInfo[] memory stakeInfos = new StakeInfo[](pools.length + posPools.length);
