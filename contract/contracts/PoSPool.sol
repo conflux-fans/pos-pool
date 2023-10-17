@@ -5,9 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./PoolContext.sol";
 import "./VotePowerQueue.sol";
 import "./PoolAPY.sol";
+import "./interfaces/IVotingEscrow.sol";
 
 ///
 ///  @title PoSPool
@@ -95,11 +97,20 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
-  string public constant VERSION = "1.2.0";
+  string public constant VERSION = "1.3.0";
+
+  ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
+
+  address public votingEscrow;
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
+    _;
+  }
+
+  modifier onlyVotingEscrow() {
+    require(msg.sender == votingEscrow, "Only votingEscrow can call this function");
     _;
   }
 
@@ -274,6 +285,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
+    
+    // if user has locked cfx for vote power, the rest amount should bigger than that
+    IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
+    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE > lockInfo.amount, "Locked is not enough");
+
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
 
@@ -459,6 +475,18 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return lastUserShots[_user];
   }
 
+  function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) public onlyVotingEscrow {
+    _stakingVoteLock(amount, unlockBlockNumber);
+  }
+
+  function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public onlyVotingEscrow {
+    paramsControl.castVote(vote_round, vote_data);
+  }
+
+  function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
+    return IVotingEscrow(votingEscrow).userLockInfo(user);
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -504,6 +532,14 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function setCfxCountOfOneVote(uint256 count) public onlyOwner {
     CFX_COUNT_OF_ONE_VOTE = count;
     CFX_VALUE_OF_ONE_VOTE = count * 1 ether;
+  }
+
+  function setVotingEscrow(address _votingEscrow) public onlyOwner {
+    votingEscrow = _votingEscrow;
+  }
+
+  function setParamsControl() public onlyOwner {
+    paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
   }
 
   function _withdrawPoolProfit(uint256 amount) public onlyOwner {
@@ -553,7 +589,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updatePoolShot();
   }
 
-  function decreaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
+  /* function decreaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
     userSummaries[sender].locked += userInqueues[sender].collectEndedVotes();
     require(userSummaries[sender].locked >= votePower, "Locked is not enough");
     _posRegisterRetire(votePower);
@@ -574,10 +610,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     //
     _poolSummary.available -= votePower;
     _updatePoolShot();
-  }
+  } */
 
   // restake user unlocked votes
-  function increaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
+  /* function increaseStakeByAdmin(address sender, uint64 votePower) public virtual onlyOwner {
     require(votePower > 0, "Minimal votePower is 1");
     userSummaries[sender].unlocked += userOutqueues[sender].collectEndedVotes();
     require(userSummaries[sender].unlocked >= votePower, "Unlocked is not enough");
@@ -603,11 +639,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     //
     _poolSummary.available += votePower;
     _updatePoolShot();
-  }
+  } */
 
-  function setPoolRegisted(bool _registed) public onlyOwner {
+  /* function setPoolRegisted(bool _registed) public onlyOwner {
     _poolRegisted = _registed;
-  }
+  } */
 
   // TODO REMOVE used for mocking reward
   // receive() external payable {}

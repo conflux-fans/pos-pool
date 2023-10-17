@@ -1,0 +1,11 @@
+{
+    "mainnet": [],
+    "testnet": [
+        {
+            "name": "test1",
+            "address": "cfxtest:acgwa148z517jj15w9je5sdzn8p8j044kjrvjz92c1",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
+        }
+    ]
+}

@@ -24,6 +24,22 @@ abstract contract PoolContext {
     STAKING.withdraw(_amount);
   }
 
+  function _stakingBalance() internal view returns (uint256) {
+    return STAKING.getStakingBalance(address(this));
+  }
+
+  function _stakingLockedStakingBalance(uint256 blockNumber) internal view returns (uint256) {
+    return STAKING.getLockedStakingBalance(address(this), blockNumber);
+  }
+
+  function _stakingVotePower(uint256 blockNumber) internal view returns (uint256) {
+    return STAKING.getVotePower(address(this), blockNumber);
+  }
+
+  function _stakingVoteLock(uint256 amount, uint256 unlockBlockNumber) internal {
+    STAKING.voteLock(amount, unlockBlockNumber);
+  }
+
   function _posRegisterRegister(
     bytes32 indentifier,
     uint64 votePower,
