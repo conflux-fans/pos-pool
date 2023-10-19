@@ -43,11 +43,11 @@ contract PoSPoolBatchCall is Ownable {
         return stakeInfos;
     }
 
-    function getStakeInfo(address pool, address user) internal view returns (StakeInfo memory) {
+    function getStakeInfo(address pool, address user) public view returns (StakeInfo memory) {
         StakeInfo memory stakeInfo;
         stakeInfo.pool = pool;
         stakeInfo.name = IPoSPool(pool).poolName();
-        stakeInfo.stakeAmount = IPoSPool(pool).userSummary(user).votes * 1000 ether;
+        stakeInfo.stakeAmount = uint256(IPoSPool(pool).userSummary(user).votes) * 1000 ether;
         stakeInfo.lockAmount = IPoSPool(pool).userLockInfo(user).amount;
         stakeInfo.unlockBlock = IPoSPool(pool).userLockInfo(user).unlockBlock;
         stakeInfo.apy = IPoSPool(pool).poolAPY();
