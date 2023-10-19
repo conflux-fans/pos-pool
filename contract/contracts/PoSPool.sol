@@ -487,6 +487,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return IVotingEscrow(votingEscrow).userLockInfo(user);
   }
 
+  function userVotePower(address user) external view returns (uint256) {
+    return IVotingEscrow(votingEscrow).userVotePower(user);
+  }
+
   // ======================== admin methods =====================
 
   ///
