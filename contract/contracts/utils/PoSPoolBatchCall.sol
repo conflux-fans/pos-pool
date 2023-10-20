@@ -20,7 +20,7 @@ contract PoSPoolBatchCall is Ownable {
         uint256 lockAmount;
         uint256 unlockBlock;
         uint256 votePower;
-        uint32 apy;
+        uint64 apy;
     }
 
     struct SelfStakeInfo {
@@ -50,7 +50,7 @@ contract PoSPoolBatchCall is Ownable {
         stakeInfo.stakeAmount = uint256(IPoSPool(pool).userSummary(user).votes) * 1000 ether;
         stakeInfo.lockAmount = IPoSPool(pool).userLockInfo(user).amount;
         stakeInfo.unlockBlock = IPoSPool(pool).userLockInfo(user).unlockBlock;
-        stakeInfo.apy = IPoSPool(pool).poolAPY();
+        stakeInfo.apy = uint64(IPoSPool(pool).poolAPY());
         stakeInfo.votePower = IVotingEscrow(IPoSPool(pool).votingEscrow()).userVotePower(user);
         return stakeInfo;
     }
