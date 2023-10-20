@@ -54,4 +54,5 @@ interface IPoSPool {
   function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) external;
   function userLockInfo(address user) external view returns (IVotingEscrow.LockInfo memory);
   function votingEscrow() external view returns (address);
+  function userVotePower(address user) external view returns (uint256);
 }

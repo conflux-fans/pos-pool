@@ -20,7 +20,7 @@ contract PoSPoolBatchCall is Ownable {
         uint256 lockAmount;
         uint256 unlockBlock;
         uint256 votePower;
-        uint32 apy;
+        uint64 apy;
     }
 
     struct SelfStakeInfo {
@@ -30,7 +30,7 @@ contract PoSPoolBatchCall is Ownable {
         uint256 votePower;
     }
 
-    address[] public posPools;
+    address[] private posPools;
 
     function getStakeInfos(address[] memory pools, address user) public view returns (StakeInfo[] memory) {
         StakeInfo[] memory stakeInfos = new StakeInfo[](pools.length + posPools.length);
@@ -43,14 +43,14 @@ contract PoSPoolBatchCall is Ownable {
         return stakeInfos;
     }
 
-    function getStakeInfo(address pool, address user) internal view returns (StakeInfo memory) {
+    function getStakeInfo(address pool, address user) public view returns (StakeInfo memory) {
         StakeInfo memory stakeInfo;
         stakeInfo.pool = pool;
         stakeInfo.name = IPoSPool(pool).poolName();
-        stakeInfo.stakeAmount = IPoSPool(pool).userSummary(user).votes * 1000 ether;
+        stakeInfo.stakeAmount = uint256(IPoSPool(pool).userSummary(user).votes) * 1000 ether;
         stakeInfo.lockAmount = IPoSPool(pool).userLockInfo(user).amount;
         stakeInfo.unlockBlock = IPoSPool(pool).userLockInfo(user).unlockBlock;
-        stakeInfo.apy = IPoSPool(pool).poolAPY();
+        stakeInfo.apy = uint64(IPoSPool(pool).poolAPY());
         stakeInfo.votePower = IVotingEscrow(IPoSPool(pool).votingEscrow()).userVotePower(user);
         return stakeInfo;
     }
