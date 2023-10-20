@@ -235,7 +235,11 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
 
     // internal functions
     function _adjustBlockNumber(uint256 blockNumber) internal pure returns (uint256) {
-        return (blockNumber / QUARTER_BLOCK_NUMBER + 1) * QUARTER_BLOCK_NUMBER;
+        uint256 adjusted = (blockNumber / QUARTER_BLOCK_NUMBER) * QUARTER_BLOCK_NUMBER;
+        if (adjusted < blockNumber) { // if not divide exactly
+            return adjusted + QUARTER_BLOCK_NUMBER;
+        }
+        return adjusted;
     }
 
     function _sumVote(uint256[3] memory votes) internal pure returns (uint256) {
