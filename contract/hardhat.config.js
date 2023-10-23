@@ -55,6 +55,13 @@ module.exports = {
       ],
       chainId: 8889,
     },
+    net8888: {
+        url: "http://net8888cfx.confluxrpc.com",
+        accounts: [
+          PRIVATE_KEY,
+        ],
+        chainId: 8888,
+    },
     testnet: {
       url: "https://test.confluxrpc.com",
       accounts: [
