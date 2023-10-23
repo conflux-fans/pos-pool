@@ -154,11 +154,14 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         if (topicSpecialVoters[vote_round][topic_index].length() > 0) {
             for(uint256 i = 0; i < topicSpecialVoters[vote_round][topic_index].length(); i ++) {
                 address addr = topicSpecialVoters[vote_round][topic_index].at(i);
+                if (addr == msg.sender) {
+                    continue;
+                }
                 // uint256 lastBlockNumber = userVoteMeta[vote_round][addr][topic_index].blockNumber;
                 uint256 lastPower = userVoteMeta[vote_round][addr][topic_index].availablePower;
                 uint256 currentPower = userVotePower(addr);
-                uint256 delta = lastPower - currentPower;
-                if (delta > 0) {
+                if (lastPower > currentPower) {
+                    uint256 delta = lastPower - currentPower;
                     uint256 index = _findVoteIndex(userVoteInfo[vote_round][addr][topic_index]);
                     userVoteInfo[vote_round][addr][topic_index][index] -= delta;
                     poolVoteInfo[vote_round][topic_index][index] -= delta;
