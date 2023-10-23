@@ -50,7 +50,9 @@
     "withdrawable": "Withdrawable:",
     "withdraw": "Withdraw",
     "unstake_activity": "Unstake Activity",
-    "can_withdraw_at": "You can withdraw at {{time}}"
+    "can_withdraw_at": "You can withdraw at {{time}}",
+    "locked": "My Locked:",
+    "unlockTime": "Unlock Time:"
   },
   "TxModal": {
     "transaction_submitted": "Transaction Submitted.",
