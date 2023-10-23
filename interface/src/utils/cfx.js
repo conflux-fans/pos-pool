@@ -3,7 +3,7 @@ import {
   Drip,
   Conflux,
 } from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
-import {abi as posPoolAbi} from './../../../contract/ABI/PoSPool.json'
+import {abi as posPoolAbi} from './../../../contract/ABI/IPoSPool.json'
 import {abi as posManagerAbi} from './../../../contract/ABI/PoolManager.json'
 import poolConfig from '../../pool.config'
 import {isTestNetEnv} from './index'

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import useController from './useController';
-import { abi as posPoolAbi } from "./../../../contract/PoSPool.json";
+import { abi as posPoolAbi } from "./../../../contract/IPoSPool.json";
 import { useParams } from "react-router-dom";
 import { utils } from 'ethers';
 
