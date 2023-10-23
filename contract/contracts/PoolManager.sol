@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IPoSPool.sol";
+import "./interfaces/IPoSPool.sol";
 
 contract PoolManager is Ownable {
   using EnumerableSet for EnumerableSet.AddressSet;
