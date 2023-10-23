@@ -27,12 +27,12 @@ function Home() {
       navigate(`/pool/${space}/${address}${space === 'e-space' ? `?coreAddress=${coreAddress}` : ''}`);
     }
   };
-  const columns = [
+  const [columns,setColumns] = useState([
     {
       title: t("Home.status"),
       key: "status",
       dataIndex: "status",
-      width:100,
+      width:80,
       render: (status) => (
         <>
           {
@@ -51,13 +51,13 @@ function Home() {
       title: t("Home.pool"),
       dataIndex: "name",
       key: "name",
-      width:200
+      width:100
     },
     {
       title: t("Home.total_locked"),
       dataIndex: "totalAvailable",
       key: "totalAvailable",
-      width:200
+      width:150
     },
     {
       title: t("Home.apy"),
@@ -74,7 +74,7 @@ function Home() {
     {
       title: "Core",
       key: "action1",
-      width: 60,
+      width: 45,
       render: (text, record) => {
         return (
           <Space size="middle">
@@ -85,6 +85,7 @@ function Home() {
           </Space>
         );
       },
+      fixed: 'right'
     },
     {
       title: "eSpace",
@@ -101,9 +102,9 @@ function Home() {
           </Space>
         );
       },
+      fixed: 'right'
     },
-  ];
-
+  ])
   useEffect(() => {
     async function getData() {
       setLoading(true)
@@ -117,6 +118,10 @@ function Home() {
         const list = await posPoolManagerContract.getPools()
         const eSpaceAddresses = await Promise.allSettled(list.map(async pool => await posPoolManagerContract.eSpacePoolAddresses(pool[3])));
         const data = await transferData(list, eSpaceAddresses);
+        const hasAnyeSpaceAddresses = data.some(item=>item.eSpaceAddress);
+        if(!hasAnyeSpaceAddresses){
+            setColumns(columns => columns.filter(column=>column.title!=="eSpace"))
+        }
         setDataList(data);
         setLoading(false)
       } catch (error) {
@@ -170,7 +175,7 @@ function Home() {
   };
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <Table columns={columns} dataSource={dataList} pagination={false} size='middle' loading={loading} />
+      <Table columns={columns} dataSource={dataList} pagination={false} size='middle' loading={loading} scroll={{ x: 800 }}/>
     </div>
   );
 }
