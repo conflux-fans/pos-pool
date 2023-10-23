@@ -274,7 +274,6 @@ function Pool() {
         setCfxCanUnstate(unstakeMul)
       }
       
-      console.log(accountAddress)
       // get user performance fee
       let fee
       try {
