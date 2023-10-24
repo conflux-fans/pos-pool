@@ -225,7 +225,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         } else if (cid == 1029) {
             return 133800000;
         } else if (cid == 8888) {
-            return 360000;  // maybe will change
+            return 100000;  // maybe will change
         }
         return 0;
     }
