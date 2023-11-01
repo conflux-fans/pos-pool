@@ -6,6 +6,12 @@
             "address": "cfxtest:ace1xye5bt56d4snfesyw2jupgt9ve3ebughhj8z1p",
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
+        },
+         {
+            "name": "test-a",
+            "address": "cfxtest:aca9rwdxwfa61d81c1xwnf54x1vbv1h1be0c0x3jff",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
         }
     ]
 }
