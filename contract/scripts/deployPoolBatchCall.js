@@ -10,7 +10,7 @@ async function main() {
         from: account,
     }).executed();
 
-    console.log("Deploy:", receipt.contractCreated);
+    console.log("Deploy PoolBatchCall:", receipt.contractCreated);
 }
 
 main().catch(console.log);

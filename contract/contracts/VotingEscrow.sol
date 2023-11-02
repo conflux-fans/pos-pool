@@ -12,10 +12,10 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     // Add the library methods
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    ParamsControl public constant paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
-    uint256 public constant ONE_DAY_BLOCK_NUMBER = 2 * 3600 * 24;
-    uint256 public constant QUARTER_BLOCK_NUMBER = ONE_DAY_BLOCK_NUMBER * 365 / 4; // 3 months
-    uint256 public constant CFX_VALUE_OF_ONE_VOTE = 1000 ether;
+    ParamsControl private constant paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
+    uint256 private constant ONE_DAY_BLOCK_NUMBER = 2 * 3600 * 24;
+    uint256 private constant QUARTER_BLOCK_NUMBER = 2 * 3600; // 3 months, 8888 network is 1 hour
+    uint256 private constant CFX_VALUE_OF_ONE_VOTE = 1000 ether;
     
     IPoSPool public posPool;
 
@@ -212,8 +212,10 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     }
 
     function _currentRoundEndBlock() internal view returns (uint256) {
-        // not sure 8888 network one round period is how long
-        return _onChainDaoStartBlock() + paramsControl.currentRound() * ONE_DAY_BLOCK_NUMBER * 60;
+        // 8888 network one round period is half hour, others is 60 day
+        uint256 cid = _getChainID();
+        uint256 oneRound = cid == 8888 ? 3600 : ONE_DAY_BLOCK_NUMBER * 60;
+        return _onChainDaoStartBlock() + paramsControl.currentRound() * oneRound;
     }
 
     function _onChainDaoStartBlock() internal view returns (uint256) {
@@ -223,7 +225,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         } else if (cid == 1029) {
             return 133800000;
         } else if (cid == 8888) {
-            return 360000;  // maybe will change
+            return 100000;  // maybe will change
         }
         return 0;
     }
