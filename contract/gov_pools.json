@@ -5,6 +5,12 @@
             "address": "cfx:acdj1y1r00mzvuw9s831rj1t5amst2405jv582syu0",
             "icon": "https://pospool.phxverse.com/favicon.ico",
             "website": "https://pospool.phxverse.com/"
+        },
+        {
+            "name": "FC Pool",
+            "address": "cfx:acbvy42ajnwz5kzpm5an9yz0uwm04ab2y2huhvvrkn",
+            "icon": "https://conflux.fans/favicon.ico",
+            "website": "https://conflux.fans/"
         }
     ],
     "testnet": [
