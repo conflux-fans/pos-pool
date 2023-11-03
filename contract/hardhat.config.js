@@ -38,6 +38,13 @@ module.exports = {
       accounts:
         PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
     },
+    cfx: {
+        url: "https://main.confluxrpc.com",
+        accounts: [
+          PRIVATE_KEY,
+        ],
+        chainId: 1029,
+    },
     espace: {
       url: "https://evm.confluxrpc.com",
       accounts: [PRIVATE_KEY],

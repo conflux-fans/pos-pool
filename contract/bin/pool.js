@@ -108,6 +108,21 @@ program
   });
 
 program
+  .command('poolBatchCallAddPool')
+  .argument('[poolAddr]', 'Pool address')
+  .action(async (poolAddr) => {
+    const meta = getContractInfo('PoSPoolBatchCall');
+    const contract = conflux.Contract({
+      abi: meta.abi,
+      address: process.env.BATCH_CALL_UTIL
+    });
+    const receipt = await contract.addPoSPool(poolAddr).sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, 'BatchCall util addPoSPool');
+  });
+
+program
   .command('deployPoSPool')
   .description('Deploy PoSPool in proxy mode')
   .action(async () => {
@@ -406,6 +421,8 @@ function getContractInfo(name) {
       return require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
     case "VotingEscrow":
       return votingEscrowContractInfo;
+    case "PoSPoolBatchCall":
+      return require('../artifacts/contracts/utils/PoSPoolBatchCall.sol/PoSPoolBatchCall.json');
     default:
       throw new Error(`Unknown contract name: ${name}`);
   }
