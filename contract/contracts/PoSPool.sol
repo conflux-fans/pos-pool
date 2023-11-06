@@ -288,7 +288,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     
     // if user has locked cfx for vote power, the rest amount should bigger than that
     IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
-    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE > lockInfo.amount, "Locked is not enough");
+    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
 
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
