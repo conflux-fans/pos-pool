@@ -1,9 +1,9 @@
-import React, {useState, useEffect, useCallback} from 'react'
-import {Input, Button, Divider, Form, List, message, Col, Row, Spin} from 'antd'
-import {useParams, useSearchParams} from 'react-router-dom'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Input, Button, Divider, Form, List, message, Col, Row, Spin } from 'antd'
+import { useParams, useSearchParams } from 'react-router-dom'
 import BigNumber from 'bignumber.js'
-import {format} from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
-import {useTranslation} from 'react-i18next'
+import { format } from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
+import { useTranslation } from 'react-i18next'
 import {
   Drip,
   getPosAccountByPowAddress,
@@ -26,7 +26,7 @@ import {
 } from '../../hooks/useWallet'
 import { provider as metaMaskProvider } from '@cfxjs/use-wallet/dist/ethereum'
 import useCurrentSpace from '../../hooks/useCurrentSpace'
-import {CFX_BASE_PER_VOTE, StatusPosNode} from '../../constants'
+import { CFX_BASE_PER_VOTE, StatusPosNode } from '../../constants'
 import Header from './Header'
 import ConfirmModal from './ConfirmModal'
 import TxModal from './TxModal'
@@ -35,7 +35,7 @@ import useCurrentNetwork from '../../hooks/useCurrentNetwork'
 import useIsNetworkMatch from '../../hooks/useIsNetworkMatch'
 
 function Pool() {
-  const {t} = useTranslation()
+  const { t } = useTranslation()
   const currentSpace = useCurrentSpace()
   const chainId = useChainId()
   const accountAddress = useAccount()
@@ -44,11 +44,11 @@ function Pool() {
   const _balance = useBalance()
   const balance = _balance?.toDecimalStandardUnit(5)
   const cfxMaxCanStake = getMax(balance)
-  const {poolAddress} = useParams()
+  const { poolAddress } = useParams()
   const [searchParams] = useSearchParams()
   const currentNetwork = useCurrentNetwork();
 
-  const {contract: posPoolContract, interface: posPoolInterface} =
+  const { contract: posPoolContract, interface: posPoolInterface } =
     usePoolContract()
   const [status, setStatus] = useState(StatusPosNode.loading)
   const [stakedCfx, setStakedCfx] = useState(0)
@@ -75,23 +75,26 @@ function Pool() {
   const [isLoading, setIsLoading] = useState(false)
   const [waitStakeRes, setWaitStakeRes] = useState(false)
   const isNetworkMatch = useIsNetworkMatch()
+  const [unlockBlock, setUnlockBlock] = useState(0)
+  const [unlockTime, setUnlockTime] = useState('')
+  const [unlockAmount, setUnlockAmount] = useState(0)
 
   useEffect(() => {
     async function fetchData() {
       const proArr = []
       proArr.push(
         currentSpace === 'core' ?
-        confluxController.provider.call('cfx_getStatus')
-        : fetch(currentNetwork.url, {
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_blockNumber',
-            params: [],
-            id: 83
-          }),
-          headers: {'content-type': 'application/json'},
-          method: 'POST',
-        }).then(response => response?.json()).then(res => res?.result)
+          confluxController.provider.call('cfx_getStatus')
+          : fetch(currentNetwork.url, {
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              method: 'eth_blockNumber',
+              params: [],
+              id: 83
+            }),
+            headers: { 'content-type': 'application/json' },
+            method: 'POST',
+          }).then(response => response?.json()).then(res => res?.result)
       )
       proArr.push(confluxController.provider.call('cfx_getPoSEconomics'))
       const data = await Promise.all(proArr)
@@ -113,9 +116,17 @@ function Pool() {
           currentSpace,
         ).toLocaleString(),
       )
+
+      setUnlockTime(
+        getDateByBlockInterval(
+          unlockBlock,
+          currentBlock,
+          currentSpace,
+        ).toLocaleString(),
+      )
     }
     fetchData()
-  }, [currentSpace, currentNetwork?.url])
+  }, [currentSpace, currentNetwork?.url, unlockBlock])
 
   useEffect(() => {
     if (status) {
@@ -226,16 +237,21 @@ function Pool() {
           posPoolContract['userOutQueue(address)']
         )(accountAddress),
       )
+      proArr.push(posPoolContract.userLockInfo(accountAddress))
 
       const data = await Promise.all(proArr)
+
       const userSum = data[0]
+
       setUserSummary(userSum)
       setStakedCfx(
         new BigNumber(userSum?.[1]?._hex || userSum[1] || 0)
           .multipliedBy(CFX_BASE_PER_VOTE)
           .toString(10),
       )
-      setCfxCanUnstate(getCfxByVote(userSum?.[2]?._hex || userSum[2]))
+      
+
+
       setCfxCanWithdraw(getCfxByVote(userSum?.[3]?._hex || userSum[3]))
       setRewards(
         getPrecisionAmount(
@@ -247,12 +263,23 @@ function Pool() {
       )
       setUnstakeList(transferQueue(data[2]))
 
+      const userLockInfo = data[3]?._hex || data[3];
+      setUnlockAmount(new BigNumber(userLockInfo?.[0]?._hex || userLockInfo[0]).dividedBy(10 ** 18).toString())
+      setUnlockBlock(new BigNumber(userLockInfo?.[1]?._hex || userLockInfo[1]).toString())
+
+      const unstake = new BigNumber(userSum?.[2]?._hex || userSum[2] || 0).multipliedBy(CFX_BASE_PER_VOTE);
+
+      const unstakeMul = unstake.minus(new BigNumber(userLockInfo?.[0]?._hex || userLockInfo[0]).dividedBy(10 ** 18)).toNumber()
+      if(unstake.isGreaterThan(0) && unstakeMul > 0) {
+        setCfxCanUnstate(unstakeMul)
+      }
+      
       // get user performance fee
       let fee
       try {
         fee = await posPoolContract
           .userShareRatio()
-          .call({from: accountAddress})
+          .call({ from: accountAddress })
       } catch (err) {
         fee = await posPoolContract.poolUserShareRatio()
       }
@@ -412,14 +439,14 @@ function Pool() {
           .request({
             method: 'eth_estimateGas',
             params: [
-                {
-                    from: accountAddress,
-                    data,
-                    to: poolAddress,
-                    value: Unit.fromMinUnit(value).toHexMinUnit(),
-                },
+              {
+                from: accountAddress,
+                data,
+                to: poolAddress,
+                value: Unit.fromMinUnit(value).toHexMinUnit(),
+              },
             ],
-        })
+          })
       }
       if (estimateData?.gasLimit) {
         txParams.gas = Unit.fromMinUnit(calculateGasMargin(estimateData?.gasLimit || 0)).toHexMinUnit()
@@ -453,7 +480,7 @@ function Pool() {
   return (
     <div className="relative w-full h-full flex">
       {isLoading &&
-          <Spin className='top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]' style={{ position: 'absolute'}}></Spin>
+        <Spin className='top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]' style={{ position: 'absolute' }}></Spin>
       }
       <div className="container mx-auto">
         <Header status={status} />
@@ -464,8 +491,8 @@ function Pool() {
                 <Form
                   layout="vertical"
                   form={form}
-                  wrapperCol={{style: {color: 'white'}}}
-                  style={{color: 'white'}}
+                  wrapperCol={{ style: { color: 'white' } }}
+                  style={{ color: 'white' }}
                 >
                   <div className="font-bold my-4 text-xl text-center">
                     {t('Pool.stake&unstake')}
@@ -514,7 +541,7 @@ function Pool() {
                       {t('Pool.stake')}
                     </Button>
                   </div>
-                  <Divider dashed style={{borderColor: 'white'}} />
+                  <Divider dashed style={{ borderColor: 'white' }} />
                   <div className="my-1">{t('Pool.how_much_unstake')}</div>
                   <Form.Item
                     required
@@ -587,7 +614,7 @@ function Pool() {
                     </Button>
                   </span>
                 </div>
-                <div className="my-2 opacity-60">
+                <div className="my-4 opacity-60">
                   <span>{t('Pool.last_update_time')}</span>
                   <span>{lastDistributeTime}</span>
                 </div>
@@ -595,7 +622,17 @@ function Pool() {
                   <span>{t('Pool.performance_fee')}</span>
                   <span className="ml-2 font-bold">{`${fee} %`}</span>
                 </div>
-                <Divider dashed style={{borderColor: 'white'}} />
+                <div>
+                  <span>{t('Pool.locked')}</span>
+                  <span className="ml-2 font-bold">{unlockAmount}</span>
+                  <span> CFX</span>
+                </div>
+                <div>
+                  <span>{t('Pool.unlockTime')}</span>
+                  <span className="ml-2 font-bold">{unlockAmount > 0 ? unlockTime : '--'}</span>
+                </div>
+
+                <Divider dashed style={{ borderColor: 'white' }} />
                 <div>
                   <span>{t('Pool.withdrawable')}</span>
                   <span className="ml-2 font-bold">{cfxCanWithdraw}</span>
@@ -613,13 +650,14 @@ function Pool() {
                     </Button>
                   </span>
                 </div>
+
               </div>
             </div>
             <div className={`${unstakeList.length > 0 ? 'block' : 'hidden'}`}>
               <Divider
                 dashed
                 orientation="left"
-                style={{borderColor: 'white', color: 'white'}}
+                style={{ borderColor: 'white', color: 'white' }}
               >
                 {t('Pool.unstake_activity')}
               </Divider>
@@ -630,7 +668,7 @@ function Pool() {
                   <List.Item>
                     <div className="text-white">{`${item.amount} CFX`}</div>
                     <div className="text-white">
-                      {t('Pool.can_withdraw_at', {time: item.timeStr})}
+                      {t('Pool.can_withdraw_at', { time: item.timeStr })}
                     </div>
                   </List.Item>
                 )}
