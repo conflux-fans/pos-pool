@@ -24,6 +24,12 @@
             "address": "cfx:acgwp9vmrp7rfd5keg2x69a8y88aw84uc2paasu7cu",
             "icon": "https://hydrasf.club/favicon.ico",
             "website": "https://hydrasf.club/"
+        },
+        {
+            "name": "ABC pool",
+            "address": "cfx:accpx9uxky39pg1hzav757vdej95w1kbcp13d0hvm7",
+            "icon": "https://confluxpos.cn/favicon.ico",
+            "website": "https://confluxpos.cn/"
         }
     ],
     "testnet": [
