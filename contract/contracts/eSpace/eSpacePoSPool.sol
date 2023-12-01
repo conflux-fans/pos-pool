@@ -1,12 +1,13 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../utils/VotePowerQueue.sol";
-import "../utils/UnstakeQueue.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {VotePowerQueue} from "../utils/VotePowerQueue.sol";
+import {UnstakeQueue} from "../utils/UnstakeQueue.sol";
+import {IVotingEscrow} from "../interfaces/IVotingEscrow.sol";
 
 ///
 ///  @title eSpace PoSPool
@@ -56,6 +57,8 @@ contract ESpacePoSPool is Ownable, Initializable {
   uint256 public crossingVotes;
 
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 1800;
+
+  address public votingEscrow;
 
   // ======================== Struct definitions =========================
   struct PoolSummary {
@@ -195,6 +198,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     address payable receiver = payable(_bridgeAddress);
     receiver.transfer(msg.value);
     crossingVotes += votePower;
+
     emit IncreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
@@ -222,6 +226,11 @@ contract ESpacePoSPool is Ownable, Initializable {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
+
+    // if user has locked cfx for vote power, the rest amount should bigger than that
+    IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
+    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
+
     // record the decrease request
     unstakeQueue.enqueue(UnstakeQueue.Node(votePower));
     emit DecreasePoSStake(msg.sender, votePower);
@@ -340,6 +349,14 @@ contract ESpacePoSPool is Ownable, Initializable {
     return summary;
   }
 
+  function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
+    return IVotingEscrow(votingEscrow).userLockInfo(user);
+  }
+
+  function userVotePower(address user) external view returns (uint256) {
+    return IVotingEscrow(votingEscrow).userVotePower(user);
+  }
+
   function poolSummary() public view returns (PoolSummary memory) {
     PoolSummary memory summary = _poolSummary;
     uint256 _latestReward = _selfBalance().sub(lastPoolShot.balance);
@@ -373,17 +390,6 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   function stakerAddress(uint256 i) public view returns (address) {
     return stakers.at(i);
-  }
-
-  function unstakeLen() public view returns (uint256) {
-    return unstakeQueue.end - unstakeQueue.start;
-  }
-
-  function firstUnstakeVotes() public view returns (uint256) {
-    if (unstakeQueue.end == unstakeQueue.start) {
-      return 0;
-    }
-    return unstakeQueue.items[unstakeQueue.start].votes;
   }
 
   // ======================== admin methods =====================
@@ -427,40 +433,22 @@ contract ESpacePoSPool is Ownable, Initializable {
     poolName = name;
   }
 
-  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    uint256 votePower = userSummaries[_addr].available;
-    if (votePower == 0) return;
-
-    _updateUserInterest(_addr);
-    userSummaries[_addr].available = 0;
-    userSummaries[_addr].locked = 0;
-    // clear user inqueue
-    userInqueues[_addr].clear();
-    userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
-    _updateUserShot(_addr);
-
-    _poolSummary.available -= votePower;
-  }
-
-  // When pool node is force retired, use this method to make all user's available stake to unlocking
-  function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
-    uint256 len = stakers.length();
-    if (len == 0) return;
-
-    _updateAccRewardPerCfx();
-
-    uint256 end = offset + limit;
-    if (end > len) {
-      end = len;
-    }
-    for (uint256 i = offset; i < end; i++) {
-      _retireUserStake(stakers.at(i), endBlockNumber);
-    }
-
-    _updatePoolShot();
+  function setVotingEscrow(address _votingEscrow) public onlyOwner {
+    votingEscrow = _votingEscrow;
   }
 
   // ======================== bridge methods =====================
+
+  function unstakeLen() public view returns (uint256) {
+    return unstakeQueue.end - unstakeQueue.start;
+  }
+
+  function firstUnstakeVotes() public view returns (uint256) {
+    if (unstakeQueue.end == unstakeQueue.start) {
+      return 0;
+    }
+    return unstakeQueue.items[unstakeQueue.start].votes;
+  }
 
   function setPoolAPY(uint256 apy) public onlyBridge {
     _poolAPY = apy;

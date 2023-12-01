@@ -7,7 +7,7 @@ import "./interfaces/IPoSPool.sol";
 
 // eSpace pool bridge contract
 contract CoreBridge is Ownable {
-  CrossSpaceCall internal crossSpaceCall;
+  CrossSpaceCall private crossSpaceCall;
 
   address public poolAddress;
   address public eSpacePoolAddress;
@@ -28,7 +28,7 @@ contract CoreBridge is Ownable {
     eSpacePoolAddress = _eSpacePoolAddress;
   }
 
-  function ePoolAddrB20() public view returns (bytes20) {
+  function ePoolAddrB20() private view returns (bytes20) {
     return bytes20(eSpacePoolAddress);
   }
 
@@ -155,10 +155,6 @@ contract CoreBridge is Ownable {
 
   function eSpaceHandleUnstakeTask() internal {
     crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
-  }
-
-  function callEVM(address addr, bytes calldata data) public onlyOwner {
-    crossSpaceCall.callEVM(bytes20(addr), data);
   }
 
   fallback() external payable {}
