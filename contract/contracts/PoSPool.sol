@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./PoolContext.sol";
-import "./VotePowerQueue.sol";
-import "./PoolAPY.sol";
+import "./utils/VotePowerQueue.sol";
+import "./utils/PoolAPY.sol";
 import "./interfaces/IVotingEscrow.sol";
 
 ///

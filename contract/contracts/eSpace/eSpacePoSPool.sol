@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../VotePowerQueue.sol";
-import "./UnstakeQueue.sol";
+import "../utils/VotePowerQueue.sol";
+import "../utils/UnstakeQueue.sol";
 
 ///
 ///  @title eSpace PoSPool

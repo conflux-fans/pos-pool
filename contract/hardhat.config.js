@@ -1,23 +1,12 @@
 /* eslint-disable prettier/prettier */
-require("dotenv").config();
-
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-conflux");
+require("dotenv").config();
 // require("hardhat-contract-sizer");
 const { loadPrivateKey } = require('./utils');
-
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
-  const accounts = await hre.ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
 
 const PRIVATE_KEY = loadPrivateKey();
 
@@ -29,14 +18,10 @@ const PRIVATE_KEY = loadPrivateKey();
  */
 module.exports = {
   solidity: "0.8.4",
+  defaultNetwork: "espaceTestnet",
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
-    },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts:
-        PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
     },
     cfx: {
         url: "https://main.confluxrpc.com",
@@ -44,6 +29,13 @@ module.exports = {
           PRIVATE_KEY,
         ],
         chainId: 1029,
+    },
+    cfxTestnet: {
+      url: "https://test.confluxrpc.com",
+      accounts: [
+        PRIVATE_KEY,
+      ],
+      chainId: 1,
     },
     espace: {
       url: "https://evm.confluxrpc.com",
@@ -62,20 +54,10 @@ module.exports = {
       ],
       chainId: 8889,
     },
-    testnet: {
-      url: "https://test.confluxrpc.com",
-      accounts: [
-        PRIVATE_KEY,
-      ],
-      chainId: 1,
-    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
-  },
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   contractSizer: {
     alphaSort: true,

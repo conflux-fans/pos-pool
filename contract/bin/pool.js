@@ -412,7 +412,7 @@ function getContractInfo(name) {
     case "PoolManager":
       return poolManagerInfo;
     case "PoolProxy":
-      return require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
+      return require("../artifacts/contracts/utils/Proxy1967.sol/Proxy1967.json");
     case "MockStaking":
       return require("../artifacts/contracts/mocks/Staking.sol/MockStaking.json");
     case "MockPosRegister":

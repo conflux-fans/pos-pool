@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
-import "../VotePowerQueue.sol";
+import "../utils/VotePowerQueue.sol";
 import "./IVotingEscrow.sol";
 
 interface IPoSPool {

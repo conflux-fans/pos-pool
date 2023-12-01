@@ -13,7 +13,7 @@ $  node bin/pool.js deploy Pool
 Deploy success: cfxtest:acg4829dee10gg2ccjfx5pc7fdn1dwxy12a2j3ua11
 ```
 
-2. Invoke the `PoSPoolProxy1967.sol` contract's upgradeTo method to update the Pool contract
+2. Invoke the `Proxy1967.sol` contract's upgradeTo method to update the Pool contract
 
 ```sh
 $ node bin/pool.js upgradePoolContract cfxtest:acg4829dee10gg2ccjfx5pc7fdn1dwxy12a2j3ua11

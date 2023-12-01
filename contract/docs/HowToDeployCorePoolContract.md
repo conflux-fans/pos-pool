@@ -5,7 +5,7 @@
 All contracts are in the `contracts` folder:
 
 * `PoSPool.sol`: This is the pool logic methods
-* `PoSPoolProxy1967.sol`: This is the pool proxy contract, used to make the pool logic upgradable.
+* `Proxy1967.sol`: This is the pool proxy contract, used to make the pool logic upgradable.
 * `PoolManager.sol`: A simple manager contract just store pool's address.
 
 ## Precondition

@@ -5,7 +5,7 @@ require('dotenv').config();
 const {conflux, Drip, account} = require("./conflux");
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 const poolManagerInfo = require("../artifacts/contracts/PoolManager.sol/PoolManager.json");
-const poolProxyInfo = require("../artifacts/contracts/PoSPoolProxy1967.sol/PoSPoolProxy1967.json");
+const poolProxyInfo = require("../artifacts/contracts/utils/Proxy1967.sol/Proxy1967.json");
 
  // 0x8129fc1c - initialize
 const InitializeMethodData = '0x8129fc1c';
