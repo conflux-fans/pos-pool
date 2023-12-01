@@ -31,20 +31,19 @@ contract CoreBridge is Ownable {
     return bytes20(eSpacePoolAddress);
   }
 
-  function queryCrossingVotes() public returns (uint256) {
-    bytes memory rawCrossingVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
+  function queryCrossingVotes() public view returns (uint256) {
+    bytes memory rawCrossingVotes = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
     return abi.decode(rawCrossingVotes, (uint256));
   }
 
-  function queryUnstakeLen() public returns (uint256) {
-    bytes memory rawUnstakeLen = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
+  function queryUnstakeLen() public view returns (uint256) {
+    bytes memory rawUnstakeLen = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
     return abi.decode(rawUnstakeLen, (uint256));
   }
 
   function queryInterest() public view returns (uint256) {
     IPoSPool posPool = IPoSPool(poolAddress);
-    uint256 interest = posPool.userInterest(address(this));
-    return interest;
+    return posPool.userInterest(address(this));
   }
 
   function queryUserSummary() public view returns (IPoSPool.UserSummary memory) {
@@ -103,12 +102,11 @@ contract CoreBridge is Ownable {
     uint256 available = userSummary.locked;
     if (available == 0) return;
     for(uint256 i = 0; i < unstakeLen; i++) {
-      bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("firstUnstakeVotes()"));
-      uint256 firstUnstakeVotes = abi.decode(rawFirstUnstakeVotes, (uint256));
+      uint256 firstUnstakeVotes = eSpaceFirstUnstakeVotes();
       if (firstUnstakeVotes == 0) break;
       if (firstUnstakeVotes > available) break;
       posPool.decreaseStake(uint64(firstUnstakeVotes));
-      crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
+      eSpaceHandleUnstakeTask();
       available -= firstUnstakeVotes;
     }
   }
@@ -120,11 +118,10 @@ contract CoreBridge is Ownable {
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
     uint256 available = userSummary.locked;
     if (available == 0) return;
-    bytes memory rawFirstUnstakeVotes = crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("firstUnstakeVotes()"));
-    uint256 firstUnstakeVotes = abi.decode(rawFirstUnstakeVotes, (uint256));
+    uint256 firstUnstakeVotes = eSpaceFirstUnstakeVotes();
     if (firstUnstakeVotes == 0 || firstUnstakeVotes > available) return;
     posPool.decreaseStake(uint64(firstUnstakeVotes));
-    crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
+    eSpaceHandleUnstakeTask();
   }
 
   function withdrawVotes() public onlyOwner {
@@ -133,8 +130,7 @@ contract CoreBridge is Ownable {
     if (userSummary.unlocked > 0) {
       posPool.withdrawStake(userSummary.unlocked);
       // transfer to eSpacePool and call method
-      uint256 transferValue = userSummary.unlocked * 1000 ether;
-      crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", userSummary.unlocked));
+      eSpaceHandleUnlockedIncrease(userSummary.unlocked);
     }
   }
 
@@ -143,8 +139,21 @@ contract CoreBridge is Ownable {
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
     require(userSummary.unlocked >= votes, "not enough unlocked votes");
     posPool.withdrawStake(votes);
+    eSpaceHandleUnlockedIncrease(votes);
+  }
+
+  function eSpaceFirstUnstakeVotes() public view returns (uint256) {
+    bytes memory rawFirstUnstakeVotes = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("firstUnstakeVotes()"));
+    return abi.decode(rawFirstUnstakeVotes, (uint256));
+  }
+
+  function eSpaceHandleUnlockedIncrease(uint64 votes) internal {
     uint256 transferValue = votes * 1000 ether;
     crossSpaceCall.callEVM{value: transferValue}(ePoolAddrB20(), abi.encodeWithSignature("handleUnlockedIncrease(uint256)", votes));
+  }
+
+  function eSpaceHandleUnstakeTask() internal {
+    crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
   }
 
   function callEVM(address addr, bytes calldata data) public onlyOwner {
