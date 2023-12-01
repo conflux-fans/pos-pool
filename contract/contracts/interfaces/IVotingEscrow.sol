@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
-import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
+import {ParamsControl} from "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 
 interface IVotingEscrow {
     struct LockInfo {

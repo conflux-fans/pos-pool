@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/ICrossSpaceCall.sol";
-import "./interfaces/IPoSPool.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {CrossSpaceCall} from "./interfaces/ICrossSpaceCall.sol";
+import {IPoSPool} from "./interfaces/IPoSPool.sol";
 
 // eSpace pool bridge contract
 contract CoreBridge is Ownable {
@@ -129,9 +129,9 @@ contract CoreBridge is Ownable {
     IPoSPool posPool = IPoSPool(poolAddress);
     IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
     if (userSummary.unlocked > 0) {
-      posPool.withdrawStake(userSummary.unlocked);
+      posPool.withdrawStake(uint64(userSummary.unlocked));
       // transfer to eSpacePool and call method
-      eSpaceHandleUnlockedIncrease(userSummary.unlocked);
+      eSpaceHandleUnlockedIncrease(uint64(userSummary.unlocked));
     }
   }
 

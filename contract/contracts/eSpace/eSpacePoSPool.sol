@@ -8,6 +8,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {VotePowerQueue} from "../utils/VotePowerQueue.sol";
 import {UnstakeQueue} from "../utils/UnstakeQueue.sol";
 import {IVotingEscrow} from "../interfaces/IVotingEscrow.sol";
+import {IPoSPool} from "../interfaces/IPoSPool.sol";
 
 ///
 ///  @title eSpace PoSPool
@@ -39,13 +40,13 @@ contract ESpacePoSPool is Ownable, Initializable {
   // global pool accumulative reward for each cfx
   uint256 public accRewardPerCfx;  // start from 0
 
-  PoolSummary private _poolSummary;
-  mapping(address => UserSummary) private userSummaries;
+  IPoSPool.PoolSummary private _poolSummary;
+  mapping(address => IPoSPool.UserSummary) private userSummaries;
   mapping(address => VotePowerQueue.InOutQueue) private userInqueues;
   mapping(address => VotePowerQueue.InOutQueue) private userOutqueues;
 
-  PoolShot internal lastPoolShot;
-  mapping(address => UserShot) internal lastUserShots;
+  IPoSPool.PoolShot internal lastPoolShot;
+  mapping(address => IPoSPool.UserShot) internal lastUserShots;
   
   EnumerableSet.AddressSet private stakers;
   // Unstake votes queue
@@ -60,40 +61,17 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   address public votingEscrow;
 
-  // ======================== Struct definitions =========================
-  struct PoolSummary {
-    uint256 available;
-    uint256 interest; // PoS pool current interest
-    uint256 totalInterest; // total historical interest of whole pools
-  }
+  // ======================== Events =========================
 
-  /// @title UserSummary
-  /// @custom:field votes User's total votes
-  /// @custom:field available User's avaliable votes
-  /// @custom:field locked
-  /// @custom:field unlocked
-  /// @custom:field claimedInterest
-  /// @custom:field currentInterest
-  struct UserSummary {
-    uint256 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
-    uint256 available; // locking + locked
-    uint256 locked;
-    uint256 unlocked;
-    uint256 claimedInterest; // total historical claimed interest
-    uint256 currentInterest; // current claimable interest
-  }
+  event IncreasePoSStake(address indexed user, uint256 votePower);
 
-  struct PoolShot {
-    uint256 available;
-    uint256 balance;
-    uint256 blockNumber;
-  } 
+  event DecreasePoSStake(address indexed user, uint256 votePower);
 
-  struct UserShot {
-    uint256 available;
-    uint256 accRewardPerCfx;
-    uint256 blockNumber;
-  }
+  event WithdrawStake(address indexed user, uint256 votePower);
+
+  event ClaimInterest(address indexed user, uint256 amount);
+
+  event RatioChanged(uint256 ratio);
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -153,25 +131,13 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   // depend on: accRewardPerCfx and lastUserShot
   function _updateUserInterest(address _user) private {
-    UserShot memory uShot = lastUserShots[_user];
+    IPoSPool.UserShot memory uShot = lastUserShots[_user];
     if (uShot.available == 0) return;
     uint256 latestInterest = accRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
     uint256 _userInterest = _calUserShare(latestInterest, _user);
     userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(_userInterest);
     _poolSummary.interest = _poolSummary.interest.add(latestInterest.sub(_userInterest));
   }
-
-  // ======================== Events =========================
-
-  event IncreasePoSStake(address indexed user, uint256 votePower);
-
-  event DecreasePoSStake(address indexed user, uint256 votePower);
-
-  event WithdrawStake(address indexed user, uint256 votePower);
-
-  event ClaimInterest(address indexed user, uint256 amount);
-
-  event RatioChanged(uint256 ratio);
 
   // ======================== Init methods =========================
 
@@ -288,7 +254,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     uint256 _latestAccRewardPerCfx = accRewardPerCfx;
     // add latest profit
     uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
-    UserShot memory uShot = lastUserShots[_address];
+    IPoSPool.UserShot memory uShot = lastUserShots[_address];
     if (_latestReward > 0) {
       uint256 _deltaAcc = _latestReward.div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
       _latestAccRewardPerCfx = _latestAccRewardPerCfx.add(_deltaAcc);
@@ -342,23 +308,15 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @param _user The address of user to query
   /// @return User's summary
   ///
-  function userSummary(address _user) public view returns (UserSummary memory) {
-    UserSummary memory summary = userSummaries[_user];
+  function userSummary(address _user) public view returns (IPoSPool.UserSummary memory) {
+    IPoSPool.UserSummary memory summary = userSummaries[_user];
     summary.locked += userInqueues[_user].sumEndedVotes();
     summary.unlocked += userOutqueues[_user].sumEndedVotes();
     return summary;
   }
 
-  function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
-    return IVotingEscrow(votingEscrow).userLockInfo(user);
-  }
-
-  function userVotePower(address user) external view returns (uint256) {
-    return IVotingEscrow(votingEscrow).userVotePower(user);
-  }
-
-  function poolSummary() public view returns (PoolSummary memory) {
-    PoolSummary memory summary = _poolSummary;
+  function poolSummary() public view returns (IPoSPool.PoolSummary memory) {
+    IPoSPool.PoolSummary memory summary = _poolSummary;
     uint256 _latestReward = _selfBalance().sub(lastPoolShot.balance);
     summary.totalInterest = summary.totalInterest.add(_latestReward);
     return summary;
@@ -390,6 +348,14 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   function stakerAddress(uint256 i) public view returns (address) {
     return stakers.at(i);
+  }
+
+  function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
+    return IVotingEscrow(votingEscrow).userLockInfo(user);
+  }
+
+  function userVotePower(address user) external view returns (uint256) {
+    return IVotingEscrow(votingEscrow).userVotePower(user);
   }
 
   // ======================== admin methods =====================
