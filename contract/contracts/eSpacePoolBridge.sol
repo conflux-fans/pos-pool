@@ -2,15 +2,29 @@
 pragma solidity ^0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ParamsControl} from "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import {CrossSpaceCall} from "./interfaces/ICrossSpaceCall.sol";
 import {IPoSPool} from "./interfaces/IPoSPool.sol";
+import {IVotingEscrow} from "./interfaces/IVotingEscrow.sol";
 
 // eSpace pool bridge contract
 contract CoreBridge is Ownable {
+  ParamsControl private constant PARAMS_CONTROL = ParamsControl(0x0888000000000000000000000000000000000007);
+  CrossSpaceCall private constant CROSS_SPACE_CALL = CrossSpaceCall(0x0888000000000000000000000000000000000006);
+  uint16 private constant TOTAL_TOPIC = 3;
+  uint256 public constant QUARTER_BLOCK_NUMBER = 2 * 3600 * 24 * 365 / 4; // 3 months
+    // uint256 public constant CFX_PER_VOTE = 1000 ether;
+    // uint256 public constant RATIO_BASE = 1000_000_000;
+
   CrossSpaceCall private crossSpaceCall;
 
   address public poolAddress;
   address public eSpacePoolAddress;
+
+  // voting escrow related states
+  address public eSpaceVotingEscrow;
+  mapping(uint256 => uint256) public globalLockAmount; // unlock block => amount (user total lock amount)
+  mapping(uint64 => mapping(uint16 => uint256[3])) public poolVoteInfo;
 
   constructor () {
     initialize();
@@ -26,6 +40,10 @@ contract CoreBridge is Ownable {
 
   function setESpacePoolAddress(address _eSpacePoolAddress) public onlyOwner {
     eSpacePoolAddress = _eSpacePoolAddress;
+  }
+
+  function setEspaceVotingEscrow(address addr) public onlyOwner {
+    eSpaceVotingEscrow = addr;
   }
 
   function ePoolAddrB20() private view returns (bytes20) {
@@ -156,6 +174,91 @@ contract CoreBridge is Ownable {
   function eSpaceHandleUnstakeTask() internal {
     crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleUnstakeTask()"));
   }
+
+  // voting escrow related methods
+
+  function _ePoolVotingAddrB20() internal view returns (bytes20) {
+    return bytes20(eSpaceVotingEscrow);
+  }
+
+    function eSpaceVotingLastUnlockBlock() public view returns (uint256) {
+        bytes memory num =
+            CROSS_SPACE_CALL.staticCallEVM(_ePoolVotingAddrB20(), abi.encodeWithSignature("lastUnlockBlock()"));
+        return abi.decode(num, (uint256));
+    }
+
+    function eSpaceVotingGlobalLockAmount(uint256 lockBlock) public view returns (uint256) {
+        bytes memory num = CROSS_SPACE_CALL.staticCallEVM(
+            _ePoolVotingAddrB20(), abi.encodeWithSignature("globalLockAmount(uint256)", lockBlock)
+        );
+        return abi.decode(num, (uint256));
+    }
+
+    function eSpaceVotingPoolVoteInfo(uint64 round, uint16 topic) public view returns (uint256[3] memory) {
+        bytes memory votes = CROSS_SPACE_CALL.staticCallEVM(
+            _ePoolVotingAddrB20(), abi.encodeWithSignature("getPoolVoteInfo(uint64,uint16)", round, topic)
+        );
+        return abi.decode(votes, (uint256[3]));
+    }
+
+    function isLockInfoChanged() public view returns (bool) {
+        uint256 lastUnlockBlock = eSpaceVotingLastUnlockBlock();
+        // max lock period is 1 year, so the max loop times is 4
+        while (lastUnlockBlock > block.number) {
+            uint256 amount = eSpaceVotingGlobalLockAmount(lastUnlockBlock);
+            if (globalLockAmount[lastUnlockBlock] != amount) {
+                return true;
+            }
+            lastUnlockBlock -= QUARTER_BLOCK_NUMBER;
+        }
+        return false;
+    }
+
+    function syncLockInfo() public {
+        uint256 lastUnlockBlock = eSpaceVotingLastUnlockBlock();
+        // max lock period is 1 year, so the max loop times is 4
+        while (lastUnlockBlock > block.number) {
+            uint256 amount = eSpaceVotingGlobalLockAmount(lastUnlockBlock);
+            if (globalLockAmount[lastUnlockBlock] != amount) {
+                IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).lockForVotePower(amount, lastUnlockBlock);
+                globalLockAmount[lastUnlockBlock] = amount;
+            }
+            lastUnlockBlock -= QUARTER_BLOCK_NUMBER;
+        }
+    }
+
+    function isVoteInfoChanged() public view returns (bool) {
+        uint64 round = PARAMS_CONTROL.currentRound();
+        uint16 topic = 0;
+        while (topic < TOTAL_TOPIC) {
+            uint256[3] memory votes = eSpaceVotingPoolVoteInfo(round, topic);
+            if (!isVotesEqual(votes, poolVoteInfo[round][topic])) {
+                return true;
+            }
+            topic++;
+        }
+        return false;
+    }
+
+    function syncVoteInfo() public {
+        uint64 round = PARAMS_CONTROL.currentRound();
+        uint16 topic = 0;
+        while (topic < TOTAL_TOPIC) {
+            uint256[3] memory votes = eSpaceVotingPoolVoteInfo(round, topic);
+            if (!isVotesEqual(votes, poolVoteInfo[round][topic])) {
+                poolVoteInfo[round][topic] = votes;
+
+                ParamsControl.Vote[] memory structVotes = new ParamsControl.Vote[](1);
+                structVotes[0] = ParamsControl.Vote(topic, votes);
+                IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).castVote(round, structVotes);
+            }
+            topic++;
+        }
+    }
+
+    function isVotesEqual(uint256[3] memory votes1, uint256[3] memory votes2) internal pure returns (bool) {
+        return votes1[0] == votes2[0] && votes1[1] == votes2[1] && votes1[2] == votes2[2];
+    }
 
   fallback() external payable {}
 

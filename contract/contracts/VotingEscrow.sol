@@ -38,9 +38,26 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     // round => topic => users
     mapping(uint64 => mapping(uint16 => EnumerableSet.AddressSet)) private topicSpecialVoters; // voters who's vote power maybe will change at round end block
 
+    address public eSpaceBridge;
+
+    modifier onlyeSpaceBridge() {
+        require(msg.sender == eSpaceBridge, "Only eSpaceBridge can call this function");
+        _;
+    }
+
     constructor() {}
 
     function initialize() public initializer {
+    }
+
+    // admin functions
+    function setPosPool(address _posPool) public onlyOwner {
+        posPool = IPoSPool(_posPool);
+    }
+
+    // admin functions
+    function seteSpaceBridge(address addr) public onlyOwner {
+        eSpaceBridge = addr;
     }
 
     // available staked amount
@@ -188,9 +205,12 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         return vote;
     }
 
-    // admin functions
-    function setPosPool(address _posPool) public onlyOwner {
-        posPool = IPoSPool(_posPool);
+    function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) public override onlyeSpaceBridge {
+        posPool.lockForVotePower(amount, unlockBlockNumber);
+    }
+
+    function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public override onlyeSpaceBridge {
+        posPool.castVote(vote_round, vote_data);
     }
 
     function _lockStake(uint256 unlockBlock) internal {
