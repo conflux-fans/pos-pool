@@ -42,7 +42,7 @@ contract CoreBridge is Ownable {
     eSpacePoolAddress = _eSpacePoolAddress;
   }
 
-  function setEspaceVotingEscrow(address addr) public onlyOwner {
+  function setESpaceVotingEscrow(address addr) public onlyOwner {
     eSpaceVotingEscrow = addr;
   }
 

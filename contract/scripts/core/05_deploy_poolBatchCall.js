@@ -10,7 +10,7 @@ async function main() {
         from: account,
     }).executed();
 
-    console.log("Deploy:", receipt.contractCreated);
+    console.log("PoSPoolBatchCall Deployed To:", receipt.contractCreated);
 }
 
 main().catch(console.log);

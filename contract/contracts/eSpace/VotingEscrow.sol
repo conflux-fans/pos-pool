@@ -30,8 +30,6 @@ contract EVotingEscrow is Ownable, Initializable {
     event VoteLock(address indexed user, uint256 indexed amount, uint256 indexed unlockBlock);
     event CastVote(address indexed user, uint256 indexed round, uint256 indexed topicIndex, uint256[3] votes);
 
-    address public mappedsCFXBridge; // core bridge mirror address
-
     // The core space chain info oracle contract, which's data is maintained by Conflux Team
     ICoreSpaceInfo public coreSpaceInfo;
     // 
@@ -52,18 +50,9 @@ contract EVotingEscrow is Ownable, Initializable {
     mapping(uint64 => mapping(uint16 => EnumerableSet.AddressSet)) private topicSpecialVoters; // voters who's vote power maybe will change at round end block
     //
 
-    modifier onlyBridge() {
-        require(msg.sender == mappedsCFXBridge, "Only bridge is allowed");
-        _;
-    }
-
     function initialize() public initializer {}
 
-    function setMappedsCFXBridge(address bridge) public onlyOwner {
-        mappedsCFXBridge = bridge;
-    }
-
-    function setCoreSpaceInfo(address coreSpaceInfoAddr) public onlyOwner {
+    function setCoreSpaceInfoOracle(address coreSpaceInfoAddr) public onlyOwner {
         coreSpaceInfo = ICoreSpaceInfo(coreSpaceInfoAddr);
     }
 

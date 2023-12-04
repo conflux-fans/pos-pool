@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.3.1
+
+Support eSpace pool to lock CFX to obtain voting rights for Conflux Governance.
+
 ## v1.3.0
 
 This version introduces the function of locking CFX to obtain voting rights for PoS Pools. After obtaining voting rights, you can participate in Conflux on-chain parameters voting and community governance voting. The means user can obtain PoS staking rewards while participating governance voting.

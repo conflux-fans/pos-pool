@@ -10,6 +10,11 @@ function loadPrivateKey() {
   }
 }
 
+// proxy1967 initialize(no params) method data
+const InitializeMethodData = '0x8129fc1c';
+
+
 module.exports = {
   loadPrivateKey,
+  InitializeMethodData,
 };

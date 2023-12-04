@@ -56,7 +56,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     }
 
     // admin functions
-    function seteSpaceBridge(address addr) public onlyOwner {
+    function setESpaceBridge(address addr) public onlyOwner {
         eSpaceBridge = addr;
     }
 

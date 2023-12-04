@@ -5,16 +5,23 @@ require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-conflux");
 require("dotenv").config();
+const { task } = require("hardhat/config");
 // require("hardhat-contract-sizer");
 const { loadPrivateKey } = require('./utils');
-
 const PRIVATE_KEY = loadPrivateKey();
 
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
+
+task("upgradeCoreContract", "Upgrade Core Space contract", async () => {
+
+});
+
+task("upgradeESpaceContract", "Upgrade eSpace contract", async () => {
+
+});
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
+ * Go to https://hardhat.org/config/ to learn more
  */
 module.exports = {
   solidity: "0.8.4",
