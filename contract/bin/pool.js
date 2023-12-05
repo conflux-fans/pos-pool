@@ -54,7 +54,7 @@ program
 program
   .command('poolStatus [address]')
   .action(async (address) => {
-    const poolAddress = address || process.env.POOL_ADDRESS;
+    const poolAddress = address || POOL_ADDRESS;
     const contract = conflux.Contract({
       address: poolAddress,
       abi: poolContractInfo.abi,
@@ -261,7 +261,7 @@ program
     const meta = getContractInfo('CoreBridge');
     let contract = conflux.Contract({
       abi: meta.abi,
-      address: process.env.ESPACE_POOL_CORE_PROXY
+      address: process.env.CORE_BRIDGE
     });
     const receipt = await contract[method](arg).sendTransaction({
       from: account.address,

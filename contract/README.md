@@ -10,6 +10,19 @@ This is the contract code of Conflux PoS pool, which is developed by Solidity. F
 
 This project uses `hardhat` to compile and test the contract.
 
+## Intro
+
+All contracts are in the `contracts` directory.
+
+There are four components in this project:
+
+1. Core Space Pool
+2. Core Space VotingEscrow
+3. eSpace Pool
+4. eSpace VotingEscrow
+
+The `Core Space Pool` is the basic component of the whole project, which manages the user's stake and reward. The rest three components are optional.
+
 ## Setup
 
 1. Install nodejs and npm
@@ -18,11 +31,11 @@ This project uses `hardhat` to compile and test the contract.
 4. cp `.env.example` to `.env` and set the env variables:
    1. `ETH_RPC_URL`: Conflux [eSpace RPC URL](https://doc.confluxnetwork.org/docs/espace/network-endpoints)
    2. `CFX_RPC_URL`: Conflux [Core space RPC URL](https://doc.confluxnetwork.org/docs/core/conflux_rpcs)
-   3. `PRIVATE_KEY`: private key of the deployer, make sure it has enough CFX balance(1200 CFX for Core space, if you want to deploy eSpace pool, you need to have 1200 CFX in eSpace)
+   3. `PRIVATE_KEY`: Private key of the deployer, make sure it has enough CFX balance(1200 CFX for Core space, if you want to deploy eSpace pool, you need to have 50 CFX in eSpace)
    4. `CFX_NETWORK_ID`: Core space network id, 1029 for `mainnet`, 1 for testnet
 5. Run `npx hardhat compile` to compile the contracts
 
-## How to Setup a PoS Pool
+## How to Setup a Basic PoS Pool
 
 To run a PoS pool, a Conflux node is required. Check Conflux documentation [`run a node`](https://doc.confluxnetwork.org/docs/category/run-a-node) for how to set up a node.
 
@@ -37,11 +50,16 @@ After the node is set up, and the blockchain data is fully synced, you can run t
 ]
 ```
 
-The first string is the `registerData`, and the second string is the pos address of your node.
+The first string is the `registerData`, and the second string is the pos address of your pos node.
 
 Add a variable `POS_REGIST_DATA` in `.env` file, and set it to the `registerData` string.
 
-### Deploy Core Pool Contract
+### Deploy Core Space Pool Contract
+
+There are two contracts need to be deployed:
+
+* `PoSPool.sol`: The core contract of PoS pool, which is used to manage the user's stake and reward.
+* `PoolManager.sol`: A simple manager contract just stores the pool's address.
 
 First, deploy the `PoolManager` contract with the following command:
 
@@ -59,57 +77,18 @@ npx hardhat run scripts/core/02_deploy_pool.js --network cfxTestnet
 
 After the command runs successfully, you will get the `PoSPool` contract address, and add it to `.env` file as `POOL_ADDRESS`.
 
-### Deploy eSpace Pool Contract
+The `PoolManager` address can be used to set up the pool UI, when the UI is ready, Conflux Core Space users can stake CFX to the pool to earn PoS rewards.
 
-First, deploy the `CoreBridge` contract with the following command:
+### Additional Components
 
-```bash
-npx hardhat run scripts/core/03_deploy_eSpacePoolBridge.js --network cfxTestnet
-```
+If you want your pool to support eSpace, or support participation in Conflux on-chain parameters voting and community governance voting, you need to deploy the additional components.
+Check related documents for how to deploy them.
 
-After the command runs successfully, you will get the `CoreBridge` contract address, and add it to `.env` file as `CORE_BRIDGE`.
+* [Deploy eSpace Pool Contract](./docs/howTo/DepolyEspacePool.md)
+* [Deploy Core Space Governance](./docs/howTo/DeployCoreSpaceVotingEscrow.md)
+* [Deploy eSpace Governance](./docs/howTo/DeployEspaceVotingEscrow.md)
 
-Then deploy the `ESpacePoSPool` contract with the following command:
+## Other Documents
 
-```bash
-npx hardhat run scripts/espace/01_deploy_pool.js --network espaceTestnet
-```
-
-After the command runs successfully, you will get the `ESpacePoSPool` contract address, and add it to `.env` file as `ESPACE_POOL_ADDRESS`.
-
-Finally, call `setESpacePoolAddress` function of `CoreBridge` contract to set the `ESpacePoSPool` contract address.
-
-```hash
-npx hardhat run scripts/core/03_setup_eSpacePoolBridge.js --network cfxTestnet
-```
-
-### Deploy VotingEscrow Contract for Core Space Pool
-
-To deploy the `VotingEscrow` contract run the following command:
-
-```bash
-npx hardhat run scripts/core/04_deploy_votingEscrow.js --network cfxTestnet
-```
-
-After the command runs successfully, you will get the `VotingEscrow` contract address, and add it to `.env` file as `VOTING_ESCROW`.
-
-### Deploy VotingEscrow Contract for eSpace Pool
-
-To deploy the `EVotingEscrow` contract run the following command:
-
-```bash
-npx hardhat run scripts/espace/02_deploy_votingEscrow.js --network espaceTestnet
-```
-
-After the command runs successfully, you will get the `EVotingEscrow` contract address, and add it to `.env` file as `ESPACE_VOTING_ESCROW`.
-
-Then we need to set the `EVotingEscrow` contract address in `CoreBridge` contract:
-
-```bash
-npx hardhat run scripts/core/06_setup_espaceVotingEscrow.js --network cfxTestnet
-```
-
-## Documentation
-
-2. [How to upgrade Core Space Pool Contract](./docs/HowToUpgradeContract.md)
-3. [How to deal with PoS force retire](./docs/PoolForceRetired.md)
+1. [How to upgrade Core Space Pool Contract](./docs/HowToUpgradeContract.md)
+2. [How to deal with PoS force retire](./docs/PoolForceRetired.md)
