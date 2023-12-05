@@ -13,20 +13,10 @@ async function main() {
     const pool = await ESpacePoSPool.deploy();
     await pool.deployed();
 
-    console.log('Impl deployed to:', pool.address);
+    console.log('New Impl deployed to:', pool.address);
 
-    const proxyAddr = 'REPLACE-WITH-YOUR-ESPACE-POOL-PROXY-ADDRESS';
-
-    const proxy = await ethers.getContractAt("Proxy1967", proxyAddr);
+    const proxy = await ethers.getContractAt("Proxy1967", process.env.ESPACE_POOL_ADDRESS);
     await proxy.upgradeTo(pool.address);
-
-    const ePool = await ethers.getContractAt("ESpacePoSPool", proxyAddr);
-
-    let tx = await ePool.setLockPeriod(2250000);
-    await tx.wait();
-
-    tx = await ePool.setUnlockPeriod(176400);
-    await tx.wait();
 
     console.log('Finished');
 }

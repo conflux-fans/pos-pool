@@ -8,8 +8,6 @@ This is the contract code of Conflux PoS pool, which is developed by Solidity. F
 * Support both Conflux Core and eSpace
 * Support participation in Conflux on-chain parameters voting and community governance voting
 
-This project uses `hardhat` to compile and test the contract.
-
 ## Intro
 
 All contracts are in the `contracts` directory.
@@ -24,6 +22,8 @@ There are four components in this project:
 The `Core Space Pool` is the basic component of the whole project, which manages the user's stake and reward. The rest three components are optional.
 
 ## Setup
+
+This project uses `hardhat` to compile and test the contract.
 
 1. Install nodejs and npm
 2. Clone this repo
@@ -56,7 +56,7 @@ Add a variable `POS_REGIST_DATA` in `.env` file, and set it to the `registerData
 
 ### Deploy Core Space Pool Contract
 
-There are two contracts need to be deployed:
+There are two contracts that need to be deployed:
 
 * `PoSPool.sol`: The core contract of PoS pool, which is used to manage the user's stake and reward.
 * `PoolManager.sol`: A simple manager contract just stores the pool's address.
@@ -78,6 +78,8 @@ npx hardhat run scripts/core/02_deploy_pool.js --network cfxTestnet
 After the command runs successfully, you will get the `PoSPool` contract address, and add it to `.env` file as `POOL_ADDRESS`.
 
 The `PoolManager` address can be used to set up the pool UI, when the UI is ready, Conflux Core Space users can stake CFX to the pool to earn PoS rewards.
+
+**Note: The commands above are for testnet, if you want to deploy the contracts to mainnet, change the `--network` parameter to `cfxMainnet`.**
 
 ### Additional Components
 

@@ -30,7 +30,7 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
     },
-    cfx: {
+    cfxMainnet: {
         url: "https://main.confluxrpc.com",
         accounts: [
           PRIVATE_KEY,
