@@ -1,12 +1,6 @@
 # PoSPool contract
 
-This is the contract code of Conflux PoS pool, which is developed by Solidity. Featured with:
-
-* Pool share ratio configurable
-* Contract Upgradeable
-* Manage several PoS pools in one contract `PoolManager`
-* Support both Conflux Core and eSpace
-* Support participation in Conflux on-chain parameters voting and community governance voting
+This is the contract code of Conflux PoS pool, which is developed by Solidity. 
 
 ## Intro
 
