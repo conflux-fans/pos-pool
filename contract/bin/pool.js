@@ -168,20 +168,6 @@ program
   });
 
 program
-  .command('upgradeProxy1967 <proxyAddr> <implAddr>')
-  .action(async (proxyAddr, implAddr) => {
-    let meta = getContractInfo('PoolProxy');
-    let contract = conflux.Contract({
-      abi: meta.abi,
-      address: proxyAddr
-    });
-    const receipt = await contract.upgradeTo(implAddr).sendTransaction({
-      from: account.address,
-    }).executed();
-    checkReceiptStatus(receipt, "Upgrade");
-  });
-
-program
   .command('Pool')
   .argument('<method>', 'Available methods: setPoolName, setPoolUserShareRatio, setLockPeriod, setUnlockPeriod, _withdrawPoolProfit, addToFeeFreeWhiteList, removeFromFeeFreeWhiteList, setPoolRegisted')
   .argument('[args...]', 'Arguments for the method')
