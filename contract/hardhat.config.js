@@ -44,7 +44,7 @@ module.exports = {
       ],
       chainId: 1,
     },
-    espace: {
+    espaceMainnet: {
       url: "https://evm.confluxrpc.com",
       accounts: [PRIVATE_KEY],
       chainId: 1030,

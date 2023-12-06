@@ -1,19 +1,13 @@
 # PoSPool contract
 
-This is the contract code of Conflux PoS pool, which is developed by Solidity. 
+This is the contract code of Conflux PoS pool, which is developed by Solidity. All contracts are in the `contracts` directory. There are four components: 
 
-## Intro
+1. Core Space Pool: `PoSPool.sol`
+2. Core Space VotingEscrow: `VotingEscrow.sol`
+3. eSpace Pool: `eSpace/eSpacePoSPool.sol` and `eSpacePoolBridge.sol`
+4. eSpace VotingEscrow: `eSpace/VotingEscrow.sol`
 
-All contracts are in the `contracts` directory.
-
-There are four components in this project:
-
-1. Core Space Pool
-2. Core Space VotingEscrow
-3. eSpace Pool
-4. eSpace VotingEscrow
-
-The `Core Space Pool` is the basic component of the whole project, which manages the user's stake and reward. The rest three components are optional.
+The `Core Space Pool` is the basic component of the whole project, which manages the user's stake and reward. **The rest three components are optional.**
 
 ## Setup
 
@@ -27,9 +21,11 @@ This project uses `hardhat` to compile and test the contract.
    2. `CFX_RPC_URL`: Conflux [Core space RPC URL](https://doc.confluxnetwork.org/docs/core/conflux_rpcs)
    3. `PRIVATE_KEY`: Private key of the deployer, make sure it has enough CFX balance(1200 CFX for Core space, if you want to deploy eSpace pool, you need to have 50 CFX in eSpace)
    4. `CFX_NETWORK_ID`: Core space network id, 1029 for `mainnet`, 1 for testnet
-5. Run `npx hardhat compile` to compile the contracts
+5. Run `npx hardhat compile` to compile all the contracts
 
 ## How to Setup a Basic PoS Pool
+
+### Prepare validator register data
 
 To run a PoS pool, a Conflux node is required. Check Conflux documentation [`run a node`](https://doc.confluxnetwork.org/docs/category/run-a-node) for how to set up a node.
 
@@ -44,9 +40,7 @@ After the node is set up, and the blockchain data is fully synced, you can run t
 ]
 ```
 
-The first string is the `registerData`, and the second string is the pos address of your pos node.
-
-Add a variable `POS_REGIST_DATA` in `.env` file, and set it to the `registerData` string.
+The first string is the `registerData`, and the second string is the pos address of your pos node. Add a variable `POS_REGIST_DATA` in `.env` file, and set it to the `registerData` string.
 
 ### Deploy Core Space Pool Contract
 
@@ -55,15 +49,15 @@ There are two contracts that need to be deployed:
 * `PoSPool.sol`: The core contract of PoS pool, which is used to manage the user's stake and reward.
 * `PoolManager.sol`: A simple manager contract just stores the pool's address.
 
-First, deploy the `PoolManager` contract with the following command:
+Step 1. Deploy the `PoolManager` contract:
 
 ```bash
 npx hardhat run scripts/core/01_deploy_poolManager.js --network cfxTestnet 
 ```
 
-After the command runs successfully, you will get the `PoolManager` contract address, and add it to `.env` file as `POOL_MANAGER_ADDRESS`.
+After the command runs successfully, you will see the `PoolManager` contract address in output, and add it to `.env` file as `POOL_MANAGER_ADDRESS`.
 
-Then deploy the `PoSPool` contract with the following command:
+Step 2. Deploy the `PoSPool` contract:
 
 ```bash
 npx hardhat run scripts/core/02_deploy_pool.js --network cfxTestnet
@@ -71,14 +65,13 @@ npx hardhat run scripts/core/02_deploy_pool.js --network cfxTestnet
 
 After the command runs successfully, you will get the `PoSPool` contract address, and add it to `.env` file as `POOL_ADDRESS`.
 
-The `PoolManager` address can be used to set up the pool UI, when the UI is ready, Conflux Core Space users can stake CFX to the pool to earn PoS rewards.
+The `PoolManager` address can be used to set up the pool UI, when the UI is ready, Conflux Core Space users can stake CFX to the pool and earn PoS rewards.
 
 **Note: The commands above are for testnet, if you want to deploy the contracts to mainnet, change the `--network` parameter to `cfxMainnet`.**
 
-### Additional Components
+## Additional Components
 
-If you want your pool to support eSpace, or support participation in Conflux on-chain parameters voting and community governance voting, you need to deploy the additional components.
-Check related documents for how to deploy them.
+If you want your pool to support eSpace, or support participation in Conflux on-chain parameters voting and community governance voting, you need to deploy the additional components. Check related documents for how to deploy them.
 
 * [Deploy eSpace Pool Contract](./docs/howTo/DepolyEspacePool.md)
 * [Deploy Core Space Governance](./docs/howTo/DeployCoreSpaceVotingEscrow.md)
@@ -86,5 +79,10 @@ Check related documents for how to deploy them.
 
 ## Other Documents
 
-1. [How to upgrade Core Space Pool Contract](./docs/HowToUpgradeContract.md)
+1. [How to upgrade Pool Contract](./docs/HowToUpgradeContract.md)
 2. [How to deal with PoS force retire](./docs/PoolForceRetired.md)
+
+## TODO
+
+1. Contract Interface Documentation
+2. eSpace Pool support governance

@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v1.3.1
+## v1.4.0
 
 Support eSpace pool to lock CFX to obtain voting rights for Conflux Governance.
 

@@ -4,7 +4,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable prettier/prettier */
 require('dotenv').config();
-const debug = require('debug')('espacePoolStatusSyncer');
+const debug = require('debug')('votingEscrowDataSyncer');
 const { Conflux } = require("js-conflux-sdk");
 const { loadPrivateKey } = require('../utils/index');
 const coreBridgeInfo = require("../artifacts/contracts/eSpacePoolBridge.sol/CoreBridge.json");

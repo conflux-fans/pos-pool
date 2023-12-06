@@ -44,5 +44,16 @@
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
         }
+    ],
+    "eSpaceMainnet": [
+
+    ],
+    "eSpaceTestnet": [
+        {
+            "name": "e-test1",
+            "address": "0x1Fba5d87d8035772Eb67E17be0696A37A32925D7",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
+        }
     ]
 }
