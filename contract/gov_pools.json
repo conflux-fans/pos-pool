@@ -29,6 +29,12 @@
             "address": "cfx:accpx9uxky39pg1hzav757vdej95w1kbcp13d0hvm7",
             "icon": "https://confluxpos.cn/favicon.ico",
             "website": "https://confluxpos.cn/"
+        },
+        {
+            "name": "Webomatic Pool",
+            "address": "cfx:acc5086t6uyww6barn1a2b6z8wdmdg376yeu9gczpz",
+            "icon": "https://pos.webomatic.fi/favicon.ico",
+            "website": "https://pos.webomatic.fi/"
         }
     ],
     "testnet": [
