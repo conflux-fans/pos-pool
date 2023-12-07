@@ -6,7 +6,7 @@
 require('dotenv').config();
 const debug = require('debug')('espacePoolStatusSyncer');
 const { Conflux, Drip } = require("js-conflux-sdk");
-const coreBridgeInfo = require("../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json");
+const coreBridgeInfo = require("../artifacts/contracts/eSpacePoolBridge.sol/CoreBridge.json");
 const { loadPrivateKey } = require('../utils/index');
 const { dingAlert } = require('../utils/dingAlert');
 
@@ -20,7 +20,7 @@ const account = conflux.wallet.addPrivateKey(loadPrivateKey());
 
 const coreBridge = conflux.Contract({
   abi: coreBridgeInfo.abi,
-  address: process.env.ESPACE_POOL_CORE_PROXY,
+  address: process.env.CORE_BRIDGE,
 });
 
 const sendTxMeta = {
@@ -44,59 +44,6 @@ async function syncAPYandClaimInterest() {
   }, 1000 * 60 * 30);  // 30 minutes once
 }
 
-async function syncVoteStatus() {
-  setInterval(async () => {
-    try {
-      let crossingVotes = await coreBridge.queryCrossingVotes();
-      debug('crossStake: ', crossingVotes);
-      if (crossingVotes > 0) {
-        const receipt = await coreBridge
-          .crossStake()
-          .sendTransaction(sendTxMeta)
-          .executed();
-        debug(`crossStake finished: `, receipt.transactionHash, receipt.outcomeStatus);
-      }
-    } catch (e) {
-      console.log('crossingVotes error: ', e);
-    }
-    
-    try {
-      let userSummary = await coreBridge.queryUserSummary();
-      debug('withdrawVotes: ', userSummary.unlocked);
-      let unlocked = Number(userSummary.unlocked);
-      while(unlocked > 0) {
-        const thisTime = unlocked >= 2 ? 2 : 1;
-        const receipt = await coreBridge
-          .withdrawVotesByVotes(thisTime)
-          .sendTransaction(sendTxMeta)
-          .executed();
-        debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
-
-        unlocked -= thisTime;
-      }
-    } catch(e) {
-      console.log('withdrawVotes error: ', e);
-    }
-
-    try {
-      let unstakeLen = await coreBridge.queryUnstakeLen();
-      debug('handleUnstake: ', unstakeLen);
-      let userSummary = await coreBridge.queryUserSummary();
-      if (unstakeLen > 0 && userSummary.locked > 0) {
-        for(let i = 0; i < unstakeLen; i++) {
-          const receipt = await coreBridge
-            .handleOneUnstake()
-            .sendTransaction(sendTxMeta)
-            .executed();
-            debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
-        }
-      }
-    } catch (e) {
-      console.log("unstake error: ", e);
-    }
-  }, 1000 * 60 * 5);
-}
-
 async function checkBalance() {
   let balance = await conflux.cfx.getBalance(account.address);
   let oneCfx = Drip.fromCFX(1);
@@ -106,13 +53,15 @@ async function checkBalance() {
 }
 
 async function main() {
+  console.log('==== eSpacePool Crossing Tasks Started ====');
   try {
     syncAPYandClaimInterest();
-    syncVoteStatus();
-    console.log('==== eSpacePool Crossing Tasks Started ====');
   } catch (e) {
     console.log(e);
   }
 }
 
-main().catch(console.log);
+main().catch(e => {
+    console.error(e);
+    process.exit(1);
+});

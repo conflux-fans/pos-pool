@@ -29,6 +29,8 @@ Lock 的数量随意不做限制，锁定的时间点（区块数）只能为一
 function votingEscrow() external view returns (address);
 // 查询用户当前的锁定信息: 锁定数量, 锁定区块数
 function userLockInfo(address user) external view returns (IVotingEscrow.LockInfo memory);
+// 查询用户的投票权
+function userVotePower(address user) external view returns (uint256);
 ```
 
 ### VotingEscrow

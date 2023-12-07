@@ -1,24 +1,36 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
-import "../VotePowerQueue.sol";
-import "./IVotingEscrow.sol";
+import {ParamsControl} from "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
+import {VotePowerQueue} from "../utils/VotePowerQueue.sol";
+import {IVotingEscrow} from "./IVotingEscrow.sol";
 
 interface IPoSPool {
   struct PoolSummary {
-    uint64 available;
+    uint256 available;
     uint256 interest;
     uint256 totalInterest; // total interest of all pools
   }
 
   struct UserSummary {
-    uint64 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
-    uint64 available; // locking + locked
-    uint64 locked;
-    uint64 unlocked;
+    uint256 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
+    uint256 available; // locking + locked
+    uint256 locked;
+    uint256 unlocked;
     uint256 claimedInterest;
     uint256 currentInterest;
+  }
+
+  struct PoolShot {
+    uint256 available;
+    uint256 balance;
+    uint256 blockNumber;
+  } 
+
+  struct UserShot {
+    uint256 available;
+    uint256 accRewardPerCfx;
+    uint256 blockNumber;
   }
 
   // admin functions

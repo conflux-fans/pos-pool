@@ -1,99 +1,121 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
-import "./interfaces/IVotingEscrow.sol";
-import "./interfaces/IPoSPool.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {ICoreSpaceInfo} from "../interfaces/ICoreSpaceInfo.sol";
+import {IPoSPool} from "../interfaces/IPoSPool.sol";
 
-contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
-    // Add the library methods
-    using EnumerableSet for EnumerableSet.AddressSet;
-
-    ParamsControl private constant paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
+contract EVotingEscrow is Ownable, Initializable {
+    using EnumerableSet for EnumerableSet.AddressSet; // Add the library methods
+    
     uint256 private constant ONE_DAY_BLOCK_NUMBER = 2 * 3600 * 24;
     uint256 public constant QUARTER_BLOCK_NUMBER = ONE_DAY_BLOCK_NUMBER * 365 / 4; // 3 months
-    uint256 private constant CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-    
+
+    struct LockInfo {
+        uint256 amount;
+        uint256 unlockBlock;
+    }
+
+    struct Vote {
+        uint16 topic_index;
+        uint256[3] votes;
+    }
+
+    struct VoteMeta {
+        uint256 availablePower;
+    }
+
+    event VoteLock(address indexed user, uint256 indexed amount, uint256 indexed unlockBlock);
+    event CastVote(address indexed user, uint256 indexed round, uint256 indexed topicIndex, uint256[3] votes);
+
+    // The core space chain info oracle contract, which's data is maintained by Conflux Team
+    ICoreSpaceInfo public coreSpaceInfo;
+    // 
     IPoSPool public posPool;
-
-    mapping(uint256 => uint256) public globalLockAmount; // unlock block => amount (user total lock amount)
-    mapping(address => LockInfo) private _userLockInfo;
+    //
     uint256 public lastUnlockBlock;
-
+    // unlock block => amount (user total lock amount)
+    mapping(uint256 => uint256) public globalLockAmount;
+    //
+    mapping(address => LockInfo) private _userLockInfo;
     // round => user => topic => votes
     mapping(uint64 => mapping(address => mapping(uint16 => uint256[3]))) private userVoteInfo;
     // round => topic => votes
     mapping(uint64 => mapping(uint16 => uint256[3])) public poolVoteInfo;
-
-    struct VoteMeta {
-        uint256 blockNumber;
-        uint256 availablePower;
-    }
-
     // round => user => topic => meta
     mapping(uint64 => mapping(address => mapping(uint16 => VoteMeta))) private userVoteMeta;
     // round => topic => users
     mapping(uint64 => mapping(uint16 => EnumerableSet.AddressSet)) private topicSpecialVoters; // voters who's vote power maybe will change at round end block
+    //
 
-    address public eSpaceBridge;
+    function initialize() public initializer {}
 
-    modifier onlyeSpaceBridge() {
-        require(msg.sender == eSpaceBridge, "Only eSpaceBridge can call this function");
-        _;
+    function setCoreSpaceInfoOracle(address coreSpaceInfoAddr) public onlyOwner {
+        coreSpaceInfo = ICoreSpaceInfo(coreSpaceInfoAddr);
     }
 
-    constructor() {}
-
-    function initialize() public initializer {
+    function setPosPool(address posPoolAddr) public onlyOwner {
+        posPool = IPoSPool(posPoolAddr);
     }
 
-    // admin functions
-    function setPosPool(address _posPool) public onlyOwner {
-        posPool = IPoSPool(_posPool);
+    function coreVoteRound() internal view returns (uint64) {
+        return coreSpaceInfo.currentVoteRound();
     }
 
-    // admin functions
-    function setESpaceBridge(address addr) public onlyOwner {
-        eSpaceBridge = addr;
+    function coreBlockNumber() internal view returns (uint256) {
+        return coreSpaceInfo.blockNumber();
     }
 
     // available staked amount
-    function userStakeAmount(address user) public override view returns (uint256) {
-        return posPool.userSummary(user).available * CFX_VALUE_OF_ONE_VOTE;
+    function userStakeAmount(address user) public view returns (uint256) {
+        return posPool.userSummary(user).available * 1000 ether;
     }
 
-    function createLock(uint256 amount, uint256 unlockBlock) public override {
+    /*
+        @param amount: sCFX amount
+        @param unlockBlock: core space unlock block number
+    */
+    function createLock(uint256 amount, uint256 unlockBlock) public {
         unlockBlock = _adjustBlockNumber(unlockBlock);
-        require(unlockBlock > block.number, "invalid unlock block");
-        require(unlockBlock - block.number > QUARTER_BLOCK_NUMBER, "Governance: unlock block too close");
-        require(_userLockInfo[msg.sender].amount == 0 || _userLockInfo[msg.sender].unlockBlock < block.number, "Governance: already locked");
+        require(unlockBlock > coreBlockNumber(), "invalid unlock block");
+        require(unlockBlock - coreBlockNumber() > QUARTER_BLOCK_NUMBER, "Governance: unlock block too close");
+        require(
+            _userLockInfo[msg.sender].amount == 0 || _userLockInfo[msg.sender].unlockBlock < coreBlockNumber(),
+            "Governance: already locked"
+        );
         require(amount <= userStakeAmount(msg.sender), "Governance: insufficient balance");
 
-        _userLockInfo[msg.sender] = LockInfo(amount, unlockBlock);
-        globalLockAmount[unlockBlock] += amount;
+        uint256 _lockAmount = amount;
+        _userLockInfo[msg.sender] = LockInfo(_lockAmount, unlockBlock);
+        globalLockAmount[unlockBlock] += _lockAmount;
 
         _lockStake(unlockBlock);
     }
 
-    function increaseLock(uint256 amount) public override {
+    /*
+        @param amount: sCFX amount
+    */
+    function increaseLock(uint256 amount) public {
         require(_userLockInfo[msg.sender].amount > 0, "Governance: not locked");
-        require(_userLockInfo[msg.sender].unlockBlock > block.number, "Governance: already unlocked");
-        require(_userLockInfo[msg.sender].amount + amount <= userStakeAmount(msg.sender), "Governance: insufficient balance");
+        require(_userLockInfo[msg.sender].unlockBlock > coreBlockNumber(), "Governance: already unlocked");
+        require(
+            _userLockInfo[msg.sender].amount + amount <= userStakeAmount(msg.sender), "Governance: insufficient balance"
+        );
 
+        uint256 _lockAmount = amount;
         uint256 unlockBlock = _userLockInfo[msg.sender].unlockBlock;
-        _userLockInfo[msg.sender].amount += amount;
-        globalLockAmount[unlockBlock] += amount;
+        _userLockInfo[msg.sender].amount += _lockAmount;
+        globalLockAmount[unlockBlock] += _lockAmount;
 
         _lockStake(unlockBlock);
     }
 
-    function extendLockTime(uint256 unlockBlock) public override {
+    function extendLockTime(uint256 unlockBlock) public {
         unlockBlock = _adjustBlockNumber(unlockBlock);
         require(_userLockInfo[msg.sender].amount > 0, "Governance: not locked");
-        require(_userLockInfo[msg.sender].unlockBlock > block.number, "Governance: already unlocked");
+        require(_userLockInfo[msg.sender].unlockBlock > coreBlockNumber(), "Governance: already unlocked");
         require(unlockBlock > _userLockInfo[msg.sender].unlockBlock, "Governance: invalid unlock block");
 
         uint256 oldUnlockNumber = _userLockInfo[msg.sender].unlockBlock;
@@ -106,34 +128,27 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         _lockStake(unlockBlock);
     }
 
-    function userVotePower(address user, uint256 blockNumber) public override view returns (uint256) {
+    function userVotePower(address user, uint256 blockNumber) public view returns (uint256) {
         if (_userLockInfo[user].amount == 0 || _userLockInfo[user].unlockBlock < blockNumber) {
             return 0;
         }
-        
         uint256 period = (_userLockInfo[user].unlockBlock - blockNumber) / QUARTER_BLOCK_NUMBER;
-
         // full vote power if period >= 4
         if (period > 4) {
             period = 4;
         }
-
-        if (period == 3) {  // no 0.75
+        if (period == 3) {
+            // no 0.75
             period = 2;
         }
-
         return _userLockInfo[user].amount * period / 4;
     }
 
-    function userVotePower(address user) public override view returns (uint256) {
-        return userVotePower(user, block.number);
+    function userVotePower(address user) public view returns (uint256) {
+        return userVotePower(user, coreBlockNumber());
     }
 
-    function userLockInfo(address user) public override view returns (LockInfo memory) {
-        return userLockInfo(user, block.number);
-    }
-
-    function userLockInfo(address user, uint256 blockNumber) public override view returns (LockInfo memory) {
+    function userLockInfo(address user, uint256 blockNumber) public view returns (LockInfo memory) {
         LockInfo memory info = _userLockInfo[user];
         if (info.unlockBlock < blockNumber) {
             info.amount = 0;
@@ -142,21 +157,26 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         return info;
     }
 
-    function castVote(uint64 vote_round, uint16 topic_index, uint256[3] memory votes) public override {
+    function userLockInfo(address user) public view returns (LockInfo memory) {
+        return userLockInfo(user, coreBlockNumber());
+    }
+
+    function castVote(uint64 vote_round, uint16 topic_index, uint256[3] memory votes) public {
         require(_onlyOneVote(votes), "Only one vote is allowed");
-        require(vote_round == paramsControl.currentRound(), "Governance: invalid vote round");
+        require(vote_round == coreVoteRound(), "Governance: invalid vote round");
         uint256 totalVotes = _sumVote(votes);
         require(userVotePower(msg.sender) >= totalVotes, "Governance: insufficient vote power");
 
         // if one user's vote power maybe will change, add it to topicSpecialVoters
         if (userVotePower(msg.sender, _currentRoundEndBlock()) < totalVotes) {
             topicSpecialVoters[vote_round][topic_index].add(msg.sender);
-            userVoteMeta[vote_round][msg.sender][topic_index] = VoteMeta(block.number, totalVotes);
+            userVoteMeta[vote_round][msg.sender][topic_index] = VoteMeta(totalVotes);
         }
 
         // update userVoteInfo and poolVoteInfo
         for (uint16 i = 0; i < votes.length; i++) {
             uint256 lastVote = userVoteInfo[vote_round][msg.sender][topic_index][i];
+
             if (votes[i] > lastVote) {
                 uint256 delta = votes[i] - lastVote;
                 poolVoteInfo[vote_round][topic_index][i] += delta;
@@ -164,53 +184,48 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
                 uint256 delta = lastVote - votes[i];
                 poolVoteInfo[vote_round][topic_index][i] -= delta;
             }
+
             userVoteInfo[vote_round][msg.sender][topic_index][i] = votes[i];
         }
 
         // update users who's vote power have changed
         if (topicSpecialVoters[vote_round][topic_index].length() > 0) {
-            for(uint256 i = 0; i < topicSpecialVoters[vote_round][topic_index].length(); i ++) {
+            for (uint256 i = 0; i < topicSpecialVoters[vote_round][topic_index].length(); i++) {
                 address addr = topicSpecialVoters[vote_round][topic_index].at(i);
-                if (addr == msg.sender) {
-                    continue;
-                }
+                if (addr == msg.sender) continue;
+
                 // uint256 lastBlockNumber = userVoteMeta[vote_round][addr][topic_index].blockNumber;
                 uint256 lastPower = userVoteMeta[vote_round][addr][topic_index].availablePower;
                 uint256 currentPower = userVotePower(addr);
+
                 if (lastPower > currentPower) {
+                    // update userVoteInfo and poolVoteInfo
                     uint256 delta = lastPower - currentPower;
                     uint256 index = _findVoteIndex(userVoteInfo[vote_round][addr][topic_index]);
                     userVoteInfo[vote_round][addr][topic_index][index] -= delta;
                     poolVoteInfo[vote_round][topic_index][index] -= delta;
+
+                    // remove or update userVoteMeta
                     if (currentPower == userVotePower(addr, _currentRoundEndBlock())) {
                         topicSpecialVoters[vote_round][topic_index].remove(msg.sender);
                         delete userVoteMeta[vote_round][addr][topic_index];
                     } else {
-                        userVoteMeta[vote_round][addr][topic_index] = VoteMeta(block.number, currentPower);
+                        userVoteMeta[vote_round][addr][topic_index] = VoteMeta(currentPower);
                     }
                 }
             }
         }
 
-        // do the vote cast
-        ParamsControl.Vote[] memory structVotes = new ParamsControl.Vote[](1);
-        structVotes[0] = ParamsControl.Vote(topic_index, poolVoteInfo[vote_round][topic_index]);
-        posPool.castVote(vote_round, structVotes);
-
         emit CastVote(msg.sender, vote_round, topic_index, votes);
     }
 
-    function readVote(address addr, uint16 topicIndex) public override view returns (ParamsControl.Vote memory) {
-        ParamsControl.Vote memory vote = ParamsControl.Vote(topicIndex, userVoteInfo[paramsControl.currentRound()][addr][topicIndex]);
+    function readVote(address addr, uint16 topicIndex) public view returns (Vote memory) {
+        Vote memory vote = Vote(topicIndex, userVoteInfo[coreVoteRound()][addr][topicIndex]);
         return vote;
     }
 
-    function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) public override onlyeSpaceBridge {
-        posPool.lockForVotePower(amount, unlockBlockNumber);
-    }
-
-    function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public override onlyeSpaceBridge {
-        posPool.castVote(vote_round, vote_data);
+    function getPoolVoteInfo(uint64 round, uint16 topicIndex) public view returns (uint256[3] memory) {
+        return poolVoteInfo[round][topicIndex];
     }
 
     function _lockStake(uint256 unlockBlock) internal {
@@ -223,17 +238,13 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
 
         while (blockNumber >= block.number) {
             accAmount += globalLockAmount[blockNumber];
-            
-            posPool.lockForVotePower(accAmount, blockNumber);
-            emit VoteLock(accAmount, blockNumber);
 
             blockNumber -= QUARTER_BLOCK_NUMBER;
         }
     }
 
     function _currentRoundEndBlock() internal view returns (uint256) {
-        // not sure 8888 network one round period is how long
-        return _onChainDaoStartBlock() + paramsControl.currentRound() * ONE_DAY_BLOCK_NUMBER * 60;
+        return _onChainDaoStartBlock() + coreVoteRound() * ONE_DAY_BLOCK_NUMBER * 60;
     }
 
     function _onChainDaoStartBlock() internal view returns (uint256) {
@@ -243,7 +254,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         } else if (cid == 1029) {
             return 133800000;
         } else if (cid == 8888) {
-            return 100000;  // maybe will change
+            return 100000; // maybe will change
         }
         return 0;
     }
@@ -253,15 +264,23 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         assembly {
             id := chainid()
         }
+
+        // convert to core chain id
+        if (id == 71) id = 1;
+        if (id == 1030) id = 1029;
+
         return id;
     }
 
     // internal functions
     function _adjustBlockNumber(uint256 blockNumber) internal pure returns (uint256) {
         uint256 adjusted = (blockNumber / QUARTER_BLOCK_NUMBER) * QUARTER_BLOCK_NUMBER;
-        if (adjusted < blockNumber) { // if not divide exactly
+
+        // if not divide exactly
+        if (adjusted < blockNumber) {
             return adjusted + QUARTER_BLOCK_NUMBER;
         }
+
         return adjusted;
     }
 
@@ -289,6 +308,6 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
                 return i;
             }
         }
-        return votes.length; // no index found
+        return votes.length; // no index found, should never happen
     }
 }

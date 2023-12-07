@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./PoSPool.sol";
 import "./mocks/IStaking.sol";
 import "./mocks/IPoSRegister.sol";
-import "./VotePowerQueue.sol";
+import "./utils/VotePowerQueue.sol";
 
 /// This use mock contracts to replace the real PoS contracts.
 /// Which enable developer test it in ethereum
