@@ -90,8 +90,6 @@ contract EVotingEscrow is Ownable, Initializable {
         uint256 _lockAmount = amount;
         _userLockInfo[msg.sender] = LockInfo(_lockAmount, unlockBlock);
         globalLockAmount[unlockBlock] += _lockAmount;
-
-        _lockStake(unlockBlock);
     }
 
     /*
@@ -108,8 +106,6 @@ contract EVotingEscrow is Ownable, Initializable {
         uint256 unlockBlock = _userLockInfo[msg.sender].unlockBlock;
         _userLockInfo[msg.sender].amount += _lockAmount;
         globalLockAmount[unlockBlock] += _lockAmount;
-
-        _lockStake(unlockBlock);
     }
 
     function extendLockTime(uint256 unlockBlock) public {
@@ -124,8 +120,6 @@ contract EVotingEscrow is Ownable, Initializable {
         _userLockInfo[msg.sender].unlockBlock = unlockBlock;
         globalLockAmount[oldUnlockNumber] -= amount;
         globalLockAmount[unlockBlock] += amount;
-
-        _lockStake(unlockBlock);
     }
 
     function userVotePower(address user, uint256 blockNumber) public view returns (uint256) {
@@ -226,21 +220,6 @@ contract EVotingEscrow is Ownable, Initializable {
 
     function getPoolVoteInfo(uint64 round, uint16 topicIndex) public view returns (uint256[3] memory) {
         return poolVoteInfo[round][topicIndex];
-    }
-
-    function _lockStake(uint256 unlockBlock) internal {
-        if (unlockBlock > lastUnlockBlock) {
-            lastUnlockBlock = unlockBlock;
-        }
-
-        uint256 accAmount = 0;
-        uint256 blockNumber = lastUnlockBlock;
-
-        while (blockNumber >= block.number) {
-            accAmount += globalLockAmount[blockNumber];
-
-            blockNumber -= QUARTER_BLOCK_NUMBER;
-        }
     }
 
     function _currentRoundEndBlock() internal view returns (uint256) {
