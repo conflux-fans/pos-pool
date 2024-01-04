@@ -50,6 +50,28 @@ task("upgradeContract", "Upgrade a Proxy1967 Contract, assumes the implementatio
         console.log(`Upgrade ${address} to new impl success`);
     });
 
+task("upgradeToNewImpl", "Upgrade a Proxy1967 Contract to new implementation, assumes the implementation contract has no constructor parameters")
+    .addParam("address", "The address of the proxy contract")
+    .addParam("impl", "The address of new implementation")
+    .setAction(async (taskArguments, hre, runSuper) => {
+        const address = taskArguments.address;
+        const implAddress = taskArguments.impl;
+
+        if (address.toLowerCase().startsWith("cfx")) {
+            const [deployer] = await hre.conflux.getSigners();
+            const proxy = await hre.conflux.getContractAt("Proxy1967", address);
+            const tx2 = proxy.upgradeTo(implAddress).sendTransaction({
+                from: deployer.address,
+            });
+            await tx2.executed();
+        } else {
+            const proxy = await hre.ethers.getContractAt("Proxy1967", address);
+            const tx = await proxy.upgradeTo(contract.address);
+            await tx.wait();
+        }
+        console.log(`Upgrade ${address} to new impl success`);
+    });
+
 task("taskName", "Task description", async () => {
 
 });
