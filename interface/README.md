@@ -2,6 +2,10 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Pre-requirements
+
+- [Node.js](https://nodejs.org/en/) v16.18.1 (higher version may not work)
+
 ## Setup
 
 First we need to install the project dependencies.
