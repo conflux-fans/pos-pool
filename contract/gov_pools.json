@@ -44,7 +44,7 @@
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
         },
-         {
+        {
             "name": "test-a",
             "address": "cfxtest:aca9rwdxwfa61d81c1xwnf54x1vbv1h1be0c0x3jff",
             "icon": "https://confluxnetwork.org/favicon.ico",
@@ -56,8 +56,8 @@
     ],
     "eSpaceTestnet": [
         {
-            "name": "e-test1",
-            "address": "0x1Fba5d87d8035772Eb67E17be0696A37A32925D7",
+            "name": "e-test5",
+            "address": "0xEfD43B3CBfAB85F5CC3C4712cb1f60fB56daFC91",
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
         }

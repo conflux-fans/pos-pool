@@ -215,15 +215,17 @@ contract CoreBridge is Ownable {
     }
 
     function syncLockInfo() public {
-        uint256 lastUnlockBlock = eSpaceVotingLastUnlockBlock();
+        uint256 accLockAmount = 0;
+        uint256 unlockBlock = eSpaceVotingLastUnlockBlock();
         // max lock period is 1 year, so the max loop times is 4
-        while (lastUnlockBlock > block.number) {
-            uint256 amount = eSpaceVotingGlobalLockAmount(lastUnlockBlock);
-            if (globalLockAmount[lastUnlockBlock] != amount) {
-                IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).lockForVotePower(amount, lastUnlockBlock);
-                globalLockAmount[lastUnlockBlock] = amount;
-            }
-            lastUnlockBlock -= QUARTER_BLOCK_NUMBER;
+        while (unlockBlock > block.number) {
+            uint256 amount = eSpaceVotingGlobalLockAmount(unlockBlock);
+            globalLockAmount[unlockBlock] = amount;
+
+            accLockAmount += amount;
+            IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).lockForVotePower(accLockAmount, unlockBlock);
+                
+            unlockBlock -= QUARTER_BLOCK_NUMBER;
         }
     }
 
