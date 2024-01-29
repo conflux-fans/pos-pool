@@ -38,7 +38,7 @@ To show eSpace pool in UI, an additional step is required. If you don't use the 
 The default UI require one eSpace pool is corresponding to one Core Space pool, so you need to set the relation in `PoolManager` contract.
 
 ```hash
-npx pool PoolManagerSetEspacePool <core-pool-address> <espace-pool-address>
+node bin/pool.js PoolManagerSetEspacePool <core-pool-address> <espace-pool-address>
 ```
 
 Note: To run this command in a different network, update `.env` file related variables: `CFX_RPC_URL`, `CFX_NETWORK_ID`.
