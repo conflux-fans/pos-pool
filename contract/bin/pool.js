@@ -251,6 +251,51 @@ program
   });
 
 program
+  .command('restakeVotes')
+  .description('Restake available votes to PoS')
+  .argument('[args...]', 'Optional arguments for the method')
+  .action(async (args) => {
+    // console.log(args);
+    const accountInfo = await conflux.cfx.getAccount(POOL_ADDRESS);
+    const posVotes = Number(Drip(accountInfo.stakingBalance).toCFX())/1000;
+    // console.log('Total staked PoS votes', posVotes);
+
+    let posAddress = await poolContract.posAddress();
+    posAddress = format.hex(posAddress);
+    // console.log('PoS node address: ', posAddress);
+
+    const posAccount = await conflux.pos.getAccount(posAddress);
+    // console.log('locked', posAccount.status.locked);
+    // console.log('availableVotes', posAccount.status.availableVotes);
+    // console.log('inQueue length', posAccount.status.inQueue.length);
+    // console.log('outQueue length', posAccount.status.outQueue);
+    const unlocking = posAccount.status.outQueue.reduce((acc, cur) => acc + cur.power, 0);
+    console.log('Pool Unlocking', unlocking);
+
+    let userUnlock = await totalUnlock();
+    userUnlock = Number(userUnlock.toString());
+    console.log('User unlocked', userUnlock);
+
+    const needRestake = posVotes - posAccount.status.availableVotes - userUnlock;
+    console.log('Votes need to restake', needRestake);
+    if (needRestake === 0) return;
+
+    const availableForRestake = needRestake - unlocking;
+    console.log('Available for restake', availableForRestake);
+    
+    if (availableForRestake <= 0) return;
+
+    const receipt = await poolContract
+            ._retirePosVote(availableForRestake)
+            .sendTransaction({
+                from: account.address,
+            })
+            .executed();
+
+    console.log(receipt.outcomeStatus === 0 ? "Restake Success" : "Unlock Failed");
+  });
+
+program
   .command('testCmd')
   .argument('<method>', 'Required arg')
   .argument('[arg...]', 'Arguments for the method')
@@ -294,4 +339,21 @@ function getContractInfo(name) {
     default:
       throw new Error(`Unknown contract name: ${name}`);
   }
+}
+
+async function totalUnlock() {
+    let total = 0n;
+    const stakerCount = await poolContract.stakerNumber();
+    for (let i = 0; i < stakerCount; i += 1) {
+        const addr = await poolContract.stakerAddress(i);
+        
+        const userSummary = await poolContract.userSummary(addr);
+        total += userSummary.votes - userSummary.available;
+        await waitMilliseconds(100);
+    }
+    return total;
+}
+
+async function waitMilliseconds(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
