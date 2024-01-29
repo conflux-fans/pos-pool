@@ -48,7 +48,7 @@ Note: To run this command in a different network, update `.env` file related var
 The sync service is used to sync the status between Core Space and eSpace, and transfer CFX between them. **It needs to be running all the time.**
 
 ```sh
-DEBUG=espacePoolStatusSyncer service/eSpacePoolStatusSyncer.js
+DEBUG=espacePoolStatusSyncer node service/eSpacePoolStatusSyncer.js
 ```
 
 ## FAQs
