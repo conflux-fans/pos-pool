@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// The implementation contract must first inherit from Ownable too
 contract Proxy1967 is ERC1967Proxy, Ownable  {
   // initialize() - "0x8129fc1c"
   constructor(address logic, bytes memory data) ERC1967Proxy(logic, data) {}

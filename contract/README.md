@@ -19,7 +19,7 @@ This project uses `hardhat` to compile and test the contract.
 4. cp `.env.example` to `.env` and set the env variables:
    1. `ETH_RPC_URL`: Conflux [eSpace RPC URL](https://doc.confluxnetwork.org/docs/espace/network-endpoints)
    2. `CFX_RPC_URL`: Conflux [Core space RPC URL](https://doc.confluxnetwork.org/docs/core/conflux_rpcs)
-   3. `PRIVATE_KEY`: Private key of the deployer, make sure it has enough CFX balance(1200 CFX for Core space, if you want to deploy eSpace pool, you need to have 50 CFX in eSpace)
+   3. `PRIVATE_KEY`: Private key of the deployer, **make sure it has enough CFX balance(1200 CFX for Core space, if you want to deploy eSpace pool, you need to have 50 CFX in eSpace)**
    4. `CFX_NETWORK_ID`: Core space network id, 1029 for `mainnet`, 1 for testnet
 5. Run `npx hardhat compile` to compile all the contracts
 
@@ -79,10 +79,5 @@ If you want your pool to support eSpace, or support participation in Conflux on-
 
 ## Other Documents
 
-1. [How to upgrade a Proxy1967 Contract](./docs/HowToUpgradeContract.md)
+1. [How to upgrade a Proxy1967 Contract](./docs/howTo/HowToUpgradeContract.md)
 2. [How to deal with PoS force retire](./docs/PoolForceRetired.md)
-
-## TODO
-
-1. Contract Interface Documentation
-2. eSpace Pool support governance
