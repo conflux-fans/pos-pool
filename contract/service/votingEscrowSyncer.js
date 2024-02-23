@@ -26,63 +26,41 @@ const sendTxMeta = {
   from: account.address
 };
 
-async function syncVoteStatus() {
+async function syncGovVoteStatus() {
   setInterval(async () => {
     try {
-      let crossingVotes = await coreBridge.queryCrossingVotes();
-      debug('crossStake: ', crossingVotes);
-      if (crossingVotes > 0) {
+      let lockInfoChanged = await coreBridge.isLockInfoChanged();
+      debug('lockInfoChanged: ', lockInfoChanged);
+      if (lockInfoChanged) {
         const receipt = await coreBridge
-          .crossStake()
+          .syncLockInfo()
           .sendTransaction(sendTxMeta)
           .executed();
-        debug(`crossStake finished: `, receipt.transactionHash, receipt.outcomeStatus);
+
+        debug('syncLockInfo receipt: ', receipt);
+      }
+
+      let voteInfoChanged = await coreBridge.isVoteInfoChanged();
+      debug('voteInfoChanged: ', voteInfoChanged);
+      if (voteInfoChanged) {
+        const receipt = await coreBridge
+          .syncVoteInfo()
+          .sendTransaction(sendTxMeta)
+          .executed();
+
+        debug('syncLockInfo receipt: ', receipt);
       }
     } catch (e) {
       console.log('crossingVotes error: ', e);
     }
     
-    try {
-      let userSummary = await coreBridge.queryUserSummary();
-      debug('withdrawVotes: ', userSummary.unlocked);
-      let unlocked = Number(userSummary.unlocked);
-      while(unlocked > 0) {
-        const thisTime = unlocked >= 2 ? 2 : 1;
-        const receipt = await coreBridge
-          .withdrawVotesByVotes(thisTime)
-          .sendTransaction(sendTxMeta)
-          .executed();
-        debug(`withdrawVotes finished: `, receipt.transactionHash, receipt.outcomeStatus);
-
-        unlocked -= thisTime;
-      }
-    } catch(e) {
-      console.log('withdrawVotes error: ', e);
-    }
-
-    try {
-      let unstakeLen = await coreBridge.queryUnstakeLen();
-      debug('handleUnstake: ', unstakeLen);
-      let userSummary = await coreBridge.queryUserSummary();
-      if (unstakeLen > 0 && userSummary.locked > 0) {
-        for(let i = 0; i < unstakeLen; i++) {
-          const receipt = await coreBridge
-            .handleOneUnstake()
-            .sendTransaction(sendTxMeta)
-            .executed();
-            debug(`handleUnstake finished: `, receipt.transactionHash, receipt.outcomeStatus);
-        }
-      }
-    } catch (e) {
-      console.log("unstake error: ", e);
-    }
-  }, 1000 * 60 * 5);
+  }, 1000 * 60 * 9.7);
 }
 
 async function main() {
   console.log('==== eSpacePool VotingEscrow Crossing Tasks Started ====');
   try {
-    syncVoteStatus();
+    syncGovVoteStatus();
   } catch (e) {
     console.log(e);
   }

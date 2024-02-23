@@ -45,7 +45,7 @@ async function syncAPYandClaimInterest() {
   }, 1000 * 60 * 30);  // 30 minutes once
 }
 
-async function syncVoteStatus() {
+async function syncPosVoteStatus() {
   setInterval(async () => {
     try {
       let crossingVotes = await coreBridge.queryCrossingVotes();
@@ -109,7 +109,7 @@ async function checkBalance() {
 async function main() {
   try {
     syncAPYandClaimInterest();
-    syncVoteStatus();
+    syncPosVoteStatus();
     console.log('==== eSpacePool Crossing Tasks Started ====');
   } catch (e) {
     console.log(e);
