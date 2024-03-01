@@ -23,8 +23,8 @@ interface IVotingEscrow {
     function castVote(uint64 vote_round, uint16 topic_index, uint256[3] memory votes) external;
     function readVote(address addr, uint16 topicIndex) external view returns (ParamsControl.Vote memory);
 
-    function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) external;
-    function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) external;
+    function triggerLock() external;
+    function triggerVote() external;
 
     event VoteLock(uint256 indexed amount, uint256 indexed unlockBlock);
     event CastVote(address indexed user, uint256 indexed round, uint256 indexed topicIndex, uint256[3] votes);
