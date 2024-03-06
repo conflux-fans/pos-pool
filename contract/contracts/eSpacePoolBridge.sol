@@ -201,32 +201,35 @@ contract CoreBridge is Ownable {
         return abi.decode(votes, (uint256[3]));
     }
 
+    function lastUnlockBlock() public view returns (uint256) {
+        return eSpaceVotingLastUnlockBlock();
+    }
+
     function isLockInfoChanged() public view returns (bool) {
-        uint256 lastUnlockBlock = eSpaceVotingLastUnlockBlock();
+        uint256 _lastUnlockBlock = eSpaceVotingLastUnlockBlock();
         // max lock period is 1 year, so the max loop times is 4
-        while (lastUnlockBlock > block.number) {
-            uint256 amount = eSpaceVotingGlobalLockAmount(lastUnlockBlock);
-            if (globalLockAmount[lastUnlockBlock] != amount) {
+        while (_lastUnlockBlock > block.number) {
+            uint256 amount = eSpaceVotingGlobalLockAmount(_lastUnlockBlock);
+            if (globalLockAmount[_lastUnlockBlock] != amount) {
                 return true;
             }
-            lastUnlockBlock -= QUARTER_BLOCK_NUMBER;
+            _lastUnlockBlock -= QUARTER_BLOCK_NUMBER;
         }
         return false;
     }
 
     function syncLockInfo() public {
-        uint256 accLockAmount = 0;
-        uint256 unlockBlock = eSpaceVotingLastUnlockBlock();
+        uint256 _lastUnlockBlock = eSpaceVotingLastUnlockBlock();
+        uint256 unlockBlock = _lastUnlockBlock;
         // max lock period is 1 year, so the max loop times is 4
         while (unlockBlock > block.number) {
             uint256 amount = eSpaceVotingGlobalLockAmount(unlockBlock);
             globalLockAmount[unlockBlock] = amount;
-
-            accLockAmount += amount;
-            IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).lockForVotePower(accLockAmount, unlockBlock);
-                
             unlockBlock -= QUARTER_BLOCK_NUMBER;
         }
+
+        // trigger lock
+        IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).triggerLock();
     }
 
     function isVoteInfoChanged() public view returns (bool) {
@@ -249,13 +252,11 @@ contract CoreBridge is Ownable {
             uint256[3] memory votes = eSpaceVotingPoolVoteInfo(round, topic);
             if (!isVotesEqual(votes, poolVoteInfo[round][topic])) {
                 poolVoteInfo[round][topic] = votes;
-
-                ParamsControl.Vote[] memory structVotes = new ParamsControl.Vote[](1);
-                structVotes[0] = ParamsControl.Vote(topic, votes);
-                IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).castVote(round, structVotes);
             }
             topic++;
         }
+
+        IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).triggerVote();
     }
 
     function isVotesEqual(uint256[3] memory votes1, uint256[3] memory votes2) internal pure returns (bool) {

@@ -136,4 +136,20 @@ module.exports = {
     runOnCompile: true,
     strict: true,
   },
+  sourcify: {
+    enabled: false,
+  },
+  etherscan: {
+    apiKey: 'espace',
+    customChains: [
+      {
+        network: 'espaceTestnet',
+        chainId: 71,
+        urls: {
+          apiURL: 'https://evmapi-testnet.confluxscan.io/api/',
+          browserURL: 'https://evmtestnet.confluxscan.io/',
+        },
+      },
+    ],
+  },
 };

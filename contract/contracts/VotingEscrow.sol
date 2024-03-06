@@ -8,6 +8,12 @@ import "@confluxfans/contracts/InternalContracts/ParamsControl.sol";
 import "./interfaces/IVotingEscrow.sol";
 import "./interfaces/IPoSPool.sol";
 
+interface IEspaceBridge {
+    function lastUnlockBlock() external view returns (uint256);
+    function globalLockAmount(uint256) external view returns (uint256);
+    function poolVoteInfo(uint64, uint16, uint256) external view returns (uint256);
+}
+
 contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     // Add the library methods
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -16,6 +22,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     uint256 private constant ONE_DAY_BLOCK_NUMBER = 2 * 3600 * 24;
     uint256 public constant QUARTER_BLOCK_NUMBER = ONE_DAY_BLOCK_NUMBER * 365 / 4; // 3 months
     uint256 private constant CFX_VALUE_OF_ONE_VOTE = 1000 ether;
+    uint16 private constant TOTAL_TOPIC = 3;
     
     IPoSPool public posPool;
 
@@ -75,7 +82,8 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         _userLockInfo[msg.sender] = LockInfo(amount, unlockBlock);
         globalLockAmount[unlockBlock] += amount;
 
-        _lockStake(unlockBlock);
+        _updateLastUnlockBlock(unlockBlock);
+        _lockStake();
     }
 
     function increaseLock(uint256 amount) public override {
@@ -87,7 +95,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         _userLockInfo[msg.sender].amount += amount;
         globalLockAmount[unlockBlock] += amount;
 
-        _lockStake(unlockBlock);
+        _lockStake();
     }
 
     function extendLockTime(uint256 unlockBlock) public override {
@@ -103,7 +111,8 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         globalLockAmount[oldUnlockNumber] -= amount;
         globalLockAmount[unlockBlock] += amount;
 
-        _lockStake(unlockBlock);
+        _updateLastUnlockBlock(unlockBlock);
+        _lockStake();
     }
 
     function userVotePower(address user, uint256 blockNumber) public override view returns (uint256) {
@@ -193,11 +202,24 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         }
 
         // do the vote cast
+        _castVote(vote_round, topic_index);
+    }
+
+    function _castVote(uint64 vote_round, uint16 topic_index) internal {
         ParamsControl.Vote[] memory structVotes = new ParamsControl.Vote[](1);
         structVotes[0] = ParamsControl.Vote(topic_index, poolVoteInfo[vote_round][topic_index]);
-        posPool.castVote(vote_round, structVotes);
 
-        emit CastVote(msg.sender, vote_round, topic_index, votes);
+        // sum votes from eSpaceBridge
+        if (eSpaceBridge != address(0)) {
+            
+            for (uint16 i = 0; i < 3; i++) { // votes.length is 3
+                uint256 votes = IEspaceBridge(eSpaceBridge).poolVoteInfo(vote_round, topic_index, uint256(i));
+                structVotes[0].votes[i] += votes;
+            }
+        }
+        
+        posPool.castVote(vote_round, structVotes);
+        emit CastVote(msg.sender, vote_round, topic_index, structVotes[0].votes);
     }
 
     function readVote(address addr, uint16 topicIndex) public override view returns (ParamsControl.Vote memory) {
@@ -205,29 +227,53 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
         return vote;
     }
 
-    function lockForVotePower(uint256 amount, uint256 unlockBlockNumber) public override onlyeSpaceBridge {
-        posPool.lockForVotePower(amount, unlockBlockNumber);
-    }
-
-    function castVote(uint64 vote_round, ParamsControl.Vote[] calldata vote_data) public override onlyeSpaceBridge {
-        posPool.castVote(vote_round, vote_data);
-    }
-
-    function _lockStake(uint256 unlockBlock) internal {
-        if (unlockBlock > lastUnlockBlock) {
-            lastUnlockBlock = unlockBlock;
+    function _updateLastUnlockBlock(uint256 lastBlock) internal {
+        if (lastBlock > lastUnlockBlock) {
+            lastUnlockBlock = lastBlock;
         }
+    }
 
+    function _getLastUnlockBlock() internal view returns (uint256) {
+        if (eSpaceBridge != address(0)) {
+            uint256 espaceUnlock = IEspaceBridge(eSpaceBridge).lastUnlockBlock();
+            if (espaceUnlock > lastUnlockBlock) {
+                return espaceUnlock;
+            }
+        }
+        return lastUnlockBlock;
+    }
+
+    function _lockStake() internal {
         uint256 accAmount = 0;
-        uint256 blockNumber = lastUnlockBlock;
+        uint256 blockNumber = _getLastUnlockBlock();
 
         while (blockNumber >= block.number) {
             accAmount += globalLockAmount[blockNumber];
+
+            // add eSpaceBridge lock amount
+            if (eSpaceBridge != address(0)) {
+                accAmount += IEspaceBridge(eSpaceBridge).globalLockAmount(blockNumber);
+            }
+
+            if (accAmount == 0) {
+                continue;
+            }
             
             posPool.lockForVotePower(accAmount, blockNumber);
             emit VoteLock(accAmount, blockNumber);
 
             blockNumber -= QUARTER_BLOCK_NUMBER;
+        }
+    }
+
+    function triggerLock() public override onlyeSpaceBridge {
+        _lockStake();
+    }
+
+    function triggerVote() public override onlyeSpaceBridge {
+        uint64 vote_round = paramsControl.currentRound();
+        for (uint16 i = 0; i < TOTAL_TOPIC; i++) {
+            _castVote(vote_round, i);
         }
     }
 

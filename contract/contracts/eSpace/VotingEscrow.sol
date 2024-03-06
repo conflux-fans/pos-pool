@@ -90,6 +90,8 @@ contract EVotingEscrow is Ownable, Initializable {
         uint256 _lockAmount = amount;
         _userLockInfo[msg.sender] = LockInfo(_lockAmount, unlockBlock);
         globalLockAmount[unlockBlock] += _lockAmount;
+
+        _updateLastUnlockBlock(unlockBlock);
     }
 
     /*
@@ -120,6 +122,8 @@ contract EVotingEscrow is Ownable, Initializable {
         _userLockInfo[msg.sender].unlockBlock = unlockBlock;
         globalLockAmount[oldUnlockNumber] -= amount;
         globalLockAmount[unlockBlock] += amount;
+
+        _updateLastUnlockBlock(unlockBlock);
     }
 
     function userVotePower(address user, uint256 blockNumber) public view returns (uint256) {
@@ -244,7 +248,7 @@ contract EVotingEscrow is Ownable, Initializable {
             id := chainid()
         }
 
-        // convert to core chain id
+        // convert to core space chain id
         if (id == 71) id = 1;
         if (id == 1030) id = 1029;
 
@@ -288,5 +292,11 @@ contract EVotingEscrow is Ownable, Initializable {
             }
         }
         return votes.length; // no index found, should never happen
+    }
+
+    function _updateLastUnlockBlock(uint256 unlockBlock) internal {
+        if (unlockBlock > lastUnlockBlock) {
+            lastUnlockBlock = unlockBlock;
+        }
     }
 }
