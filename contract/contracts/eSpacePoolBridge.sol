@@ -229,7 +229,7 @@ contract CoreBridge is Ownable {
         }
 
         // trigger lock
-        IVotingEscrow(eSpaceVotingEscrow).triggerLock();
+        IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).triggerLock();
     }
 
     function isVoteInfoChanged() public view returns (bool) {
@@ -256,7 +256,7 @@ contract CoreBridge is Ownable {
             topic++;
         }
 
-        IVotingEscrow(eSpaceVotingEscrow).triggerVote();
+        IVotingEscrow(IPoSPool(poolAddress).votingEscrow()).triggerVote();
     }
 
     function isVotesEqual(uint256[3] memory votes1, uint256[3] memory votes2) internal pure returns (bool) {

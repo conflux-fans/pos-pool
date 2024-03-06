@@ -11,7 +11,7 @@ import "./interfaces/IPoSPool.sol";
 interface IEspaceBridge {
     function lastUnlockBlock() external view returns (uint256);
     function globalLockAmount(uint256) external view returns (uint256);
-    function poolVoteInfo(uint64, uint16) external view returns (uint256[3] memory);
+    function poolVoteInfo(uint64, uint16, uint256) external view returns (uint256);
 }
 
 contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
@@ -211,9 +211,10 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
 
         // sum votes from eSpaceBridge
         if (eSpaceBridge != address(0)) {
-            uint256[3] memory votes = IEspaceBridge(eSpaceBridge).poolVoteInfo(vote_round, topic_index);
+            
             for (uint16 i = 0; i < 3; i++) { // votes.length is 3
-                structVotes[0].votes[i] += votes[i];
+                uint256 votes = IEspaceBridge(eSpaceBridge).poolVoteInfo(vote_round, topic_index, uint256(i));
+                structVotes[0].votes[i] += votes;
             }
         }
         
