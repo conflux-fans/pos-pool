@@ -52,7 +52,12 @@
         }
     ],
     "eSpaceMainnet": [
-
+        {
+            "name": "PHX V1 eSpace",
+            "address": "0x3cbc6f7d406fe9701573fe6ddf28f4f17b5d46a3",
+            "icon": "https://pospool.phxverse.com/favicon.ico",
+            "website": "https://pospool.phxverse.com/espace"
+        }
     ],
     "eSpaceTestnet": [
         {
