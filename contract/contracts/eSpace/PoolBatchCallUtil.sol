@@ -41,6 +41,14 @@ contract EPoSPoolBatchCall is Ownable {
         return stakeInfos;
     }
 
+    /**
+        Require the pool contract to implement the IPoSPool interface:
+        poolName() returns (string)
+        userSummary(address) returns (UserSummary)
+        userLockInfo(address) returns (LockInfo)
+        poolAPY() returns (uint64)
+        votingEscrow() returns (address)
+     */
     function getStakeInfo(address pool, address user) public view returns (StakeInfo memory) {
         StakeInfo memory stakeInfo;
         stakeInfo.pool = pool;
