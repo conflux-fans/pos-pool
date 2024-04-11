@@ -433,7 +433,6 @@ function Pool() {
         data,
         value: Unit.fromMinUnit(value).toHexMinUnit()
       }
-
       if (currentSpace === 'eSpace') {
         estimateData.gasLimit = await metaMaskProvider
           .request({
@@ -448,8 +447,13 @@ function Pool() {
             ],
           })
       }
+
       if (estimateData?.gasLimit) {
-        txParams.gas = Unit.fromMinUnit(calculateGasMargin(estimateData?.gasLimit || 0)).toHexMinUnit()
+        txParams.gas = Unit.fromMinUnit(calculateGasMargin(estimateData?.gasLimit || 0)).toHexMinUnit();
+        if (currentSpace === 'core') {
+          const gasPrice = await confluxController.provider.call("cfx_gasPrice");
+          if (gasPrice) txParams.gasPrice = gasPrice
+        }
       }
       if (estimateData?.storageCollateralized) {
         txParams.storageLimit = Unit.fromMinUnit(calculateGasMargin(String(estimateData?.storageCollateralized || 0))).toHexMinUnit()
