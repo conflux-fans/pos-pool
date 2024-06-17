@@ -113,6 +113,19 @@
     },
     {
       "inputs": [],
+      "name": "VERSION",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "_poolLockPeriod",
       "outputs": [
         {
@@ -138,81 +151,16 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_addr",
-          "type": "address"
-        }
-      ],
-      "name": "_posAddressToIdentifier",
+      "inputs": [],
+      "name": "_poolUnlockPeriod",
       "outputs": [
         {
-          "internalType": "bytes32",
+          "internalType": "uint256",
           "name": "",
-          "type": "bytes32"
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint64",
-          "name": "votePower",
-          "type": "uint64"
-        }
-      ],
-      "name": "_posRegisterIncreaseStake",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "indentifier",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint64",
-          "name": "votePower",
-          "type": "uint64"
-        },
-        {
-          "internalType": "bytes",
-          "name": "blsPubKey",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bytes",
-          "name": "vrfPubKey",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bytes[2]",
-          "name": "blsPubKeyProof",
-          "type": "bytes[2]"
-        }
-      ],
-      "name": "_posRegisterRegister",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint64",
-          "name": "votePower",
-          "type": "uint64"
-        }
-      ],
-      "name": "_posRegisterRetire",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -252,32 +200,6 @@
         }
       ],
       "name": "_retireUserStakes",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "_stakingDeposit",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "_stakingWithdraw",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -347,6 +269,36 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "vote_round",
+          "type": "uint64"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint16",
+              "name": "topic_index",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint256[3]",
+              "name": "votes",
+              "type": "uint256[3]"
+            }
+          ],
+          "internalType": "struct ParamsControl.Vote[]",
+          "name": "vote_data",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "castVote",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "claimAllInterest",
       "outputs": [],
@@ -400,11 +352,42 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "unlockBlockNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "lockForVotePower",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "owner",
       "outputs": [
         {
           "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "paramsControl",
+      "outputs": [
+        {
+          "internalType": "contract ParamsControl",
           "name": "",
           "type": "address"
         }
@@ -433,6 +416,36 @@
           "internalType": "string",
           "name": "",
           "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "poolShot",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "available",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "balance",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blockNumber",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct PoSPool.PoolShot",
+          "name": "",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",
@@ -580,6 +593,13 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "setParamsControl",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "string",
@@ -601,6 +621,32 @@
         }
       ],
       "name": "setPoolUserShareRatio",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "period",
+          "type": "uint64"
+        }
+      ],
+      "name": "setUnlockPeriod",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_votingEscrow",
+          "type": "address"
+        }
+      ],
+      "name": "setVotingEscrow",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -745,6 +791,37 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "userLockInfo",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "unlockBlock",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IVotingEscrow.LockInfo",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "account",
           "type": "address"
         }
@@ -834,6 +911,42 @@
           "type": "address"
         }
       ],
+      "name": "userShot",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "available",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "accRewardPerCfx",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blockNumber",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct PoSPool.UserShot",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
       "name": "userSummary",
       "outputs": [
         {
@@ -872,6 +985,38 @@
           "internalType": "struct PoSPool.UserSummary",
           "name": "",
           "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "userVotePower",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "votingEscrow",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
