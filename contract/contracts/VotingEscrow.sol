@@ -22,7 +22,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
     uint256 private constant ONE_DAY_BLOCK_NUMBER = 2 * 3600 * 24;
     uint256 public constant QUARTER_BLOCK_NUMBER = ONE_DAY_BLOCK_NUMBER * 365 / 4; // 3 months
     uint256 private constant CFX_VALUE_OF_ONE_VOTE = 1000 ether;
-    uint16 private constant TOTAL_TOPIC = 3;
+    uint16 private constant TOTAL_TOPIC = 4;
     
     IPoSPool public posPool;
 
