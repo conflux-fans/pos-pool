@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.5.0
+
+Change the `TOTAL_TOPIC` of VotingEscrow.sol and eSpacePoolBridge.sol from 3 to 4.
+
 ## v1.4.0
 
 Support eSpace pool to lock CFX to obtain voting rights for Conflux Governance.

@@ -11,7 +11,7 @@ import {IVotingEscrow} from "./interfaces/IVotingEscrow.sol";
 contract CoreBridge is Ownable {
   ParamsControl private constant PARAMS_CONTROL = ParamsControl(0x0888000000000000000000000000000000000007);
   CrossSpaceCall private constant CROSS_SPACE_CALL = CrossSpaceCall(0x0888000000000000000000000000000000000006);
-  uint16 private constant TOTAL_TOPIC = 3;
+  uint16 private constant TOTAL_TOPIC = 4;
   uint256 public constant QUARTER_BLOCK_NUMBER = 2 * 3600 * 24 * 365 / 4; // 3 months
     // uint256 public constant CFX_PER_VOTE = 1000 ether;
     // uint256 public constant RATIO_BASE = 1000_000_000;
