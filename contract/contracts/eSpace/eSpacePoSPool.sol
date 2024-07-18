@@ -358,6 +358,10 @@ contract ESpacePoSPool is Ownable, Initializable {
     return IVotingEscrow(votingEscrow).userVotePower(user);
   }
 
+  function userShareRatio() public pure returns (uint256) {
+    return _userShareRatio();
+  }
+
   // ======================== admin methods =====================
 
   ///
