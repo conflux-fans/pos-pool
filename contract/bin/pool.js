@@ -331,7 +331,7 @@ function getContractInfo(name) {
     case "MockPosRegister":
       return require("../artifacts/contracts/mocks/PoSRegister.sol/MockPoSRegister.json");
     case "CoreBridge":
-      return require('../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json');
+      return require('../artifacts/contracts/eSpacePoolBridge.sol/CoreBridge.json');
     case "VotingEscrow":
       return votingEscrowContractInfo;
     case "PoSPoolBatchCall":
