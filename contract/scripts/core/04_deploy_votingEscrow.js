@@ -5,7 +5,6 @@ const { InitializeMethodData } = require('../../utils/index.js');
 async function main() {
     const [deployer] = await conflux.getSigners();
 
-    // deploy pool manager
     const VotingEscrow = await conflux.getContractFactory('VotingEscrow');
     const votingEscrowDeployReceipt = await VotingEscrow.constructor().sendTransaction({
         from: deployer.address,
