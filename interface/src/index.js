@@ -3,8 +3,9 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import {completeDetect} from '@cfxjs/use-wallet';
-import {completeDetect as completeDetectEthereum} from '@cfxjs/use-wallet/dist/ethereum';
+
+import { completeDetect } from '@cfxjs/use-wallet-react/conflux';
+import { completeDetect as completeDetectEthereum } from '@cfxjs/use-wallet-react/ethereum';
 import '../public/locales';
 
 Promise.all([completeDetect(), completeDetectEthereum()]).then(() => {

@@ -24,7 +24,7 @@ import {
   useSendTransaction,
   Unit,
 } from '../../hooks/useWallet'
-import { provider as metaMaskProvider } from '@cfxjs/use-wallet/dist/ethereum'
+import { provider as metaMaskProvider } from '@cfxjs/use-wallet-react/ethereum'
 import useCurrentSpace from '../../hooks/useCurrentSpace'
 import { CFX_BASE_PER_VOTE, StatusPosNode } from '../../constants'
 import Header from './Header'

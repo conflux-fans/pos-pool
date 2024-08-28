@@ -3,7 +3,7 @@ const poolConfig = require('./pool.config');
 module.exports = {
   style: {
     postcss: {
-      plugins: [require('tailwindcss'),require('autoprefixer')],
+      plugins: [require('tailwindcss'), require('autoprefixer')],
     },
   },
   devServer: {
@@ -34,5 +34,13 @@ module.exports = {
       webpackConfig.resolve.plugins.splice(scopePluginIndex, 1);
       return webpackConfig;
     }
+  },
+  babel: {
+    plugins: [
+      ['@babel/plugin-proposal-private-property-in-object', { loose: true }],
+      ['@babel/plugin-transform-class-properties', { loose: true }],
+      ['@babel/plugin-transform-private-methods', { loose: true }],
+      '@babel/plugin-proposal-optional-chaining',
+    ]
   }
 }

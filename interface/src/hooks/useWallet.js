@@ -6,14 +6,14 @@ import {
   sendTransaction as sendTransactionWithFluent,
   connect as connectFluent,
   Unit,
-} from '@cfxjs/use-wallet'
+} from '@cfxjs/use-wallet-react/conflux'
 import {
   useAccount as useMetaMaskAccount,
   useChainId as useMetaMaskChainId,
   useBalance as useMetaMaskBalance,
   sendTransaction as sendTransactionWithMetaMask,
   connect as connectMetaMask,
-} from '@cfxjs/use-wallet/dist/ethereum'
+} from '@cfxjs/use-wallet-react/ethereum'
 
 export const useAccount = () => {
   const currentSpace = useCurrentSpace()
