@@ -1,5 +1,5 @@
-import { useChainId as useFluentChainId } from "@cfxjs/use-wallet";
-import { useChainId as useMetaMaskChainId } from "@cfxjs/use-wallet/dist/ethereum";
+import { useChainId as useFluentChainId } from "@cfxjs/use-wallet-react/conflux";
+import { useChainId as useMetaMaskChainId } from "@cfxjs/use-wallet-react/ethereum";
 import useCurrentSpace from "./useCurrentSpace";
 import useCurrentNetwork from "./useCurrentNetwork";
 
