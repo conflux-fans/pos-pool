@@ -3,9 +3,11 @@
   "version": "1.1.0",
   "description": "Solidity contract of pos-pool",
   "main": "index.js",
-  "bin": "./bin/pool.js",
+  "bin": {
+    "pool": "./bin/pool.js"
+  },
   "dependencies": {
-    "@confluxfans/contracts": "^0.2.5",
+    "@confluxfans/contracts": "^0.3.3",
     "@openzeppelin/contracts": "^4.3.2",
     "commander": "^8.3.0",
     "debug": "^4.3.4",
@@ -29,6 +31,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.1",
     "hardhat": "^2.6.7",
+    "hardhat-conflux": "^0.1.1",
     "hardhat-contract-sizer": "^2.1.1",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.4.1",

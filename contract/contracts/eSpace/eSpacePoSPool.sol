@@ -1,12 +1,14 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../VotePowerQueue.sol";
-import "./UnstakeQueue.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {VotePowerQueue} from "../utils/VotePowerQueue.sol";
+import {UnstakeQueue} from "../utils/UnstakeQueue.sol";
+import {IVotingEscrow} from "../interfaces/IVotingEscrow.sol";
+import {IPoSPool} from "../interfaces/IPoSPool.sol";
 
 ///
 ///  @title eSpace PoSPool
@@ -38,13 +40,13 @@ contract ESpacePoSPool is Ownable, Initializable {
   // global pool accumulative reward for each cfx
   uint256 public accRewardPerCfx;  // start from 0
 
-  PoolSummary private _poolSummary;
-  mapping(address => UserSummary) private userSummaries;
+  IPoSPool.PoolSummary private _poolSummary;
+  mapping(address => IPoSPool.UserSummary) private userSummaries;
   mapping(address => VotePowerQueue.InOutQueue) private userInqueues;
   mapping(address => VotePowerQueue.InOutQueue) private userOutqueues;
 
-  PoolShot internal lastPoolShot;
-  mapping(address => UserShot) internal lastUserShots;
+  IPoSPool.PoolShot internal lastPoolShot;
+  mapping(address => IPoSPool.UserShot) internal lastUserShots;
   
   EnumerableSet.AddressSet private stakers;
   // Unstake votes queue
@@ -57,40 +59,19 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 1800;
 
-  // ======================== Struct definitions =========================
-  struct PoolSummary {
-    uint256 available;
-    uint256 interest; // PoS pool current interest
-    uint256 totalInterest; // total historical interest of whole pools
-  }
+  address public votingEscrow;
 
-  /// @title UserSummary
-  /// @custom:field votes User's total votes
-  /// @custom:field available User's avaliable votes
-  /// @custom:field locked
-  /// @custom:field unlocked
-  /// @custom:field claimedInterest
-  /// @custom:field currentInterest
-  struct UserSummary {
-    uint256 votes;  // Total votes in PoS system, including locking, locked, unlocking, unlocked
-    uint256 available; // locking + locked
-    uint256 locked;
-    uint256 unlocked;
-    uint256 claimedInterest; // total historical claimed interest
-    uint256 currentInterest; // current claimable interest
-  }
+  // ======================== Events =========================
 
-  struct PoolShot {
-    uint256 available;
-    uint256 balance;
-    uint256 blockNumber;
-  } 
+  event IncreasePoSStake(address indexed user, uint256 votePower);
 
-  struct UserShot {
-    uint256 available;
-    uint256 accRewardPerCfx;
-    uint256 blockNumber;
-  }
+  event DecreasePoSStake(address indexed user, uint256 votePower);
+
+  event WithdrawStake(address indexed user, uint256 votePower);
+
+  event ClaimInterest(address indexed user, uint256 amount);
+
+  event RatioChanged(uint256 ratio);
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -150,25 +131,13 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   // depend on: accRewardPerCfx and lastUserShot
   function _updateUserInterest(address _user) private {
-    UserShot memory uShot = lastUserShots[_user];
+    IPoSPool.UserShot memory uShot = lastUserShots[_user];
     if (uShot.available == 0) return;
     uint256 latestInterest = accRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
     uint256 _userInterest = _calUserShare(latestInterest, _user);
     userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(_userInterest);
     _poolSummary.interest = _poolSummary.interest.add(latestInterest.sub(_userInterest));
   }
-
-  // ======================== Events =========================
-
-  event IncreasePoSStake(address indexed user, uint256 votePower);
-
-  event DecreasePoSStake(address indexed user, uint256 votePower);
-
-  event WithdrawStake(address indexed user, uint256 votePower);
-
-  event ClaimInterest(address indexed user, uint256 amount);
-
-  event RatioChanged(uint256 ratio);
 
   // ======================== Init methods =========================
 
@@ -195,6 +164,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     address payable receiver = payable(_bridgeAddress);
     receiver.transfer(msg.value);
     crossingVotes += votePower;
+
     emit IncreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
@@ -222,6 +192,11 @@ contract ESpacePoSPool is Ownable, Initializable {
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
     userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
+
+    // if user has locked cfx for vote power, the rest amount should bigger than that
+    IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
+    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
+
     // record the decrease request
     unstakeQueue.enqueue(UnstakeQueue.Node(votePower));
     emit DecreasePoSStake(msg.sender, votePower);
@@ -279,7 +254,7 @@ contract ESpacePoSPool is Ownable, Initializable {
     uint256 _latestAccRewardPerCfx = accRewardPerCfx;
     // add latest profit
     uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
-    UserShot memory uShot = lastUserShots[_address];
+    IPoSPool.UserShot memory uShot = lastUserShots[_address];
     if (_latestReward > 0) {
       uint256 _deltaAcc = _latestReward.div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
       _latestAccRewardPerCfx = _latestAccRewardPerCfx.add(_deltaAcc);
@@ -333,15 +308,15 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @param _user The address of user to query
   /// @return User's summary
   ///
-  function userSummary(address _user) public view returns (UserSummary memory) {
-    UserSummary memory summary = userSummaries[_user];
+  function userSummary(address _user) public view returns (IPoSPool.UserSummary memory) {
+    IPoSPool.UserSummary memory summary = userSummaries[_user];
     summary.locked += userInqueues[_user].sumEndedVotes();
     summary.unlocked += userOutqueues[_user].sumEndedVotes();
     return summary;
   }
 
-  function poolSummary() public view returns (PoolSummary memory) {
-    PoolSummary memory summary = _poolSummary;
+  function poolSummary() public view returns (IPoSPool.PoolSummary memory) {
+    IPoSPool.PoolSummary memory summary = _poolSummary;
     uint256 _latestReward = _selfBalance().sub(lastPoolShot.balance);
     summary.totalInterest = summary.totalInterest.add(_latestReward);
     return summary;
@@ -375,15 +350,16 @@ contract ESpacePoSPool is Ownable, Initializable {
     return stakers.at(i);
   }
 
-  function unstakeLen() public view returns (uint256) {
-    return unstakeQueue.end - unstakeQueue.start;
+  function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
+    return IVotingEscrow(votingEscrow).userLockInfo(user);
   }
 
-  function firstUnstakeVotes() public view returns (uint256) {
-    if (unstakeQueue.end == unstakeQueue.start) {
-      return 0;
-    }
-    return unstakeQueue.items[unstakeQueue.start].votes;
+  function userVotePower(address user) external view returns (uint256) {
+    return IVotingEscrow(votingEscrow).userVotePower(user);
+  }
+
+  function userShareRatio() public pure returns (uint256) {
+    return _userShareRatio();
   }
 
   // ======================== admin methods =====================
@@ -427,40 +403,22 @@ contract ESpacePoSPool is Ownable, Initializable {
     poolName = name;
   }
 
-  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    uint256 votePower = userSummaries[_addr].available;
-    if (votePower == 0) return;
-
-    _updateUserInterest(_addr);
-    userSummaries[_addr].available = 0;
-    userSummaries[_addr].locked = 0;
-    // clear user inqueue
-    userInqueues[_addr].clear();
-    userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
-    _updateUserShot(_addr);
-
-    _poolSummary.available -= votePower;
-  }
-
-  // When pool node is force retired, use this method to make all user's available stake to unlocking
-  function _retireUserStakes(uint256 offset, uint256 limit, uint64 endBlockNumber) public onlyOwner {
-    uint256 len = stakers.length();
-    if (len == 0) return;
-
-    _updateAccRewardPerCfx();
-
-    uint256 end = offset + limit;
-    if (end > len) {
-      end = len;
-    }
-    for (uint256 i = offset; i < end; i++) {
-      _retireUserStake(stakers.at(i), endBlockNumber);
-    }
-
-    _updatePoolShot();
+  function setVotingEscrow(address _votingEscrow) public onlyOwner {
+    votingEscrow = _votingEscrow;
   }
 
   // ======================== bridge methods =====================
+
+  function unstakeLen() public view returns (uint256) {
+    return unstakeQueue.end - unstakeQueue.start;
+  }
+
+  function firstUnstakeVotes() public view returns (uint256) {
+    if (unstakeQueue.end == unstakeQueue.start) {
+      return 0;
+    }
+    return unstakeQueue.items[unstakeQueue.start].votes;
+  }
 
   function setPoolAPY(uint256 apy) public onlyBridge {
     _poolAPY = apy;

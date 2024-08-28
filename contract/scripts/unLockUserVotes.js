@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable prettier/prettier */
 require("dotenv").config();
-const {conflux, Drip, account} = require("./conflux");
+const {conflux, Drip, account} = require("./core//conflux");
 const poolContractInfo = require("../artifacts/contracts/PoSPool.sol/PoSPool.json");
 
 const poolContract = conflux.Contract({

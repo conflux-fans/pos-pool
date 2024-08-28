@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IPoSPool.sol";
+import "./interfaces/IPoSPool.sol";
 
 contract PoolManager is Ownable {
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -29,7 +29,7 @@ contract PoolManager is Ownable {
       IPoSPool poolInstance = IPoSPool(poolAddresses[i]);
       poolInfos[i] = PoolInfo({
         poolAddress: poolAddresses[i],
-        totalAvailable: poolInstance.poolSummary().available,
+        totalAvailable: uint64(poolInstance.poolSummary().available),
         name: poolInstance.poolName(),
         apy: poolInstance.poolAPY(),
         fee: poolInstance.poolUserShareRatio()
