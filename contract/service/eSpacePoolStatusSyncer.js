@@ -6,7 +6,7 @@
 require('dotenv').config();
 const debug = require('debug')('espacePoolStatusSyncer');
 const { Conflux, Drip } = require("js-conflux-sdk");
-const coreBridgeInfo = require("../artifacts/contracts/eSpace/CoreBridge.sol/CoreBridge.json");
+const coreBridgeInfo = require("../artifacts/contracts/eSpacePoolBridge.sol/CoreBridge.json");
 const { loadPrivateKey } = require('../utils/index');
 const { dingAlert } = require('../utils/dingAlert');
 
@@ -20,11 +20,12 @@ const account = conflux.wallet.addPrivateKey(loadPrivateKey());
 
 const coreBridge = conflux.Contract({
   abi: coreBridgeInfo.abi,
-  address: process.env.ESPACE_POOL_CORE_PROXY,
+  address: process.env.CORE_BRIDGE,
 });
 
 const sendTxMeta = {
-  from: account.address
+  from: account.address,
+//   gasPrice: Drip.fromGDrip(300),
 };
 
 async function syncAPYandClaimInterest() {
@@ -44,7 +45,7 @@ async function syncAPYandClaimInterest() {
   }, 1000 * 60 * 30);  // 30 minutes once
 }
 
-async function syncVoteStatus() {
+async function syncPosVoteStatus() {
   setInterval(async () => {
     try {
       let crossingVotes = await coreBridge.queryCrossingVotes();
@@ -59,7 +60,7 @@ async function syncVoteStatus() {
     } catch (e) {
       console.log('crossingVotes error: ', e);
     }
-    
+
     try {
       let userSummary = await coreBridge.queryUserSummary();
       debug('withdrawVotes: ', userSummary.unlocked);
@@ -108,7 +109,7 @@ async function checkBalance() {
 async function main() {
   try {
     syncAPYandClaimInterest();
-    syncVoteStatus();
+    syncPosVoteStatus();
     console.log('==== eSpacePool Crossing Tasks Started ====');
   } catch (e) {
     console.log(e);

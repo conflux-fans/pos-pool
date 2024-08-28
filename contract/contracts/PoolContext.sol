@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
 import "@confluxfans/contracts/InternalContracts/Staking.sol";
 import "@confluxfans/contracts/InternalContracts/PoSRegister.sol";
 
-pragma solidity ^0.8.0;
-
 abstract contract PoolContext {
+  Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
+  PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
+
   function _selfBalance() internal view virtual returns (uint256) {
     return address(this).balance;
   }
@@ -13,15 +16,28 @@ abstract contract PoolContext {
     return block.number;
   }
 
-  Staking private constant STAKING = Staking(0x0888000000000000000000000000000000000002);
-  PoSRegister private constant POS_REGISTER = PoSRegister(0x0888000000000000000000000000000000000005);
-  
   function _stakingDeposit(uint256 _amount) internal virtual {
     STAKING.deposit(_amount);
   }
 
   function _stakingWithdraw(uint256 _amount) internal virtual {
     STAKING.withdraw(_amount);
+  }
+
+  function _stakingBalance() internal view returns (uint256) {
+    return STAKING.getStakingBalance(address(this));
+  }
+
+  function _stakingLockedStakingBalance(uint256 blockNumber) internal view returns (uint256) {
+    return STAKING.getLockedStakingBalance(address(this), blockNumber);
+  }
+
+  function _stakingVotePower(uint256 blockNumber) internal view returns (uint256) {
+    return STAKING.getVotePower(address(this), blockNumber);
+  }
+
+  function _stakingVoteLock(uint256 amount, uint256 unlockBlockNumber) internal {
+    STAKING.voteLock(amount, unlockBlockNumber);
   }
 
   function _posRegisterRegister(
