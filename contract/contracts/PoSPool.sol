@@ -97,7 +97,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
-  string public constant VERSION = "1.3.0";
+  string public constant VERSION = "1.5.0";
 
   ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
 
