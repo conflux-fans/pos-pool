@@ -11,3 +11,9 @@ npx hardhat upgradeContract --network <network> --address <address> --contract <
 ```
 
 This task will **deploy a new implementation contract** and **upgrade the proxy contract to the new implementation**. And it support both Conflux eSpace and Core Space.
+
+For example, upgrade the PoSPool contract on the Core Space testnet:
+
+```sh
+npx hardhat upgradeContract --network cfxTestnet --address your-contract-address --contract PoSPool
+```
