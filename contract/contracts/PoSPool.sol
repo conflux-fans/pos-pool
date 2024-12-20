@@ -110,7 +110,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   }
 
   modifier onlyVotingEscrow() {
-    require(msg.sender == votingEscrow, "Only votingEscrow can call this function");
+    require(msg.sender == votingEscrow && votingEscrow != address(0), "Only votingEscrow can call this function");
     _;
   }
 
@@ -287,8 +287,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
     
     // if user has locked cfx for vote power, the rest amount should bigger than that
-    IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
-    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
+    if (votingEscrow != address(0)) {
+      IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
+      require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
+    }
 
     _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
@@ -484,10 +486,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   }
 
   function userLockInfo(address user) public view returns (IVotingEscrow.LockInfo memory) {
+    if (votingEscrow == address(0)) return IVotingEscrow.LockInfo(0, 0);
     return IVotingEscrow(votingEscrow).userLockInfo(user);
   }
 
   function userVotePower(address user) external view returns (uint256) {
+    if (votingEscrow == address(0)) return 0;
     return IVotingEscrow(votingEscrow).userVotePower(user);
   }
 
