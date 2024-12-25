@@ -286,7 +286,7 @@ program
     if (availableForRestake <= 0) return;
 
     const receipt = await poolContract
-            ._retirePosVote(availableForRestake)
+            ._restakePosVote(availableForRestake)
             .sendTransaction({
                 from: account.address,
             })
