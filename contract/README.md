@@ -87,4 +87,4 @@ If you want your pool to support eSpace, or support participation in Conflux on-
 
 1. [How to upgrade a Proxy1967 Contract](./docs/howTo/HowToUpgradeContract.md)
 2. [How to deal with PoS force retire](./docs/PoolForceRetired.md)
-3. [Common Core space pool manage operation](./docs/PoolCommonSetup.md)
+3. [Common Core space pool manage operation](./docs/howTo/ManageCorePool.md)

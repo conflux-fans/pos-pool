@@ -27,3 +27,9 @@ If the machine running the validator node crashes, it may cause the validator to
 ```shell
 node bin/pool.js restakeVotes
 ```
+
+## Withdraw pool profit
+
+```sh
+node bin/pool.js withdrawPoolProfit your-profit-receiver-address
+```
