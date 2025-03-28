@@ -1,6 +1,6 @@
 /**
  * This script can be used to snapshot PoS's staker info.
- * First it will get all PoS nodes from confluxscan.io
+ * First it will get all PoS nodes from confluxscan.org
  * Then get node's basic info(powAddress, votes) through internal contract PoSRegister
  * Finally will get every node's powAddress if it is a standard pool contract, get all staker info from the pool contract
  * 
@@ -119,7 +119,7 @@ async function getPoSNodesFromScan() {
   let nodeList = [];
   let skip = 0;
   while(true) {
-    let url = `https://confluxscan.io/stat/list-pos-account?limit=${LIMIT}&orderBy=createdAt&reverse=true&skip=${skip}`;
+    let url = `https://confluxscan.org/stat/list-pos-account?limit=${LIMIT}&orderBy=createdAt&reverse=true&skip=${skip}`;
     let { status, body } = await superagent.get(url);
     if (status !== 200) {
       throw new Error(`Network error skip=${skip} limit=${LIMIT}`);
