@@ -33,3 +33,9 @@ node bin/pool.js restakeVotes
 ```sh
 node bin/pool.js withdrawPoolProfit your-profit-receiver-address
 ```
+
+## Add a new pool to PoolManager
+
+```sh
+ node bin/pool.js PoolManager addPool your-pool-address
+```
