@@ -25,6 +25,12 @@ Then we need to set the `EVotingEscrow` contract address in `CoreBridge` contrac
 npx hardhat run scripts/core/06_setup_espaceVotingEscrow.js --network cfxTestnet
 ```
 
+## Setup VotingEscrow in PoSPool
+
+```bash
+npx hardhat run scripts/espace/05_set_votingEscrow_in_pospool.js --network espaceTestnet
+```
+
 ## Start the Sync Service
 
 To sync the lock and vote data back to Core Space, we need to start the sync service:
