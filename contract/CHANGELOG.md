@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v1.6.0
+
+### Core Space PoSPool contract
+
+The contract upgrade permission and Pool management permission are separated to achieve more granular permission management. After the upgrade, the contract will have two roles: `owner` and `manager`. The former can upgrade the contract and set other addresses, while the latter mainly has the authority to manage the Pool (such as name, ratio, period, etc.).
+
+For the upgrade process, refer to [HowToUpgradeContract.md](./docs/howTo/HowToUpgradeContract.md). After the upgrade, the owner needs to call the setManager method to initialize the manager.
+
 ## v1.5.0
 
 Change the `TOTAL_TOPIC` of VotingEscrow.sol and eSpacePoolBridge.sol from 3 to 4.
