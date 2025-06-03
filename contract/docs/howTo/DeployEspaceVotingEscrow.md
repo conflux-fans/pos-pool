@@ -4,6 +4,11 @@ To make eSpace Pool support governance, a separate `EVotingEscrow` contract need
 
 ## Deploy Contract
 
+Add `CORE_SPACE_INFO_ORACLE` in into `.env` file with value:
+
+* mainnet: 0x4CE48b7e15A6120B7DAFC59bA5184085a51C05Ff
+* testnet: 0x95Af72EaC6f5e08b6Ab51874582FA8F8C5E93D28
+
 To deploy it run the following command:
 
 ```bash
