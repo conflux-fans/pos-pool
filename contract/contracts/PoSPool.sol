@@ -97,11 +97,13 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
-  string public constant VERSION = "1.5.0";
+  string public constant VERSION = "1.6.0";
 
   ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
 
   address public votingEscrow;
+
+  address public manager; // added in version 1.6.0
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -111,6 +113,11 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   modifier onlyVotingEscrow() {
     require(msg.sender == votingEscrow && votingEscrow != address(0), "Only votingEscrow can call this function");
+    _;
+  }
+
+  modifier onlyManager() {
+    require(msg.sender == manager, "Only manager can call this function");
     _;
   }
 
@@ -207,6 +214,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     poolUserShareRatio = 9000;
     _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600;
     _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 3600;
+    manager = msg.sender;
   }
   
   ///
@@ -502,7 +510,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @dev The ratio base is 10000, only admin can do this
   /// @param ratio The interest user share ratio (1-10000), default is 9000
   ///
-  function setPoolUserShareRatio(uint64 ratio) public onlyOwner {
+  function setPoolUserShareRatio(uint64 ratio) public onlyManager {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
@@ -513,26 +521,26 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @dev Only admin can do this
   /// @param period The lock period in block number, default is seven day's block count
   ///
-  function setLockPeriod(uint64 period) public onlyOwner {
+  function setLockPeriod(uint64 period) public onlyManager {
     _poolLockPeriod = period;
   }
 
-  function setUnlockPeriod(uint64 period) public onlyOwner {
+  function setUnlockPeriod(uint64 period) public onlyManager {
     _poolUnlockPeriod = period;
   }
 
-  function addToFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
+  function addToFeeFreeWhiteList(address _freeAddress) public onlyManager returns (bool) {
     return feeFreeWhiteList.add(_freeAddress);
   }
 
-  function removeFromFeeFreeWhiteList(address _freeAddress) public onlyOwner returns (bool) {
+  function removeFromFeeFreeWhiteList(address _freeAddress) public onlyManager returns (bool) {
     return feeFreeWhiteList.remove(_freeAddress);
   }
 
   /// 
   /// @notice Enable admin to set the pool name
   ///
-  function setPoolName(string memory name) public onlyOwner {
+  function setPoolName(string memory name) public onlyManager {
     poolName = name;
   }
 
@@ -544,6 +552,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   function setVotingEscrow(address _votingEscrow) public onlyOwner {
     votingEscrow = _votingEscrow;
+  }
+
+  function setManager(address _manager) public onlyOwner {
+    manager = _manager;
   }
 
   function setParamsControl() public onlyOwner {
@@ -559,46 +571,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     _updatePoolShot();
   }
 
-  function _retireUserStake(address _addr, uint64 endBlockNumber) public onlyOwner {
-    uint256 votePower = userSummaries[_addr].available;
-    if (votePower == 0) return;
-
-    _updateAccRewardPerCfx();
-
-    _updateUserInterest(_addr);
-
-    userSummaries[_addr].available = 0;
-
-    userSummaries[_addr].locked = 0;
-    // clear user inqueue
-    userInqueues[_addr].clear();
-    userOutqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, endBlockNumber));
-    _updateUserShot(_addr);
-
-    _poolSummary.available -= votePower;
-    _updatePoolShot();
-  }
-
-  function _restakePosVote(uint64 votes) public onlyOwner {
+  function _restakePosVote(uint64 votes) public onlyManager {
     _posRegisterIncreaseStake(votes);
-  }
-
-  function _restakeUserStake(address _addr) public onlyOwner {
-    userSummaries[_addr].unlocked += userOutqueues[_addr].collectEndedVotes();
-    uint256 votePower = userSummaries[_addr].unlocked;
-    require(votePower > 0, "Minimal votePower is 1");
-    
-    _posRegisterIncreaseStake(uint64(votePower));
-
-    // put stake info in queue
-    userInqueues[_addr].enqueue(VotePowerQueue.QueueNode(votePower, _blockNumber() + _poolLockPeriod));
-    userSummaries[_addr].available += votePower;
-    userSummaries[_addr].unlocked = 0;
-    _updateUserShot(_addr);
-
-    //
-    _poolSummary.available += votePower;
-    _updatePoolShot();
   }
 
 }
