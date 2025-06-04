@@ -36,4 +36,4 @@ npx hardhat flatten contracts/eSpace/eSpacePoSPool.sol > pospool.sol
 
 ## How to verify the contract
 
-Refer to the [ConfluxScan contract verification documentation]((https://doc.confluxnetwork.org/docs/espace/tutorials/VerifyContracts#verify-on-web-ui-manually)) to complete contract verification.
+Refer to the [ConfluxScan contract verification documentation](https://doc.confluxnetwork.org/docs/espace/tutorials/VerifyContracts#verify-on-web-ui-manually) to complete contract verification.
