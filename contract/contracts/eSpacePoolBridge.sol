@@ -50,16 +50,6 @@ contract CoreBridge is Ownable {
     return bytes20(eSpacePoolAddress);
   }
 
-  function queryCrossingVotes() public view returns (uint256) {
-    bytes memory rawCrossingVotes = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
-    return abi.decode(rawCrossingVotes, (uint256));
-  }
-
-  function queryUnstakeLen() public view returns (uint256) {
-    bytes memory rawUnstakeLen = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
-    return abi.decode(rawUnstakeLen, (uint256));
-  }
-
   function queryInterest() public view returns (uint256) {
     IPoSPool posPool = IPoSPool(poolAddress);
     return posPool.userInterest(address(this));
@@ -73,13 +63,22 @@ contract CoreBridge is Ownable {
 
   function syncAPYandClaimInterest() public onlyOwner {
     syncAPY();
-    claimInterest();
+    claimAndCrossInterest();
   }
 
   function syncAPY() public {
     IPoSPool posPool = IPoSPool(poolAddress);
     uint256 apy = posPool.poolAPY();
     crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("setPoolAPY(uint256)", apy));
+  }
+
+  function claimAndCrossInterest() public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    uint256 interest = posPool.userInterest(address(this));
+    if (interest > 0) {
+      posPool.claimInterest(interest);
+      crossSpaceCall.callEVM{value: interest}(ePoolAddrB20(), abi.encodeWithSignature("receiveInterest()"));
+    }
   }
 
   function crossStake() public onlyOwner {
@@ -91,24 +90,6 @@ contract CoreBridge is Ownable {
       crossSpaceCall.callEVM(ePoolAddrB20(), abi.encodeWithSignature("handleCrossingVotes(uint256)", crossingVotes));
       IPoSPool posPool = IPoSPool(poolAddress);
       posPool.increaseStake{value: amount}(uint64(crossingVotes));
-    }
-  }
-
-  function claimInterest() public onlyOwner {
-    IPoSPool posPool = IPoSPool(poolAddress);
-    uint256 interest = posPool.userInterest(address(this));
-    if (interest > 0) {
-      posPool.claimInterest(interest);
-      crossSpaceCall.transferEVM{value: interest}(ePoolAddrB20());
-    }
-  }
-
-  function claimAndCrossInterest() public onlyOwner {
-    IPoSPool posPool = IPoSPool(poolAddress);
-    uint256 interest = posPool.userInterest(address(this));
-    if (interest > 0) {
-      posPool.claimInterest(interest);
-      crossSpaceCall.callEVM{value: interest}(ePoolAddrB20(), abi.encodeWithSignature("receiveInterest()"));
     }
   }
 
@@ -153,12 +134,15 @@ contract CoreBridge is Ownable {
     }
   }
 
-  function withdrawVotesByVotes(uint64 votes) public onlyOwner {
-    IPoSPool posPool = IPoSPool(poolAddress);
-    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
-    require(userSummary.unlocked >= votes, "not enough unlocked votes");
-    posPool.withdrawStake(votes);
-    eSpaceHandleUnlockedIncrease(votes);
+  // =================== espace pool related methods ===================
+  function queryCrossingVotes() public view returns (uint256) {
+    bytes memory rawCrossingVotes = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
+    return abi.decode(rawCrossingVotes, (uint256));
+  }
+
+  function queryUnstakeLen() public view returns (uint256) {
+    bytes memory rawUnstakeLen = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("unstakeLen()"));
+    return abi.decode(rawUnstakeLen, (uint256));
   }
 
   function eSpaceFirstUnstakeVotes() public view returns (uint256) {

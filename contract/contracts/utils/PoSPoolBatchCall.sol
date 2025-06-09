@@ -8,6 +8,7 @@ import "../interfaces/IVotingEscrow.sol";
 
 /**
  * Batch query user's staking information in multiple mining pools
+ * Used in ConfluxHub.io
  */
 contract PoSPoolBatchCall is Ownable {
 

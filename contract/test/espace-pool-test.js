@@ -263,30 +263,30 @@ describe("EspaceStaking", async function () {
     user1Interest = await pool.userInterest(user1.address);
     expect(user1Interest).to.equal(parseEther('5'));
 
-    tx = await pool.withdrawStake(4);
-    await tx.wait();
-
-    user1Interest = await pool.userInterest(user1.address);
-    expect(user1Interest).to.equal(parseEther('5'));
-    user2Interest = await pool.userInterest(user2.address);
-    expect(user2Interest).to.equal(parseEther('5'));
-
-
-    tx = await pool.claimAllInterest();
-    await tx.wait();
-
-    user1Interest = await pool.userInterest(user1.address);
-    expect(user1Interest).to.equal(0);
-    user2Interest = await pool.userInterest(user2.address);
-    expect(user2Interest).to.equal(parseEther('5'));
-
+    // add more interest
     tx = await pool.connect(bridge).receiveInterest({
       value: parseEther(`${16}`),
     });
     await tx.wait();
 
     user1Interest = await pool.userInterest(user1.address);
-    expect(user1Interest).to.equal(parseEther('6'));
+    expect(user1Interest).to.equal(parseEther('11'));
+
+    tx = await pool.withdrawStake(4);
+    await tx.wait();
+
+
+    user2Interest = await pool.userInterest(user2.address);
+    expect(user2Interest).to.equal(parseEther('15'));
+
+    user1Interest = await pool.userInterest(user1.address);
+    expect(user1Interest).to.equal(parseEther('11'));
+    
+    tx = await pool.claimAllInterest();
+    await tx.wait();
+
+    user1Interest = await pool.userInterest(user1.address);
+    expect(user1Interest).to.equal(0);
     user2Interest = await pool.userInterest(user2.address);
     expect(user2Interest).to.equal(parseEther('15'));
 
