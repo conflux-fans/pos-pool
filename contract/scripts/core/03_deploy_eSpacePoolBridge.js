@@ -10,7 +10,7 @@ async function main() {
     const coreBridgeDeployReceipt = await CoreBridge.constructor().sendTransaction({
         from: deployer.address,
     }).executed();
-    logReceipt(coreBridgeDeployReceipt, 'CoreBridge deployment');
+    logReceipt(coreBridgeDeployReceipt, 'CoreBridge implementation deployment');
     
     const implAddr = coreBridgeDeployReceipt.contractCreated;
 

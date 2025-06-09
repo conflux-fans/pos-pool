@@ -61,8 +61,6 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   address public votingEscrow;
 
-  // ======================== Events =========================
-
   event IncreasePoSStake(address indexed user, uint256 votePower);
 
   event DecreasePoSStake(address indexed user, uint256 votePower);
@@ -119,6 +117,17 @@ contract ESpacePoSPool is Ownable, Initializable {
   // depend on: lastPoolShot.available and lastPoolShot.balance
   function _updateAccRewardPerCfx() private {
     uint256 reward = _selfBalance() - lastPoolShot.balance;
+    if (reward == 0 || lastPoolShot.available == 0) return;
+
+    // update global accRewardPerCfx
+    uint256 cfxCount = lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE);
+    accRewardPerCfx = accRewardPerCfx.add(reward.div(cfxCount));
+
+    // update pool interest info
+    _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
+  }
+
+  function _updateAccRewardPerCfxWithReward(uint256 reward) private {
     if (reward == 0 || lastPoolShot.available == 0) return;
 
     // update global accRewardPerCfx
@@ -194,10 +203,8 @@ contract ESpacePoSPool is Ownable, Initializable {
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
 
     // if user has locked cfx for vote power, the rest amount should bigger than that
-    if (votingEscrow != address(0)) {
-      IVotingEscrow.LockInfo memory lockInfo = IVotingEscrow(votingEscrow).userLockInfo(msg.sender);
-      require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
-    }
+    IVotingEscrow.LockInfo memory lockInfo = userLockInfo(msg.sender);
+    require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
 
     // record the decrease request
     unstakeQueue.enqueue(UnstakeQueue.Node(votePower));
@@ -228,6 +235,8 @@ contract ESpacePoSPool is Ownable, Initializable {
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     uint256 _withdrawAmount = votePower * CFX_VALUE_OF_ONE_VOTE;
     require(withdrawableCfx >= _withdrawAmount, "Withdrawable CFX is not enough");
+    //
+    _updateAccRewardPerCfx();
     // update amount of withdrawable CFX
     withdrawableCfx -= _withdrawAmount;
     //    
@@ -430,6 +439,10 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   function handleUnlockedIncrease(uint256 votePower) public payable onlyBridge {
     require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
+    
+    uint256 newReward = _selfBalance() - lastPoolShot.balance - msg.value; // msg.value is not reward
+    _updateAccRewardPerCfxWithReward(newReward);
+
     withdrawableCfx += msg.value;
     _updatePoolShot();
   }
