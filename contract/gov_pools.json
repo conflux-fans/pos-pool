@@ -35,6 +35,12 @@
             "address": "cfx:acc5086t6uyww6barn1a2b6z8wdmdg376yeu9gczpz",
             "icon": "https://pos.webomatic.fi/favicon.ico",
             "website": "https://pos.webomatic.fi/"
+        },
+        {
+            "name": "STC Pool",
+            "address": "cfx:acaybd44zg93ew04vyzgmdct0juhjg4vkuj2wcxes6",
+            "icon": "https://conflux.stakewithstc.xyz/favicon.ico",
+            "website": "https://conflux.stakewithstc.xyz/"
         }
     ],
     "testnet": [
