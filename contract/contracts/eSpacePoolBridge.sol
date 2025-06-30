@@ -134,6 +134,14 @@ contract CoreBridge is Ownable {
     }
   }
 
+  function withdrawVotesByVotes(uint64 votes) public onlyOwner {
+    IPoSPool posPool = IPoSPool(poolAddress);
+    IPoSPool.UserSummary memory userSummary = posPool.userSummary(address(this));
+    require(userSummary.unlocked >= votes, "not enough unlocked votes");
+    posPool.withdrawStake(votes);
+    eSpaceHandleUnlockedIncrease(votes);
+  }
+
   // =================== espace pool related methods ===================
   function queryCrossingVotes() public view returns (uint256) {
     bytes memory rawCrossingVotes = crossSpaceCall.staticCallEVM(ePoolAddrB20(), abi.encodeWithSignature("crossingVotes()"));
