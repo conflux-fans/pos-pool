@@ -545,12 +545,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   }
 
   /// @param count Vote cfx count, unit is cfx
-  function setCfxCountOfOneVote(uint256 count) public onlyOwner {
+  function setCfxCountOfOneVote(uint256 count) public onlyManager {
     CFX_COUNT_OF_ONE_VOTE = count;
     CFX_VALUE_OF_ONE_VOTE = count * 1 ether;
   }
 
-  function setVotingEscrow(address _votingEscrow) public onlyOwner {
+  function setVotingEscrow(address _votingEscrow) public onlyManager {
     votingEscrow = _votingEscrow;
   }
 
@@ -558,7 +558,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     manager = _manager;
   }
 
-  function setParamsControl() public onlyOwner {
+  function setParamsControl() public {
     paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
   }
 
