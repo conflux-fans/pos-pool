@@ -31,6 +31,9 @@ node bin/pool.js restakeVotes
 ## Withdraw pool profit
 
 ```sh
+# First, settle the pool profit to update the pool's interest
+node bin/pool.js settlePoolProfit
+# Then, withdraw the profit to your specified address
 node bin/pool.js withdrawPoolProfit your-profit-receiver-address
 ```
 

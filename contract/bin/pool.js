@@ -199,6 +199,20 @@ program
   });
 
 program
+  .command('settlePoolProfit')
+  .action(async () => {
+    const contract = poolContract;
+    // // update pool interest
+    let receipt = await contract._updatePoolProfit().sendTransaction({
+      from: account.address,
+    }).executed();
+    checkReceiptStatus(receipt, '_updatePoolProfit');
+    // claim profit
+    const poolSummary = await contract.poolSummary();
+    console.log('Pool interest: ', Drip(poolSummary.interest).toCFX());
+  });
+
+program
   .command('withdrawPoolProfit')
   .argument('<receiver>', 'Reciver address')
   .action(async (receiver) => {
@@ -206,16 +220,10 @@ program
     const poolSummary = await contract.poolSummary();
     const toClaim = poolSummary.interest - BigInt(Drip.fromGDrip(1));
     console.log('Claiming pool profit: ', Drip(toClaim).toCFX());
-    const receipt = await contract._withdrawPoolProfit(toClaim).sendTransaction({
+    receipt = await contract._withdrawPoolProfit(toClaim, receiver).sendTransaction({
       from: account.address,
     }).executed();
     checkReceiptStatus(receipt, '_withdrawPoolProfit');
-    const transferReceipt = await conflux.cfx.sendTransaction({
-      from: account.address,
-      to: receiver,
-      value: toClaim
-    }).executed();
-    checkReceiptStatus(transferReceipt, 'send CFX');
   });
 
 program

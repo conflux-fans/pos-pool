@@ -36,6 +36,8 @@ task("upgradeContract", "Upgrade a Proxy1967 Contract, assumes the implementatio
             });
             await tx2.executed();
         } else {
+            const [deployer] = await hre.ethers.getSigners();
+            console.log("Upgrading contracts with the account:", deployer.address);
             const Contract = await hre.ethers.getContractFactory(name);
             const contract = await Contract.deploy();
             await contract.deployed();

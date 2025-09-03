@@ -97,7 +97,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
-  string public constant VERSION = "1.6.0";
+  string public constant VERSION = "1.7.0";
 
   ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
 
@@ -347,17 +347,16 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @return CFX interest in Drip
   ///
   function userInterest(address _address) public view returns (uint256) {
-    uint256 _interest = userSummaries[_address].currentInterest;
-
     uint256 _latestAccRewardPerCfx = accRewardPerCfx;
     // add latest profit
     uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
-    UserShot memory uShot = lastUserShots[_address];
     if (_latestReward > 0) {
       uint256 _deltaAcc = _latestReward.div(lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
       _latestAccRewardPerCfx = _latestAccRewardPerCfx.add(_deltaAcc);
     }
 
+    uint256 _interest = userSummaries[_address].currentInterest;
+    UserShot memory uShot = lastUserShots[_address];
     if (uShot.available > 0) {
       uint256 _latestInterest = _latestAccRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
       _interest = _interest.add(_calUserShare(_latestInterest, _address));
@@ -562,11 +561,21 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
   }
 
-  function _withdrawPoolProfit(uint256 amount) public onlyOwner {
+  function _updatePoolProfit() public onlyOwner {
+    _updateAccRewardPerCfx();
+
+    uint256 stakerNum = stakers.length();
+    for (uint i = 0; i < stakerNum; i++) {
+      address staker = stakers.at(i);
+      _updateUserInterest(staker);
+      _updateUserShot(staker);
+    }
+  }
+
+  function _withdrawPoolProfit(uint256 amount, address payable receiver) public onlyOwner {
     require(_poolSummary.interest > amount, "Not enough interest");
     require(_selfBalance() > amount, "Balance not enough");
     _poolSummary.interest = _poolSummary.interest.sub(amount);
-    address payable receiver = payable(msg.sender);
     receiver.transfer(amount);
     _updatePoolShot();
   }

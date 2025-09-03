@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v1.7.0
+
+### Core Space PoSPool contract
+
+1. Add `_updatePoolProfit` method to update pool interest and user interest.
+2. Change `_withdrawPoolProfit` method to accept a `receiver` address parameter, allowing the owner to specify where the withdrawn profit should be sent.
+
 ## v1.6.0
 
 ### Core Space PoSPool contract
