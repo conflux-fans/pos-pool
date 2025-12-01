@@ -13,16 +13,16 @@ Actually it use the `pos_getAccount` RPC method to get the PoS node's info, if t
 
 ## What to do if a PoS pool's node is forceRetired?
 
-If a PoS Pool's node is foreceRetired then it's votes will be automatic unlock, and the Pool contract's CFX state should also change to unlock to keep consistent with PoS node.
+If a PoS Pool's node is forceRetired, then its votes will be automatically unlocked. You will need to re-stake all votes after the node's status returns to normal.
 
-The Pool contract provide a method `_retireUserStake` which can be used to do this. There also is a script `scripts/unLockUserVotes.js` which is wroten just for this.
+The Pool contract provide a method `_restakePosVote` which can be used to do this. 
 When a PoS Pool's node is forceRetired you can call it.
 
 ```sh
-$ node scripts/unLockUserVotes.js
+$ node bin/pool.js restakeVotes
 ```
 
-Then all Pool contract's CFX will be in unlocking state.
+Then all Pool contract's CFX will be restake.
 
 ## How to prevent a node is forceRetired?
 
@@ -34,16 +34,12 @@ To prevent forcible exit when your PoS voting node restarts, it is recommended t
 
 ## Check PoS node's status
 
-If one PoS node is force retired for some reason, all it's votes will be force retired. In this case the pool runner need **manually call PoS pool contract's `_retireUserStakes` method to unlock user's votes in contract**.
+If one PoS node is force retired for some reason, all it's votes will be force retired. In this case the pool runner need **manually call PoS pool contract's `_restakePosVote` method to restake user's votes in contract**.
 
 There also is a scripts can do this:
 
 ```js
-$ node scripts/unLockUserVotes.js
+$ node bin/pool.js restakeVotes
 ```
 
 So it is necessary to have some way monitor your PoS node's status.
-
-## ForceRetired
-
-If your Pool PoS Node is force retired you need manually [do some operation](./PoolForceRetired.md) to correct the Pool's vote state.
