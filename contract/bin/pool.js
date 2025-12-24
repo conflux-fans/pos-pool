@@ -24,6 +24,7 @@ const conflux = new Conflux({
 });
 
 const account = conflux.wallet.addPrivateKey(loadPrivateKey());
+console.log('Using account: ', account.address);
 
 const poolContract = conflux.Contract({
   abi: poolContractInfo.abi,

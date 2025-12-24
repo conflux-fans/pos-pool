@@ -28,7 +28,7 @@ npx hardhat run scripts/core/06_setup_espaceVotingEscrow.js --network cfxTestnet
 ## Setup VotingEscrow in PoSPool
 
 ```bash
-npx hardhat run scripts/espace/05_set_votingEscrow_in_pospool.js --network espaceTestnet
+npx hardhat run scripts/espace/04_set_votingEscrow_in_pospool.js --network espaceTestnet
 ```
 
 ## Start the Sync Service

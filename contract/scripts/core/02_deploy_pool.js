@@ -38,12 +38,12 @@ async function main() {
     }).executed();
 
     // add posPool to poolManager
-    const poolManagerAddr = process.env.POOL_MANAGER_ADDRESS;
-    const poolManager = await conflux.getContractAt('PoolManager', poolManagerAddr);
-    const addReceipt = await poolManager.addPool(poolAddress).sendTransaction({
-        from: deployer.address,
-    }).executed();
-    logReceipt(addReceipt, 'PoSPool added to PoolManager');
+    // const poolManagerAddr = process.env.POOL_MANAGER_ADDRESS;
+    // const poolManager = await conflux.getContractAt('PoolManager', poolManagerAddr);
+    // const addReceipt = await poolManager.addPool(poolAddress).sendTransaction({
+    //     from: deployer.address,
+    // }).executed();
+    // logReceipt(addReceipt, 'PoSPool added to PoolManager');
 }
 
 main().catch((error) => {

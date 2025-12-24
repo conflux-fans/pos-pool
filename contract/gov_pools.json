@@ -49,6 +49,12 @@
             "address": "cfxtest:ace1xye5bt56d4snfesyw2jupgt9ve3ebughhj8z1p",
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
+        },
+        {
+            "name": "test6",
+            "address": "cfxtest:acfcgjrph2cmsb9h9b9jedbn3kza975egytnzew4xr",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
         }
     ],
     "eSpaceMainnet": [
@@ -63,6 +69,12 @@
         {
             "name": "e-test5",
             "address": "0x102e78b92Be30e94203Adf676f50563cbe3A5525",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
+        },
+        {
+            "name": "e-test6",
+            "address": "0x1E91e86C7f48DDAB885d0f21b2F83965a549E233",
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
         }
