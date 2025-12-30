@@ -26,8 +26,8 @@
     "stake_3": "When you staked your CFX, those CFX can unstake after 13 days.",
     "stake_4": "After submitting the Unstake transaction, you need to wait a 1-day lock-up to claim your CFX.",
     "unstake": "unstake",
-    "unstake_1": "You need to wait a 7-day lock-up to claim your CFX.",
-    "unstake_2": "No profit during 7-day lock-up.",
+    "unstake_1": "You need to wait a 1-day lock-up to claim your CFX.",
+    "unstake_2": "No profit during 1-day lock-up.",
     "unstake_3": "The proformance fee will be charged."
   },
   "Pool": {
