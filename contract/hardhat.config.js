@@ -36,6 +36,8 @@ task("upgradeContract", "Upgrade a Proxy1967 Contract, assumes the implementatio
             });
             await tx2.executed();
         } else {
+            const [deployer] = await hre.ethers.getSigners();
+            console.log("Upgrading contracts with the account:", deployer.address);
             const Contract = await hre.ethers.getContractFactory(name);
             const contract = await Contract.deploy();
             await contract.deployed();
@@ -146,8 +148,8 @@ module.exports = {
         network: 'espaceTestnet',
         chainId: 71,
         urls: {
-          apiURL: 'https://evmapi-testnet.confluxscan.io/api/',
-          browserURL: 'https://evmtestnet.confluxscan.io/',
+          apiURL: 'https://evmapi-testnet.confluxscan.org/api/',
+          browserURL: 'https://evmtestnet.confluxscan.org/',
         },
       },
     ],

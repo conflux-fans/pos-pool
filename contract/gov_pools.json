@@ -35,12 +35,24 @@
             "address": "cfx:acc5086t6uyww6barn1a2b6z8wdmdg376yeu9gczpz",
             "icon": "https://pos.webomatic.fi/favicon.ico",
             "website": "https://pos.webomatic.fi/"
+        },
+        {
+            "name": "STC Pool",
+            "address": "cfx:acaybd44zg93ew04vyzgmdct0juhjg4vkuj2wcxes6",
+            "icon": "https://conflux.stakewithstc.xyz/favicon.ico",
+            "website": "https://conflux.stakewithstc.xyz/"
         }
     ],
     "testnet": [
         {
             "name": "test5",
             "address": "cfxtest:ace1xye5bt56d4snfesyw2jupgt9ve3ebughhj8z1p",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
+        },
+        {
+            "name": "test6",
+            "address": "cfxtest:acfcgjrph2cmsb9h9b9jedbn3kza975egytnzew4xr",
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
         }
@@ -57,6 +69,12 @@
         {
             "name": "e-test5",
             "address": "0x102e78b92Be30e94203Adf676f50563cbe3A5525",
+            "icon": "https://confluxnetwork.org/favicon.ico",
+            "website": ""
+        },
+        {
+            "name": "e-test6",
+            "address": "0x1E91e86C7f48DDAB885d0f21b2F83965a549E233",
             "icon": "https://confluxnetwork.org/favicon.ico",
             "website": ""
         }

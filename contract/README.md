@@ -65,6 +65,12 @@ npx hardhat run scripts/core/02_deploy_pool.js --network cfxTestnet
 
 After the command runs successfully, you will get the `PoSPool` contract address, and add it to `.env` file as `POOL_ADDRESS`.
 
+Step 3. Add the `PoSPool` address to the `PoolManager` contract:
+
+```bash
+node bin/pool.js PoolManager addPool your-pool-address
+```
+
 The `PoolManager` address can be used to set up the pool UI, when the UI is ready, Conflux Core Space users can stake CFX to the pool and earn PoS rewards.
 
 **Note: The commands above are for testnet, if you want to deploy the contracts to mainnet, change the `--network` parameter to `cfxMainnet`.**
@@ -81,3 +87,4 @@ If you want your pool to support eSpace, or support participation in Conflux on-
 
 1. [How to upgrade a Proxy1967 Contract](./docs/howTo/HowToUpgradeContract.md)
 2. [How to deal with PoS force retire](./docs/PoolForceRetired.md)
+3. [Common Core space pool manage operation](./docs/howTo/ManageCorePool.md)

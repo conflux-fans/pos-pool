@@ -56,7 +56,7 @@ There are already some PoS pools running on Conflux Mainnet. For example:
 3. Consensus pool
 4. HydraSF
 
-Check them at the [Conflux PoS Validators List](https://www.conflux-pos-validators.com/)
+Check them at the [Conflux PoS Validators List](https://www.conflux-pos-validators.org/)
 
 ## FAQs
 
