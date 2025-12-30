@@ -109,14 +109,10 @@ function Home() {
     async function getData() {
       setLoading(true)
       try {
-        // const options = {};
-        // if (accountAddress) {
-        //   options.from = accountAddress;
-        // }
-        // const list = await posPoolManagerContract.getPools().call(options)
-
-        const list = await posPoolManagerContract.getPools()
-        const eSpaceAddresses = await Promise.allSettled(list.map(async pool => await posPoolManagerContract.eSpacePoolAddresses(pool[3])));
+        const list = await posPoolManagerContract.getPools().call()
+        const eSpaceAddresses = await Promise.allSettled(
+          list.map(async pool => await posPoolManagerContract.eSpacePoolAddresses(pool[3]).call())
+        );
         const data = await transferData(list, eSpaceAddresses);
         const hasAnyeSpaceAddresses = data.some(item=>item.eSpaceAddress);
         if(!hasAnyeSpaceAddresses){
@@ -147,7 +143,7 @@ function Home() {
         arr.push({
           key: item[3],
           coreAddress: item[3],
-          eSpaceAddress: eSpaceAddresses?.[index]?.value && format.hexAddress(eSpaceAddresses?.[index]?.value) !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
+          eSpaceAddress: eSpaceAddresses?.[index]?.value && format.hexAddress(eSpaceAddresses?.[index]?.value) !== '0x0000000000000000000000000000000000000000' ? format.hexAddress(eSpaceAddresses?.[index]?.value) : undefined,
           totalAvailable: getCfxByVote(item[2]),
           name: item[4],
           apy: getApy(item[0]) + "%",
@@ -161,7 +157,7 @@ function Home() {
         arr.push({
           key: item[3],
           coreAddress: item[3],
-          eSpaceAddress: eSpaceAddresses?.[index]?.value && format.hexAddress(eSpaceAddresses?.[index]?.value) !== '0x0000000000000000000000000000000000000000' ? eSpaceAddresses?.[index]?.value : undefined,
+          eSpaceAddress: eSpaceAddresses?.[index]?.value && format.hexAddress(eSpaceAddresses?.[index]?.value) !== '0x0000000000000000000000000000000000000000' ? format.hexAddress(eSpaceAddresses?.[index]?.value) : undefined,
           totalAvailable: getCfxByVote(item[2]),
           name: item[4],
           apy: getApy(item[0]) + "%",
