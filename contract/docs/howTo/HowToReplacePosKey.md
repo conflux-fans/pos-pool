@@ -42,7 +42,7 @@ Note: If there are votes not locked before this operation, a notification will p
 
 ### 3 Register with new data
 
-When all votes are unlocked, admin can register using new PoS node data. Click to see details in [Confluxscan account information page]( https://confluxscan.net/pos/accounts/0x947c684e270131a1aab8711d2e321fc0e909318d885cfe69d4fc0158aded22d0?tab=right-status). (You need to change the PoS node address into your PoS node address.)
+When all votes are unlocked, admin can register using new PoS node data. Click to see details in [Confluxscan account information page]( https://confluxscan.org/pos/accounts/0x947c684e270131a1aab8711d2e321fc0e909318d885cfe69d4fc0158aded22d0?tab=right-status). (You need to change the PoS node address into your PoS node address.)
 
 Register with new PoS node data and set the register data in `POS_REGIST_DATA` of the env files.
 
