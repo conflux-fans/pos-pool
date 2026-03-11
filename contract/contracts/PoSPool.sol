@@ -214,6 +214,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     poolUserShareRatio = 9000;
     _poolLockPeriod = ONE_DAY_BLOCK_COUNT * 13 + 3600;
     _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT * 1 + 3600;
+    paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
     manager = msg.sender;
   }
   
@@ -551,6 +552,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   function setVotingEscrow(address _votingEscrow) public onlyManager {
     votingEscrow = _votingEscrow;
+    setParamsControl();
   }
 
   function setManager(address _manager) public onlyOwner {

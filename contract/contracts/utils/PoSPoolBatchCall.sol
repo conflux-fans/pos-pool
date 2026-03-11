@@ -48,7 +48,7 @@ contract PoSPoolBatchCall is Ownable {
         StakeInfo memory stakeInfo;
         stakeInfo.pool = pool;
         stakeInfo.name = IPoSPool(pool).poolName();
-        stakeInfo.stakeAmount = uint256(IPoSPool(pool).userSummary(user).votes) * 1000 ether;
+        stakeInfo.stakeAmount = uint256(IPoSPool(pool).userSummary(user).available) * 1000 ether;
         stakeInfo.lockAmount = IPoSPool(pool).userLockInfo(user).amount;
         stakeInfo.unlockBlock = IPoSPool(pool).userLockInfo(user).unlockBlock;
         stakeInfo.apy = uint64(IPoSPool(pool).poolAPY());
