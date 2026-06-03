@@ -192,7 +192,7 @@ contract VotingEscrow is Ownable, Initializable, IVotingEscrow {
                     userVoteInfo[vote_round][addr][topic_index][index] -= delta;
                     poolVoteInfo[vote_round][topic_index][index] -= delta;
                     if (currentPower == userVotePower(addr, _currentRoundEndBlock())) {
-                        topicSpecialVoters[vote_round][topic_index].remove(msg.sender);
+                        topicSpecialVoters[vote_round][topic_index].remove(addr);
                         delete userVoteMeta[vote_round][addr][topic_index];
                     } else {
                         userVoteMeta[vote_round][addr][topic_index] = VoteMeta(block.number, currentPower);

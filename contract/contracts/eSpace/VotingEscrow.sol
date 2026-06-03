@@ -205,7 +205,7 @@ contract EVotingEscrow is Ownable, Initializable {
 
                     // remove or update userVoteMeta
                     if (currentPower == userVotePower(addr, _currentRoundEndBlock())) {
-                        topicSpecialVoters[vote_round][topic_index].remove(msg.sender);
+                        topicSpecialVoters[vote_round][topic_index].remove(addr);
                         delete userVoteMeta[vote_round][addr][topic_index];
                     } else {
                         userVoteMeta[vote_round][addr][topic_index] = VoteMeta(currentPower);
