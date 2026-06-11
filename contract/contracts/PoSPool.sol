@@ -310,7 +310,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
       require((userSummaries[msg.sender].available - votePower) * CFX_VALUE_OF_ONE_VOTE >= lockInfo.amount, "Locked is not enough");
     }
 
-    _posRegisterRetire(votePower);
+    // _posRegisterRetire(votePower);
     emit DecreasePoSStake(msg.sender, votePower);
 
     _updateAccRewardPerCfx();
