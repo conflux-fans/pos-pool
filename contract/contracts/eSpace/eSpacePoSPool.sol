@@ -61,6 +61,8 @@ contract ESpacePoSPool is Ownable, Initializable {
 
   address public votingEscrow;
 
+  uint256 private _reentrancyStatus; // must be last storage variable to avoid slot shift
+
   event IncreasePoSStake(address indexed user, uint256 votePower);
 
   event DecreasePoSStake(address indexed user, uint256 votePower);
@@ -80,6 +82,13 @@ contract ESpacePoSPool is Ownable, Initializable {
   modifier onlyBridge() {
     require(msg.sender == _bridgeAddress, "Only bridge is allowed");
     _;
+  }
+
+  modifier nonReentrant() {
+    require(_reentrancyStatus != 2, "ReentrancyGuard: reentrant call");
+    _reentrancyStatus = 2;
+    _;
+    _reentrancyStatus = 1;
   }
 
   // ======================== Helpers =========================
@@ -165,13 +174,14 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @notice Increase PoS vote power
   /// @param votePower The number of vote power to increase
   ///
-  function increaseStake(uint64 votePower) public virtual payable onlyRegisted {
+  function increaseStake(uint64 votePower) public virtual payable onlyRegisted nonReentrant {
     require(votePower > 0, "Minimal votePower is 1");
     require(msg.value == votePower * CFX_VALUE_OF_ONE_VOTE, "msg.value should be votePower * 1000 ether");
     
     // transfer to bridge address
     address payable receiver = payable(_bridgeAddress);
-    receiver.transfer(msg.value);
+    (bool success, ) = receiver.call{value: msg.value}("");
+    require(success, "Transfer failed");
     crossingVotes += votePower;
 
     emit IncreasePoSStake(msg.sender, votePower);
@@ -230,7 +240,7 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @notice Withdraw PoS vote power
   /// @param votePower The number of vote power to withdraw
   ///
-  function withdrawStake(uint64 votePower) public onlyRegisted {
+  function withdrawStake(uint64 votePower) public onlyRegisted nonReentrant {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     uint256 _withdrawAmount = votePower * CFX_VALUE_OF_ONE_VOTE;
@@ -244,7 +254,8 @@ contract ESpacePoSPool is Ownable, Initializable {
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
-    receiver.transfer(_withdrawAmount);
+    (bool success, ) = receiver.call{value: _withdrawAmount}("");
+    require(success, "Transfer failed");
     emit WithdrawStake(msg.sender, votePower);
 
     _updatePoolShot();
@@ -283,7 +294,7 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @notice Claim specific amount user interest
   /// @param amount The amount of interest to claim
   ///
-  function claimInterest(uint amount) public onlyRegisted {
+  function claimInterest(uint amount) public onlyRegisted nonReentrant {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "Interest not enough");
 
@@ -298,7 +309,8 @@ contract ESpacePoSPool is Ownable, Initializable {
 
     // send interest to user
     address payable receiver = payable(msg.sender);
-    receiver.transfer(amount);
+    (bool success, ) = receiver.call{value: amount}("");
+    require(success, "Transfer failed");
     emit ClaimInterest(msg.sender, amount);
 
     // update blockNumber and balance

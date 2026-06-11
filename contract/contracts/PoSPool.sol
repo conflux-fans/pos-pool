@@ -97,13 +97,15 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
-  string public constant VERSION = "1.7.0";
+  string public constant VERSION = "1.8.0";
 
   ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
 
   address public votingEscrow;
 
   address public manager; // added in version 1.6.0
+
+  uint256 private _reentrancyStatus; // must be last storage variable to avoid slot shift, added in version 1.8.0
 
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
@@ -119,6 +121,13 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   modifier onlyManager() {
     require(msg.sender == manager, "Only manager can call this function");
     _;
+  }
+
+  modifier nonReentrant() {
+    require(_reentrancyStatus != 2, "ReentrancyGuard: reentrant call");
+    _reentrancyStatus = 2;
+    _;
+    _reentrancyStatus = 1;
   }
 
   // ======================== Helpers =========================
@@ -325,7 +334,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @notice Withdraw PoS vote power
   /// @param votePower The number of vote power to withdraw
   ///
-  function withdrawStake(uint64 votePower) public onlyRegisted {
+  function withdrawStake(uint64 votePower) public onlyRegisted nonReentrant {
     userSummaries[msg.sender].unlocked += userOutqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].unlocked >= votePower, "Unlocked is not enough");
     _stakingWithdraw(votePower * CFX_VALUE_OF_ONE_VOTE);
@@ -334,7 +343,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
-    receiver.transfer(votePower * CFX_VALUE_OF_ONE_VOTE);
+    (bool success, ) = receiver.call{value: votePower * CFX_VALUE_OF_ONE_VOTE}("");
+    require(success, "Transfer failed");
     emit WithdrawStake(msg.sender, votePower);
 
     if (userSummaries[msg.sender].votes == 0) {
@@ -370,7 +380,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @notice Claim specific amount user interest
   /// @param amount The amount of interest to claim
   ///
-  function claimInterest(uint amount) public onlyRegisted {
+  function claimInterest(uint amount) public onlyRegisted nonReentrant {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest >= amount, "Interest not enough");
 
@@ -386,7 +396,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
     // send interest to user
     address payable receiver = payable(msg.sender);
-    receiver.transfer(amount);
+    (bool success, ) = receiver.call{value: amount}("");
+    require(success, "Transfer failed");
     emit ClaimInterest(msg.sender, amount);
 
     // update blockNumber and balance
@@ -574,11 +585,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     }
   }
 
-  function _withdrawPoolProfit(uint256 amount, address payable receiver) public onlyOwner {
+  function _withdrawPoolProfit(uint256 amount, address payable receiver) public onlyOwner nonReentrant {
     require(_poolSummary.interest > amount, "Not enough interest");
     require(_selfBalance() > amount, "Balance not enough");
     _poolSummary.interest = _poolSummary.interest.sub(amount);
-    receiver.transfer(amount);
+    (bool success, ) = receiver.call{value: amount}("");
+    require(success, "Transfer failed");
     _updatePoolShot();
   }
 
