@@ -209,6 +209,7 @@ contract ESpacePoSPool is Ownable, Initializable {
   /// @param votePower The number of vote power to decrease
   ///
   function decreaseStake(uint64 votePower) public virtual onlyRegisted {
+    require(votePower > 0, "Minimal votePower is 1");
     userSummaries[msg.sender].locked += userInqueues[msg.sender].collectEndedVotes();
     require(userSummaries[msg.sender].locked >= votePower, "Locked is not enough");
 
