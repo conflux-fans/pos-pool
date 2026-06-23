@@ -27,6 +27,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   uint256 private CFX_VALUE_OF_ONE_VOTE = 1000 ether;
   uint256 private ONE_DAY_BLOCK_COUNT = 2 * 3600 * 24;
   uint256 private ONE_YEAR_BLOCK_COUNT = ONE_DAY_BLOCK_COUNT * 365;
+  uint256 private constant REWARD_MULTIPLIER = 1e9;
   
   // ======================== Pool config =========================
 
@@ -107,6 +108,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   uint256 private _reentrancyStatus; // must be last storage variable to avoid slot shift, added in version 1.8.0
 
+  uint256 public accRewardPerCfxMul;
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -132,6 +134,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   // ======================== Helpers =========================
 
+  function _getAccRewardPerCfx() private view returns (uint256) {
+    return accRewardPerCfx + accRewardPerCfxMul.div(REWARD_MULTIPLIER);
+  }
+
   function _userShareRatio(address _user) public view returns (uint256) {
     if (feeFreeWhiteList.contains(_user)) return RATIO_BASE;
     return poolUserShareRatio;
@@ -151,7 +157,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // used to update lastUserShot after userSummary.available and accRewardPerCfx changed
   function _updateUserShot(address _user) private {
     lastUserShots[_user].available = userSummaries[_user].available;
-    lastUserShots[_user].accRewardPerCfx = accRewardPerCfx;
+    lastUserShots[_user].accRewardPerCfx = _getAccRewardPerCfx();
     lastUserShots[_user].blockNumber = _blockNumber();
   }
 
@@ -163,7 +169,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
     // update global accRewardPerCfx
     uint256 cfxCount = lastPoolShot.available.mul(CFX_COUNT_OF_ONE_VOTE);
-    accRewardPerCfx = accRewardPerCfx.add(reward.div(cfxCount));
+    accRewardPerCfxMul = accRewardPerCfxMul.add(reward.mul(REWARD_MULTIPLIER).div(cfxCount));
 
     // update pool interest info
     _poolSummary.totalInterest = _poolSummary.totalInterest.add(reward);
@@ -173,7 +179,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   function _updateUserInterest(address _user) private {
     UserShot memory uShot = lastUserShots[_user];
     if (uShot.available == 0) return;
-    uint256 latestInterest = accRewardPerCfx.sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
+    uint256 latestInterest = _getAccRewardPerCfx().sub(uShot.accRewardPerCfx).mul(uShot.available.mul(CFX_COUNT_OF_ONE_VOTE));
     uint256 _userInterest = _calUserShare(latestInterest, _user);
     userSummaries[_user].currentInterest = userSummaries[_user].currentInterest.add(_userInterest);
     _poolSummary.interest = _poolSummary.interest.add(latestInterest.sub(_userInterest));
@@ -359,7 +365,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   /// @return CFX interest in Drip
   ///
   function userInterest(address _address) public view returns (uint256) {
-    uint256 _latestAccRewardPerCfx = accRewardPerCfx;
+    uint256 _latestAccRewardPerCfx = _getAccRewardPerCfx();
     // add latest profit
     uint256 _latestReward = _selfBalance() - lastPoolShot.balance;
     if (_latestReward > 0) {
@@ -577,6 +583,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
 
   function _updatePoolProfit() public onlyOwner {
     _updateAccRewardPerCfx();
+    _updatePoolShot();
 
     uint256 stakerNum = stakers.length();
     for (uint i = 0; i < stakerNum; i++) {
