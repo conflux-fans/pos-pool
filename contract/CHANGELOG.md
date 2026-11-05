@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v1.10.0
+
+### Core Space PoSPool contract
+
+Add support for a special stake withdrawal receiver:
+
+1. The manager can set a special receiver for a staker with `setSpecialReceiver(staker, receiver)`.
+2. The staker must confirm the receiver with `confirmSpecialReceiver(receiver)`. Until it is confirmed, `withdrawStake` will revert.
+3. Once confirmed, the withdrawn CFX is sent to the special receiver instead of the staker.
+4. The staker can remove the special receiver with `cleanSpecialReceiver` 20 days after it was set.
+5. Add `querySpecialReceiver(staker)` to query the special receiver configuration of a staker.
+
+A `SpecialReceiverSet` event is emitted when the special receiver is set.
+
 ## v1.9.0
 
 Optimize the reward calculation logic.

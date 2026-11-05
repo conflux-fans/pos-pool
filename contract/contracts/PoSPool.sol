@@ -75,6 +75,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint256 blockNumber;
   }
 
+  struct SpecialReceiver {
+    address receiver;
+    bool confirmed;
+    uint256 setTime;
+  }
+
   // ======================== Contract states =========================
 
   // global pool accumulative reward for each cfx
@@ -98,7 +104,7 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   // unlock period: 1 days + half hour
   uint256 public _poolUnlockPeriod = ONE_DAY_BLOCK_COUNT + 3600; 
 
-  string public constant VERSION = "1.9.0";
+  string public constant VERSION = "1.10.0";
 
   ParamsControl public paramsControl = ParamsControl(0x0888000000000000000000000000000000000007);
 
@@ -109,6 +115,9 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   uint256 private _reentrancyStatus; // must be last storage variable to avoid slot shift, added in version 1.8.0
 
   uint256 public accRewardPerCfxMul; // added in version 1.9.0
+
+  mapping(address => SpecialReceiver) private specialReceivers;
+
   // ======================== Modifiers =========================
   modifier onlyRegisted() {
     require(_poolRegisted, "Pool is not registed");
@@ -214,6 +223,8 @@ contract PoSPool is PoolContext, Ownable, Initializable {
   event ClaimInterest(address indexed user, uint256 amount);
 
   event RatioChanged(uint256 ratio);
+
+  event SpecialReceiverSet(address indexed staker, address receiver);
 
   // error UnnormalReward(uint256 previous, uint256 current, uint256 blockNumber);
 
@@ -350,6 +361,12 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     userSummaries[msg.sender].votes -= votePower;
     
     address payable receiver = payable(msg.sender);
+
+    if (specialReceivers[msg.sender].setTime > 0) {
+      require(specialReceivers[msg.sender].confirmed, "Special receiver not confirmed");
+      receiver = payable(specialReceivers[msg.sender].receiver);
+    }
+    
     (bool success, ) = receiver.call{value: votePower * CFX_VALUE_OF_ONE_VOTE}("");
     require(success, "Transfer failed");
     emit WithdrawStake(msg.sender, votePower);
@@ -418,6 +435,16 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     uint claimableInterest = userInterest(msg.sender);
     require(claimableInterest > 0, "No claimable interest");
     claimInterest(claimableInterest);
+  }
+
+  function confirmSpecialReceiver(address receiver) public onlyRegisted{
+    require(specialReceivers[msg.sender].receiver == receiver, "Receiver not set");
+    specialReceivers[msg.sender].confirmed = true;
+  }
+
+  function cleanSpecialReceiver() public onlyRegisted {
+    require(specialReceivers[msg.sender].setTime + 20 days < block.timestamp , "lock time not expired");
+    delete specialReceivers[msg.sender];
   }
 
   /// 
@@ -521,6 +548,10 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     return IVotingEscrow(votingEscrow).userVotePower(user);
   }
 
+  function querySpecialReceiver(address staker) public view returns (SpecialReceiver memory) {
+    return specialReceivers[staker];
+  }
+
   // ======================== admin methods =====================
 
   ///
@@ -532,6 +563,17 @@ contract PoSPool is PoolContext, Ownable, Initializable {
     require(ratio > 0 && ratio <= RATIO_BASE, "ratio should be 1-10000");
     poolUserShareRatio = ratio;
     emit RatioChanged(ratio);
+  }
+
+  function setSpecialReceiver(address staker, address receiver) public onlyManager {
+    require(staker != address(0), "Staker cannot be zero address");
+    require(receiver != address(0), "Receiver cannot be zero address");
+    specialReceivers[staker] = SpecialReceiver({
+      receiver: receiver,
+      confirmed: false,
+      setTime: block.timestamp
+    });
+    emit SpecialReceiverSet(staker, receiver);
   }
 
   /// 
