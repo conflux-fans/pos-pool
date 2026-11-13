@@ -1,7 +1,6 @@
 /* eslint-disable prettier/prettier */
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-ethers");
-require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-conflux");
 require("dotenv").config();
