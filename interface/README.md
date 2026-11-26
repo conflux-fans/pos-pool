@@ -4,7 +4,8 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Pre-requirements
 
-- [Node.js](https://nodejs.org/en/) v16.18.1 (higher version may not work)
+- [Node.js](https://nodejs.org/en/) 24 LTS
+- Yarn Classic 1.22 (`corepack yarn`)
 
 ## Setup
 
@@ -14,6 +15,14 @@ First we need to install the project dependencies.
 $ cd interface
 $ yarn # install the npm packages
 ```
+
+React Scripts 5 and CRACO 7 remove the vulnerable, unmaintained `ip` dependency
+from the development server. Tailwind stays on version 2 with its native PostCSS 8
+build to preserve the existing styles; React Scripts loads `tailwind.config.js`
+automatically. Security resolutions keep PostCSS, SVGO and their consumers on
+compatible patched versions. Keep these resolutions when updating the lockfile.
+Run `yarn test:security` to check source-map isolation, SVG processing and the
+removal of `ip` from the dependency graph.
 
 Second a config file `pool.config.js` is need to create
 

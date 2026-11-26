@@ -5,7 +5,7 @@
   "dependencies": {
     "@ant-design/icons": "^4.7.0",
     "@cfxjs/use-wallet-react": "^0.0.2-6",
-    "@craco/craco": "^6.4.0",
+    "@craco/craco": "^7.1.0",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -18,8 +18,8 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-i18next": "^11.15.4",
-    "react-router-dom": "^6.3.0",
-    "react-scripts": "4.0.3",
+    "react-router-dom": "^6.30.6",
+    "react-scripts": "5.0.1",
     "react-use": "^17.3.1",
     "web-vitals": "^1.0.1"
   },
@@ -27,6 +27,7 @@
     "start": "cross-env TAILWIND_MODE=watch REACT_APP_TestNet=true craco start",
     "build": "craco build",
     "test": "craco test",
+    "test:security": "node scripts/check-security-dependencies.js",
     "eject": "craco eject"
   },
   "eslintConfig": {
@@ -80,15 +81,20 @@
     "@babel/plugin-transform-class-properties": "^7.25.4",
     "@babel/plugin-transform-private-methods": "^7.25.4",
     "@babel/plugin-transform-private-property-in-object": "^7.24.7",
-    "@tailwindcss/postcss7-compat": "^2.2.2",
-    "autoprefixer": "^9",
+    "autoprefixer": "^10.4.20",
     "cross-env": "^7.0.3",
-    "postcss": "^8.2.10",
+    "postcss": "^8.5.33",
     "postcss-px-to-viewport": "^1.1.1",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat",
-    "webpack-dev-server": "^4.4.0"
+    "tailwindcss": "2.2.19",
+    "webpack-dev-server": "^4.15.2"
   },
   "resolutions": {
+    "@svgr/plugin-svgo": "6.5.1",
+    "cssnano": "5.1.15",
+    "svgo": "2.8.4",
+    "postcss": "8.5.33",
+    "resolve-url-loader": "5.0.0",
+    "tailwindcss": "2.2.19",
     "@babel/traverse": "7.25.4",
     "tar": "7.5.23",
     "websocket-driver": "0.7.5",

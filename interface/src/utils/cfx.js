@@ -3,11 +3,14 @@ import {
   Drip,
   Conflux,
 } from 'js-conflux-sdk/dist/js-conflux-sdk.umd.min.js'
-import {abi as posPoolAbi} from './../../../contract/ABI/IPoSPool.json'
-import {abi as posManagerAbi} from './../../../contract/ABI/PoolManager.json'
+import posPoolArtifact from './../../../contract/ABI/IPoSPool.json'
+import posManagerArtifact from './../../../contract/ABI/PoolManager.json'
 import poolConfig from '../../pool.config'
 import {isTestNetEnv} from './index'
 import {NETWORK_ID_CORE_MAINNET, NETWORK_ID_CORE_TESTNET} from '../constants'
+
+const posPoolAbi = posPoolArtifact.abi
+const posManagerAbi = posManagerArtifact.abi
 
 let cfxUrl = poolConfig[isTestNetEnv() ? 'testnet' : 'mainnet'].core.RPC
 if (process.env.REACT_APP_TestNet === 'true') {
