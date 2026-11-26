@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import useController from './useController';
-import { abi as posPoolAbi } from './../../../contract/ABI/IPoSPool.json'
+import posPoolArtifact from './../../../contract/ABI/IPoSPool.json'
 import { useParams } from "react-router-dom";
 import { utils } from 'ethers';
+
+const posPoolAbi = posPoolArtifact.abi;
 
 const usePoolContract = () => {
     const { poolAddress } = useParams();
