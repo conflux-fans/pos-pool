@@ -86,7 +86,7 @@
     "postcss": "^8.5.33",
     "postcss-px-to-viewport": "^1.1.1",
     "tailwindcss": "2.2.19",
-    "webpack-dev-server": "^4.15.2"
+    "webpack-dev-server": "^5.2.6"
   },
   "resolutions": {
     "@svgr/plugin-svgo": "6.5.1",
