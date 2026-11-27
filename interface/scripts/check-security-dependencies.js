@@ -75,6 +75,35 @@ async function main() {
     assert.deepStrictEqual(dns.decode(dns.encode(packet)).answers.map(answer => answer.data),
       packet.answers.map(answer => answer.data))
     console.log('PASS: the vulnerable ip dependency is absent and DNS encoding works')
+
+    const i18n = require('i18next').createInstance()
+    const resources = Object.fromEntries(['en', 'zh', 'id', 'ko', 'vn'].map(language => [
+      language, {translation: require(`../public/locales/${language}/translation.json`)},
+    ]))
+    await i18n.init({lng: 'en', resources, interpolation: {escapeValue: false}})
+    for (const language of Object.keys(resources)) {
+      await i18n.changeLanguage(language)
+      assert.strictEqual(i18n.t('Header.pos_pool'), resources[language].translation.Header.pos_pool)
+      assert(i18n.t('Header.unspport_network_switch', {network: 'Conflux Testnet'}).includes('Conflux Testnet'))
+    }
+    const originalCall = Object.getOwnPropertyDescriptor(Object.prototype.hasOwnProperty, 'call')
+    try {
+      i18n.addResourceBundle('en', 'untrusted', {hasOwnProperty: {call: 'corrupted'}}, true, true)
+      assert.strictEqual(Object.prototype.hasOwnProperty.call, Function.prototype.call)
+    } finally {
+      if (originalCall) Object.defineProperty(Object.prototype.hasOwnProperty, 'call', originalCall)
+      else delete Object.prototype.hasOwnProperty.call
+    }
+    console.log('PASS: all five languages, interpolation and inherited-property isolation')
+
+    const {resolvePath} = require('react-router-dom')
+    for (const pathname of ['\\\\attacker.invalid/pool', '/\\attacker.invalid/pool', '\\/attacker.invalid/pool']) {
+      const resolved = resolvePath({pathname}, '/pool-manage')
+      assert.strictEqual(new URL(resolved.pathname, 'https://pool.example').origin, 'https://pool.example')
+    }
+    console.log('PASS: backslashes in internal paths cannot redirect to another origin')
+
+    await require('../../scripts/check-crypto-dependencies')(path.join(__dirname, '../package.json'))
   } finally {
     fs.rmSync(directory, {recursive: true, force: true})
   }
