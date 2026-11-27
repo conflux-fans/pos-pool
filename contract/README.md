@@ -13,6 +13,9 @@ The `Core Space Pool` is the basic component of the whole project, which manages
 
 This project uses `hardhat` to compile and test the contract.
 
+Run `npm run test:security` to verify patched BN.js, PBKDF2 and signing behavior
+in the contract toolchain before running the full Hardhat suite.
+
 1. Install nodejs and npm
 2. Clone this repo
 3. Install dependencies: `npm install`

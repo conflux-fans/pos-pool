@@ -22,7 +22,8 @@ build to preserve the existing styles; React Scripts loads `tailwind.config.js`
 automatically. Security resolutions keep PostCSS, SVGO and their consumers on
 compatible patched versions. Keep these resolutions when updating the lockfile.
 Run `yarn test:security` to check source-map isolation, SVG processing and the
-removal of `ip` from the dependency graph.
+removal of `ip` from the dependency graph. `yarn test:dev-server` exercises the
+RPC proxies, SPA fallback, host/origin checks and HMR WebSocket protection.
 
 Second a config file `pool.config.js` is need to create
 

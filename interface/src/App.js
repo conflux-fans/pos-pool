@@ -28,7 +28,7 @@ function App() {
                   <Route path="pool-manage" element={<Home />} />
                   <Route path="pool/core/:poolAddress" element={<Pool />} />
                   <Route path="pool/e-space/:poolAddress" element={<Pool />} />
-                  <Route path="*" element={<Navigate to="pool-manage"/>} />
+                  <Route path="*" element={<Navigate to="/pool-manage" replace/>} />
                 </Routes>
               </div>
             </Content>
